@@ -9,7 +9,8 @@ import {
   ToolExecution,
   SystemInfo,
   PermissionRequest,
-  McpServerStatus
+  McpServerStatus,
+  SessionHistory
 } from './types';
 
 interface AgentStore {
@@ -109,6 +110,12 @@ interface AgentStore {
     timestamp: string;
   }) => void;
   clearHookLogs: () => void;
+
+  // Session history
+  sessionHistory: SessionHistory[];
+  addSessionHistory: (session: SessionHistory) => void;
+  updateSessionHistory: (id: string, updates: Partial<SessionHistory>) => void;
+  clearSessionHistory: () => void;
 
   // UI state
   isLoading: boolean;
@@ -240,6 +247,20 @@ export const useAgentStore = create<AgentStore>((set) => ({
       hookLogs: [...state.hookLogs, log],
     })),
   clearHookLogs: () => set({ hookLogs: [] }),
+
+  // Session history
+  sessionHistory: [],
+  addSessionHistory: (session) =>
+    set((state) => ({
+      sessionHistory: [...state.sessionHistory, session],
+    })),
+  updateSessionHistory: (id, updates) =>
+    set((state) => ({
+      sessionHistory: state.sessionHistory.map((session) =>
+        session.id === id ? { ...session, ...updates } : session
+      ),
+    })),
+  clearSessionHistory: () => set({ sessionHistory: [] }),
 
   // UI
   isLoading: false,

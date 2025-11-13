@@ -8,11 +8,11 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Clock, DollarSign, Zap, AlertCircle, TrendingUp, Info, Terminal, Server, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
+import { Clock, DollarSign, Zap, AlertCircle, TrendingUp, Info, Terminal, Server, CheckCircle, XCircle, RefreshCw, GitBranch, Play, Pause, RotateCcw, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function DebugPanel() {
-  const { debugInfo, config, accumulatedCost, sdkMode, systemInfo, hookLogs } = useAgentStore();
+  const { debugInfo, config, accumulatedCost, sdkMode, systemInfo, hookLogs, sessionHistory } = useAgentStore();
 
   const budgetRemaining = config.maxBudgetUsd ? config.maxBudgetUsd - accumulatedCost : null;
   const budgetPercentage = config.maxBudgetUsd ? (accumulatedCost / config.maxBudgetUsd) * 100 : null;
@@ -174,6 +174,74 @@ export default function DebugPanel() {
                 )}
               </div>
 
+              {/* Visual Budget Progress Bar */}
+              {config.maxBudgetUsd && (
+                <Card>
+                  <CardContent className="pt-4 pb-3 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Budget Usage</span>
+                      <span className="font-medium">{budgetPercentage?.toFixed(1)}%</span>
+                    </div>
+                    <div className="relative h-3 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className={`absolute inset-y-0 left-0 transition-all duration-300 ${
+                          isOverBudget
+                            ? 'bg-destructive'
+                            : isApproachingLimit
+                            ? 'bg-yellow-500'
+                            : 'bg-green-600'
+                        }`}
+                        style={{ width: `${Math.min(100, budgetPercentage || 0)}%` }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>$0</span>
+                      <span>${config.maxBudgetUsd.toFixed(6)}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Cost Breakdown */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Cost Breakdown</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">This Request</span>
+                    <span className="font-medium">${debugInfo.cost.toFixed(6)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Session Total</span>
+                    <span className="font-medium">${accumulatedCost.toFixed(6)}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Input Tokens</span>
+                    <span className="font-medium">{debugInfo.tokens.input.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Output Tokens</span>
+                    <span className="font-medium">{debugInfo.tokens.output.toLocaleString()}</span>
+                  </div>
+                  {debugInfo.tokens.cacheRead !== undefined && debugInfo.tokens.cacheRead > 0 && (
+                    <>
+                      <Separator />
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">Cache Read</span>
+                        <div className="flex items-center gap-1">
+                          <Badge variant="outline" className="text-xs h-4 px-1">
+                            {debugInfo.tokens.cacheRead.toLocaleString()}
+                          </Badge>
+                          <span className="text-green-600">↓90% cost</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+
               {isOverBudget && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
@@ -242,6 +310,78 @@ export default function DebugPanel() {
             </div>
           </>
         )}
+
+        {/* Performance Metrics */}
+        <Separator />
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Performance Metrics</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Response Time</span>
+                <span className="font-medium">{debugInfo.latency}ms</span>
+              </div>
+              <div className="relative h-2 bg-muted rounded-full overflow-hidden">
+                <div
+                  className={`absolute inset-y-0 left-0 transition-all duration-300 ${
+                    debugInfo.latency < 1000
+                      ? 'bg-green-600'
+                      : debugInfo.latency < 3000
+                      ? 'bg-yellow-500'
+                      : 'bg-orange-500'
+                  }`}
+                  style={{ width: `${Math.min(100, (debugInfo.latency / 5000) * 100)}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Fast</span>
+                <span>Slow</span>
+              </div>
+            </div>
+
+            {debugInfo.numTurns && debugInfo.numTurns > 1 && (
+              <>
+                <Separator />
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Avg Time per Turn</span>
+                    <span className="font-medium">{(debugInfo.latency / debugInfo.numTurns).toFixed(0)}ms</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Tokens per Second</span>
+                    <span className="font-medium">
+                      {((debugInfo.tokens.total / debugInfo.latency) * 1000).toFixed(1)}
+                    </span>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {debugInfo.tokens.cacheRead !== undefined && debugInfo.tokens.cacheRead > 0 && (
+              <>
+                <Separator />
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Cache Hit Rate</span>
+                    <Badge variant="outline" className="text-xs h-4 px-1 bg-green-50 text-green-700 border-green-200">
+                      {((debugInfo.tokens.cacheRead / debugInfo.tokens.input) * 100).toFixed(1)}%
+                    </Badge>
+                  </div>
+                  <div className="relative h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="absolute inset-y-0 left-0 bg-green-600 transition-all duration-300"
+                      style={{
+                        width: `${((debugInfo.tokens.cacheRead / debugInfo.tokens.input) * 100).toFixed(1)}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Timestamp */}
         <div>
@@ -655,7 +795,7 @@ export default function DebugPanel() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="text-xs"
+                            className="text-xs flex items-center gap-1"
                             onClick={() => {
                               navigator.clipboard.writeText(debugInfo.sessionId || '');
                               toast.success('Session ID copied', {
@@ -663,12 +803,13 @@ export default function DebugPanel() {
                               });
                             }}
                           >
+                            <Copy className="h-3 w-3" />
                             Copy ID
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
-                            className="text-xs"
+                            className="text-xs flex items-center gap-1"
                             onClick={() => {
                               const { setConfig } = useAgentStore.getState();
                               setConfig({ continueSession: true });
@@ -677,12 +818,13 @@ export default function DebugPanel() {
                               });
                             }}
                           >
+                            <Play className="h-3 w-3" />
                             Continue
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
-                            className="text-xs"
+                            className="text-xs flex items-center gap-1"
                             onClick={() => {
                               const { setConfig } = useAgentStore.getState();
                               setConfig({ resumeSessionId: debugInfo.sessionId });
@@ -691,12 +833,13 @@ export default function DebugPanel() {
                               });
                             }}
                           >
+                            <RotateCcw className="h-3 w-3" />
                             Resume
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
-                            className="text-xs"
+                            className="text-xs flex items-center gap-1"
                             onClick={() => {
                               const { setConfig } = useAgentStore.getState();
                               setConfig({ forkSession: true });
@@ -705,8 +848,91 @@ export default function DebugPanel() {
                               });
                             }}
                           >
+                            <GitBranch className="h-3 w-3" />
                             Fork
                           </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Session Metadata Card */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm">Session Metadata</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Started</p>
+                          <p className="text-xs font-medium">{new Date(debugInfo.timestamp).toLocaleTimeString()}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Turns</p>
+                          <Badge variant="secondary">{debugInfo.numTurns || 1}</Badge>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Total Cost</p>
+                          <p className="text-xs font-medium">${accumulatedCost.toFixed(6)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Total Tokens</p>
+                          <p className="text-xs font-medium">{debugInfo.tokens.total.toLocaleString()}</p>
+                        </div>
+                      </div>
+
+                      {debugInfo.toolsUsed && debugInfo.toolsUsed.length > 0 && (
+                        <>
+                          <Separator />
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-2">Tools Used</p>
+                            <div className="flex flex-wrap gap-1">
+                              {debugInfo.toolsUsed.map((tool, i) => (
+                                <Badge key={i} variant="outline" className="text-xs">
+                                  {tool}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Session Timeline */}
+                      <Separator />
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-2">Session Timeline</p>
+                        <div className="relative pl-4">
+                          {/* Vertical line */}
+                          <div className="absolute left-1 top-0 bottom-0 w-px bg-border" />
+
+                          {/* Timeline items */}
+                          <div className="space-y-3">
+                            <div className="relative">
+                              <div className="absolute -left-[13px] top-1 w-2 h-2 rounded-full bg-green-600" />
+                              <div className="text-xs">
+                                <p className="font-medium">Session Started</p>
+                                <p className="text-muted-foreground">{new Date(debugInfo.timestamp).toLocaleString()}</p>
+                              </div>
+                            </div>
+
+                            {debugInfo.numTurns && debugInfo.numTurns > 1 && (
+                              <div className="relative">
+                                <div className="absolute -left-[13px] top-1 w-2 h-2 rounded-full bg-blue-600" />
+                                <div className="text-xs">
+                                  <p className="font-medium">{debugInfo.numTurns} Turns Completed</p>
+                                  <p className="text-muted-foreground">Multi-turn conversation</p>
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="relative">
+                              <div className="absolute -left-[13px] top-1 w-2 h-2 rounded-full bg-primary animate-pulse" />
+                              <div className="text-xs">
+                                <p className="font-medium">Active</p>
+                                <p className="text-muted-foreground">Ready for next turn</p>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </CardContent>

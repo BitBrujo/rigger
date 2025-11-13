@@ -489,6 +489,19 @@ export interface DebugInfo {
   toolsUsed?: string[];
 }
 
+// Session History
+export interface SessionHistory {
+  id: string;
+  sessionId: string;
+  startedAt: string;
+  completedAt: string;
+  numTurns: number;
+  totalCost: number;
+  totalTokens: number;
+  toolsUsed: string[];
+  status: 'active' | 'completed' | 'error';
+}
+
 // Default configuration for Agent SDK
 export const DEFAULT_SDK_CONFIG: AgentSDKConfig = {
   model: 'claude-3-5-sonnet-20241022',

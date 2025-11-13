@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { ChevronDown, ChevronRight, Clock, CheckCircle2, XCircle, Loader2, BarChart3, FileText, FileEdit, Search, FolderOpen, Folder, File } from 'lucide-react';
+import { ChevronDown, ChevronRight, Clock, CheckCircle2, XCircle, Loader2, BarChart3, FileText, FileEdit, Search, FolderOpen, Folder, File, Network, Box } from 'lucide-react';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { ToolExecution } from '@/lib/types';
 import { toast } from 'sonner';
@@ -86,9 +86,15 @@ function ToolExecutionCard({ execution }: { execution: ToolExecution }) {
     'old_string' in execution.input &&
     'new_string' in execution.input;
 
+  // Check if this is a Task tool (subagent)
+  const isTaskTool = execution.toolName === 'Task';
+  const subagentType = isTaskTool && execution.input && typeof execution.input === 'object' && 'subagent_type' in execution.input
+    ? String(execution.input.subagent_type)
+    : null;
+
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="mb-2">
-      <Card>
+      <Card className={isTaskTool ? 'border-l-4 border-l-purple-500' : ''}>
         <CollapsibleTrigger asChild>
           <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors p-3">
             <div className="flex items-center justify-between">
@@ -98,9 +104,11 @@ function ToolExecutionCard({ execution }: { execution: ToolExecution }) {
                 ) : (
                   <ChevronRight className="h-4 w-4" />
                 )}
+                {isTaskTool && <Network className="h-4 w-4 text-purple-600" />}
                 <CardTitle className="text-sm font-semibold">{execution.toolName}</CardTitle>
                 <StatusBadge />
                 {hasEditData && <Badge variant="outline" className="text-xs">Diff Available</Badge>}
+                {subagentType && <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300">{subagentType}</Badge>}
               </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 {duration && (
@@ -117,8 +125,59 @@ function ToolExecutionCard({ execution }: { execution: ToolExecution }) {
           <CardContent className="p-3 pt-0 space-y-2">
             <Separator />
 
-            {/* Show diff viewer for Edit tool if data is available */}
-            {hasEditData ? (
+            {/* Show subagent details for Task tool */}
+            {isTaskTool && execution.input && typeof execution.input === 'object' ? (
+              <>
+                <div className="space-y-2 bg-purple-50 dark:bg-purple-950/20 p-3 rounded-md border border-purple-200 dark:border-purple-900">
+                  <div className="flex items-center gap-2">
+                    <Box className="h-4 w-4 text-purple-600" />
+                    <p className="text-xs font-semibold text-purple-700 dark:text-purple-300">Subagent Execution</p>
+                  </div>
+
+                  {subagentType && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Agent Type</p>
+                      <Badge variant="secondary" className="text-xs">{subagentType}</Badge>
+                    </div>
+                  )}
+
+                  {'description' in execution.input && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Description</p>
+                      <p className="text-xs">{String(execution.input.description)}</p>
+                    </div>
+                  )}
+
+                  {'prompt' in execution.input && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Task Prompt</p>
+                      <pre className="text-xs bg-muted p-2 rounded-md overflow-x-auto max-h-32">
+                        {String(execution.input.prompt)}
+                      </pre>
+                    </div>
+                  )}
+
+                  {'model' in execution.input && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Model</p>
+                      <Badge variant="outline" className="text-xs">{String(execution.input.model)}</Badge>
+                    </div>
+                  )}
+                </div>
+
+                {execution.output && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground mb-1">Subagent Output</p>
+                    <pre className="text-xs bg-muted p-2 rounded-md overflow-x-auto max-h-48">
+                      {typeof execution.output === 'string'
+                        ? execution.output
+                        : JSON.stringify(execution.output, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </>
+            ) : hasEditData ? (
+              /* Show diff viewer for Edit tool if data is available */
               <>
                 <div>
                   <p className="text-xs font-semibold text-muted-foreground mb-1">File Path</p>
@@ -234,6 +293,82 @@ function ToolStatistics({ executions }: { executions: ToolExecution[] }) {
           </Card>
         );
       })}
+    </div>
+  );
+}
+
+// Subagent hierarchy component
+function SubagentHierarchy({ executions }: { executions: ToolExecution[] }) {
+  // Build hierarchy tree from Task tool executions
+  const hierarchy = useMemo(() => {
+    const taskExecutions = executions.filter((exec) => exec.toolName === 'Task');
+
+    // Build parent-child relationships based on parentToolUseId
+    const rootTasks = taskExecutions.filter((exec) => !exec.parentToolUseId);
+
+    const buildTree = (parentId: string | null): ToolExecution[] => {
+      return taskExecutions.filter((exec) => exec.parentToolUseId === parentId);
+    };
+
+    return rootTasks.map((root) => ({
+      ...root,
+      children: buildTree(root.id),
+    }));
+  }, [executions]);
+
+  const renderTaskNode = (task: ToolExecution & { children?: ToolExecution[] }, level = 0) => {
+    const subagentType = task.input && typeof task.input === 'object' && 'subagent_type' in task.input
+      ? String(task.input.subagent_type)
+      : 'general';
+
+    const description = task.input && typeof task.input === 'object' && 'description' in task.input
+      ? String(task.input.description)
+      : 'Task execution';
+
+    return (
+      <div key={task.id} className="text-xs">
+        <div
+          className="flex items-center gap-2 py-2 px-3 rounded-md hover:bg-accent/50"
+          style={{ paddingLeft: `${level * 16 + 12}px` }}
+        >
+          <Network className="h-3 w-3 text-purple-600 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-medium truncate">{subagentType}</span>
+              {task.status === 'running' && <Loader2 className="h-3 w-3 animate-spin text-blue-600" />}
+              {task.status === 'completed' && <CheckCircle2 className="h-3 w-3 text-green-600" />}
+              {task.status === 'failed' && <XCircle className="h-3 w-3 text-destructive" />}
+            </div>
+            <p className="text-muted-foreground truncate text-xs">{description}</p>
+          </div>
+          {task.endTime && (
+            <span className="text-muted-foreground text-xs flex-shrink-0">
+              {((task.endTime - task.startTime) / 1000).toFixed(1)}s
+            </span>
+          )}
+        </div>
+        {task.children && task.children.length > 0 && (
+          <div className="border-l-2 border-purple-200 dark:border-purple-900 ml-4">
+            {task.children.map((child) => renderTaskNode(child as any, level + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-2">
+      {hierarchy.length === 0 ? (
+        <div className="text-center text-muted-foreground py-8">
+          <Network className="h-8 w-8 mx-auto mb-2 opacity-50" />
+          <p className="text-xs">No subagents spawned yet</p>
+          <p className="text-xs mt-1">Task tool executions will appear here</p>
+        </div>
+      ) : (
+        <div className="space-y-1">
+          {hierarchy.map((task: any) => renderTaskNode(task))}
+        </div>
+      )}
     </div>
   );
 }
@@ -541,7 +676,7 @@ export function ToolsPanel() {
       </div>
 
       <Tabs defaultValue="history" className="flex-1 flex flex-col">
-        <TabsList className="mx-4 mt-2 grid grid-cols-4 w-auto">
+        <TabsList className="mx-4 mt-2 grid grid-cols-5 w-auto">
           <TabsTrigger value="history" className="flex items-center gap-1">
             <Clock className="h-3 w-3" />
             History ({toolExecutions.length})
@@ -549,6 +684,10 @@ export function ToolsPanel() {
           <TabsTrigger value="active" className="flex items-center gap-1">
             <Loader2 className="h-3 w-3" />
             Active ({activeExecutions.length})
+          </TabsTrigger>
+          <TabsTrigger value="agents" className="flex items-center gap-1">
+            <Network className="h-3 w-3" />
+            Agents
           </TabsTrigger>
           <TabsTrigger value="files" className="flex items-center gap-1">
             <FolderOpen className="h-3 w-3" />
@@ -594,6 +733,12 @@ export function ToolsPanel() {
                 ))}
               </div>
             )}
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="agents" className="flex-1 mt-0">
+          <ScrollArea className="h-full p-4">
+            <SubagentHierarchy executions={toolExecutions} />
           </ScrollArea>
         </TabsContent>
 
