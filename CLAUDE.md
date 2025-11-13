@@ -4,19 +4,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Claude Agent SDK and Messages API testing application built with Next.js 15 and Express.js. It provides a three-panel interface for testing both Claude APIs with real-time streaming, debugging metrics, and persistence.
+This is a Claude Agent SDK testing application built with Next.js 15 and Express.js. It provides a three-panel interface for testing the Claude Agent SDK with real-time streaming, debugging metrics, and persistence.
 
-**Dual API Support:**
-- **Agent SDK Mode** (`@anthropic-ai/claude-agent-sdk`): Full agent capabilities with 18 built-in tools, containerization, automatic cost calculation, and multi-turn conversations
-- **Messages API Mode** (`@anthropic-ai/sdk`): Standard Claude Messages API with manual configuration and cost calculation
+**Features:**
+- **Agent SDK** (`@anthropic-ai/claude-agent-sdk`): Full agent capabilities with built-in tools, containerization, automatic cost calculation, and multi-turn conversations
+- **Custom Tool Configuration**: Select and configure which tools the agent can use
+- **Real-time Streaming**: Watch agent responses as they generate
+- **Debug Metrics**: Token usage, costs, cache stats, and API responses
 
 ## Development Commands
 
 ### Frontend (Next.js)
 ```bash
-npm run dev          # Start Next.js dev server (port 3000)
+npm run dev          # Start Next.js dev server (port 3334)
 npm run build        # Build production bundle
-npm run start        # Start production server
+npm run start        # Start production server (port 3334)
 npm run lint         # Run ESLint
 ```
 
@@ -49,10 +51,11 @@ docker-compose down -v && docker-compose up -d
 
 ## Architecture
 
-### Three-Panel Layout Architecture
+### Four-Panel Layout Architecture
 
-The application uses a resizable three-panel layout (`components/agent-tester.tsx`):
-- **Left Panel (ConfigPanel)**: Agent configuration controls
+The application uses a resizable four-panel layout (`components/agent-tester.tsx`):
+- **Left Panel (ConfigPanel)**: Agent configuration controls (model, temperature, system prompt)
+- **Tools Panel (ToolsPanel)**: Tool selection and configuration
 - **Center Panel (ChatInterface)**: Message history and input
 - **Right Panel (DebugPanel)**: Real-time metrics and raw API responses
 
@@ -61,12 +64,11 @@ All panels share state via Zustand store (`lib/store.ts`).
 ### State Management Flow
 
 **Zustand Store (`lib/store.ts`)** is the single source of truth:
-- `config`: Current agent configuration (model, temperature, etc.)
+- `config`: Current agent configuration (model, temperature, tools, etc.)
 - `messages`: Conversation history
 - `debugInfo`: Latest API response metrics
 - `isStreaming`, `streamingMode`: Streaming state
 - `conversationId`: Current conversation for persistence
-- `sdkMode`: Toggle between Agent SDK and Messages API
 
 Components consume and update this store directly. No prop drilling.
 
@@ -75,58 +77,42 @@ Components consume and update this store directly. No prop drilling.
 **Frontend → Backend flow:**
 
 1. **ChatInterface** collects user input and current config from store
-2. **ConfigPanel** SDK mode toggle determines which API to use
+2. **ToolsPanel** allows selection of enabled tools
 3. **ApiClient** (`lib/api-client.ts`) handles HTTP/SSE communication
-4. Four endpoint combinations:
-   - **Messages API Batch**: `POST /api/agent/message`
-   - **Messages API Streaming**: `POST /api/agent/stream`
-   - **Agent SDK Batch**: `POST /api/agent-sdk/message`
-   - **Agent SDK Streaming**: `POST /api/agent-sdk/stream`
+4. Backend endpoints use Agent SDK:
+   - **Batch**: `POST /api/agent/message`
+   - **Streaming**: `POST /api/agent/stream`
 5. **ChatInterface** updates store with messages and debug info
-6. **DebugPanel** reactively displays metrics from store (including SDK-specific metrics)
+6. **DebugPanel** reactively displays metrics from store
 
 ### Backend Architecture
 
 **Express Router Pattern** (`backend/src/routes/`):
-- `agent.ts`: Messages API wrapper (message + streaming endpoints)
-- `agent-sdk.ts`: **Agent SDK wrapper (message + streaming with built-in tools)**
+- `agent.ts`: Agent SDK wrapper (batch and streaming endpoints with tool support)
 - `conversations.ts`: CRUD for conversation history
 - `presets.ts`: CRUD for configuration presets
 - `analytics.ts`: Usage statistics and aggregations
 
 **Database Abstraction:**
 - `backend/db/client.ts`: pg Pool singleton
-- `backend/db/schema.sql`: PostgreSQL schema with Agent SDK fields (auto-initialized on first run)
+- `backend/db/schema.sql`: PostgreSQL schema (auto-initialized on first run)
 
 **Cost Calculation:**
-- **Messages API**: Manual calculation in `agent.ts` and `chat-interface.tsx` using hardcoded pricing
-- **Agent SDK**: Automatic calculation via SDK's `total_cost_usd` field
+- Automatic via Agent SDK's built-in metrics
+- No manual pricing calculation needed
 
-### Agent SDK vs Messages API
+### Agent SDK Tools
 
-| Feature | Messages API | Agent SDK |
-|---------|--------------|-----------|
-| **Endpoint** | `/api/agent/*` | `/api/agent-sdk/*` |
-| **SDK Package** | `@anthropic-ai/sdk` | `@anthropic-ai/claude-agent-sdk` |
-| **Tools** | Manual implementation | 18 built-in tools (Read, Write, Bash, WebFetch, etc.) |
-| **Cost Calculation** | Manual (hardcoded pricing) | Automatic (`total_cost_usd`) |
-| **Workspace** | N/A | `/app/workspace` volume |
-| **Prompt Caching** | No metrics | Cache creation/read tokens tracked |
-| **Multi-turn** | Manual orchestration | Automatic via `maxTurns` |
-| **Parameters** | Full control (top_p, top_k, etc.) | Simplified (maxTokens, temperature) |
+The application uses the Claude Agent SDK which provides built-in tools:
 
-### Agent SDK Built-in Tools
-
-When SDK mode is enabled, agents have access to 18 tools:
-
-**File Operations:** Read, Write, Edit, Glob, Grep, NotebookEdit
+**File Operations:** Read, Write, Edit, Glob, Grep
 **Execution:** Bash, BashOutput, KillShell
 **Web:** WebFetch, WebSearch
 **Task Management:** TodoWrite, Task
-**MCP Integration:** ListMcpResources, ReadMcpResource
-**Planning:** ExitPlanMode
 
-Configured in `backend/src/routes/agent-sdk.ts` with `allowedTools` array.
+Tools can be enabled/disabled via the Tools Panel in the UI. Configuration is stored in `config.allowedTools` array and sent to the Agent SDK.
+
+Default enabled tools are configured in `backend/src/routes/agent.ts` line 39-44.
 
 ### Type System
 
@@ -144,8 +130,8 @@ Frontend and backend expect these types but backend doesn't import from `lib/typ
 **Server-Sent Events (SSE) flow:**
 
 1. Backend (`agent.ts`):
-   - Uses `anthropic.messages.stream()`
-   - Emits events: `message`, `text`, `content_block_delta`, `done`, `error`
+   - Uses Agent SDK's `query()` function with async iteration
+   - Streams agent responses including tool use and thinking
    - Wraps events in SSE format: `data: {JSON}\n\n`
 
 2. Frontend (`chat-interface.tsx`):
@@ -205,10 +191,11 @@ PORT=3001
 - Avoids complex joins for conversation retrieval
 - PostgreSQL JSONB has good indexing and query support
 
-### Why Duplicate Cost Calculation?
-- Frontend needs immediate cost display (no API call)
-- Backend logs accurate costs to database
-- Trade-off: must keep pricing in sync manually
+### Why Agent SDK over Messages API?
+- Built-in tool support (no manual implementation needed)
+- Automatic cost calculation and token tracking
+- Multi-turn conversation handling
+- Simplified agent development workflow
 
 ## shadcn/ui Components
 
@@ -271,7 +258,7 @@ Existing components: button, input, textarea, select, slider, switch, badge, car
 - `lib/store.ts`: Global state management
 - `lib/types.ts`: Shared TypeScript interfaces
 - `lib/api-client.ts`: Backend API wrapper
-- `backend/src/routes/agent.ts`: Anthropic SDK integration and cost calculation
+- `backend/src/routes/agent.ts`: Agent SDK integration and tool configuration
 - `backend/db/schema.sql`: Database schema
 - `components/agent-tester.tsx`: Main layout container
 - `components/chat-interface.tsx`: Streaming and batch message handling
@@ -280,10 +267,11 @@ Existing components: button, input, textarea, select, slider, switch, badge, car
 ## Testing the Application
 
 1. Start services: `docker-compose up -d && npm run dev`
-2. Visit http://localhost:3000
-3. Configure agent in left panel (model, temperature, etc.)
-4. Send test message in center panel
-5. Verify metrics in right panel (tokens, cost, latency)
-6. Save preset and reload to verify database persistence
-7. Toggle streaming mode and compare response behavior
-8. Check backend logs for errors: `docker-compose logs -f backend`
+2. Visit http://localhost:3334
+3. Configure agent in left panel (model, temperature, system prompt)
+4. Select tools in tools panel
+5. Send test message in center panel
+6. Verify metrics in right panel (tokens, cost, latency)
+7. Save preset and reload to verify database persistence
+8. Toggle streaming mode and compare response behavior
+9. Check backend logs for errors: `docker-compose logs -f backend`

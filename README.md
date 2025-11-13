@@ -1,27 +1,25 @@
 # Claude Agent SDK Tester
 
-A Next.js application for testing and debugging **both** the Claude Agent SDK and Messages API configurations with real-time streaming support.
+A Next.js application for testing and debugging the Claude Agent SDK with real-time streaming support.
 
 ## Features
 
-- **Dual API Support**: Toggle between Agent SDK (with built-in tools) and Messages API
-- **Model Comparison**: Test Claude 3.5 Sonnet, Haiku, and Opus side-by-side
-- **Parameter Testing**: Live adjustment of temperature and max tokens
+- **Agent SDK Integration**: Full-featured Claude Agent SDK with built-in tools
+- **Model Selection**: Test Claude 3.5 Sonnet, Haiku, and Opus
+- **Tool Configuration**: Enable/disable specific tools through the UI
+- **Parameter Testing**: Live adjustment of temperature, maxTurns, and thinking tokens
 - **System Prompts**: Template library with custom prompt editing
 - **Streaming Support**: Toggle between streaming and batch response modes
-- **Agent SDK Tools**: 18 built-in tools including file operations, Bash execution, web access
 - **Debug Panel**: Real-time metrics, token usage, costs, cache stats, and API responses
 - **Persistence**: Save conversations, configuration presets, and usage analytics
-- **Three-Panel Layout**: Config (left), Chat (center), Debug (right)
+- **Four-Panel Layout**: Config (left), Tools (left-center), Chat (center), Debug (right)
 
 ## Tech Stack
 
-- **Frontend**: Next.js 15, React 19, TypeScript, shadcn/ui, Tailwind CSS
+- **Frontend**: Next.js 16, React 19, TypeScript, shadcn/ui, Tailwind CSS 4
 - **Backend**: Express.js, Node.js (Docker)
 - **Database**: PostgreSQL (Docker)
-- **SDKs**:
-  - `@anthropic-ai/claude-agent-sdk` (Agent SDK with tools & containerization)
-  - `@anthropic-ai/sdk` (Standard Messages API)
+- **SDK**: `@anthropic-ai/claude-agent-sdk` (Agent SDK with tools & containerization)
 - **State**: Zustand
 
 ## Getting Started
@@ -37,7 +35,8 @@ A Next.js application for testing and debugging **both** the Claude Agent SDK an
 1. **Clone the repository**
 
 ```bash
-cd gunnyclaude
+git clone <repository-url>
+cd jigger
 ```
 
 2. **Install frontend dependencies**
@@ -79,18 +78,24 @@ npm run dev
 
 6. **Open the app**
 
-Visit [http://localhost:3000](http://localhost:3000)
+Visit [http://localhost:3334](http://localhost:3334)
 
 ## Usage
 
 ### Configuration Panel (Left)
 
 - **Model Selection**: Choose between Claude 3.5 Sonnet, Haiku, or Opus
-- **Max Tokens**: Control response length (256-8192)
+- **Max Turns**: Control multi-turn conversation limit
+- **Max Thinking Tokens**: Set extended thinking token budget
 - **Temperature**: Adjust randomness (0.0-1.0)
-- **Top P & Top K**: Fine-tune sampling behavior
 - **System Prompt**: Use templates or write custom prompts
 - **Presets**: Save and load configuration presets
+
+### Tools Panel (Left-Center)
+
+- **Tool Selection**: Enable/disable individual tools
+- **Categories**: File operations, execution, web, and task management
+- **Quick Actions**: Enable all or disable all tools
 
 ### Chat Interface (Center)
 
@@ -108,10 +113,10 @@ Visit [http://localhost:3000](http://localhost:3000)
 
 ## API Endpoints
 
-### Agent
+### Agent (SDK)
 
-- `POST /api/agent/message` - Send batch message
-- `POST /api/agent/stream` - Send streaming message (SSE)
+- `POST /api/agent/message` - Send batch message using Agent SDK
+- `POST /api/agent/stream` - Send streaming message using Agent SDK (SSE)
 
 ### Conversations
 
@@ -184,13 +189,14 @@ docker-compose up -d
 ## Project Structure
 
 ```
-/gunnyclaude
+/jigger
 ├── app/                    # Next.js app directory
 │   ├── page.tsx           # Main page
 │   └── globals.css        # Global styles
 ├── components/            # React components
 │   ├── agent-tester.tsx  # Main container
 │   ├── config-panel.tsx  # Configuration controls
+│   ├── tools-panel.tsx   # Tool selection
 │   ├── chat-interface.tsx # Chat UI
 │   ├── debug-panel.tsx   # Debug info display
 │   └── ui/               # shadcn components
@@ -202,10 +208,11 @@ docker-compose up -d
 ├── backend/             # Express backend
 │   ├── src/
 │   │   ├── server.ts   # Main server
-│   │   └── routes/     # API routes
+│   │   └── routes/     # API routes (agent, conversations, presets, analytics)
 │   └── db/             # Database
 │       ├── schema.sql  # Schema
 │       └── client.ts   # PG client
+├── workspace/           # Agent SDK workspace volume
 └── docker-compose.yml  # Docker services
 ```
 
@@ -217,11 +224,12 @@ docker-compose up -d
 - **claude-3-5-haiku-20241022**: Fastest, great for simple tasks
 - **claude-3-opus-20240229**: Previous generation, very capable
 
-### Temperature Presets
+### Available Tools
 
-- **0.0-0.3**: Deterministic, precise responses
-- **0.4-0.7**: Balanced creativity and consistency
-- **0.8-1.0**: Highly creative and varied
+- **File Operations**: Read, Write, Edit, Glob, Grep
+- **Execution**: Bash, BashOutput, KillShell
+- **Web**: WebFetch, WebSearch
+- **Task Management**: TodoWrite, Task
 
 ### System Prompt Templates
 
@@ -230,6 +238,7 @@ docker-compose up -d
 - Creative Writer
 - Data Analyst
 - Technical Documenter
+- Research Assistant
 
 ## Troubleshooting
 
@@ -251,14 +260,13 @@ docker-compose up -d
 - Check DATABASE_URL in backend/.env
 - Wait for PostgreSQL health check: `docker-compose logs postgres`
 
+## Notes
+
+- The application uses the Agent SDK's built-in tool system
+- Cost calculation is automatic via SDK metrics
+- The workspace directory is mounted for agent file operations
+- PostgreSQL database persists conversations and usage logs
+
 ## License
 
 MIT
-
-## Contributing
-
-Pull requests are welcome! For major changes, please open an issue first.
-
-## Support
-
-For issues and questions, please open an issue on GitHub.
