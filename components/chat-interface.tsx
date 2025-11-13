@@ -125,6 +125,8 @@ export default function ChatInterface() {
               timestamp: event.timestamp || new Date().toISOString(),
               errors: event.is_error ? ['Error during execution'] : [],
               numTurns: event.num_turns,
+              sessionId: event.session_id,
+              permissionDenials: event.permission_denials,
               sdkMode: true,
             });
           } else {
@@ -200,6 +202,8 @@ export default function ChatInterface() {
         timestamp: result.timestamp || new Date().toISOString(),
         errors: result.is_error ? ['Error during execution'] : [],
         numTurns: result.num_turns,
+        sessionId: result.session_id,
+        permissionDenials: result.permission_denials,
         sdkMode: true,
       });
     } else {

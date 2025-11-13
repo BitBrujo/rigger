@@ -29,11 +29,24 @@ export default function DebugPanel() {
   }
 
   return (
-    <ScrollArea className="h-full">
-      <div className="p-6 space-y-4">
+    <div className="h-full flex flex-col">
+      <div className="p-4 border-b">
         <h2 className="text-lg font-semibold">Debug Info</h2>
+      </div>
 
-        {/* Key Metrics */}
+      <Tabs defaultValue="metrics" className="flex-1 flex flex-col">
+        <TabsList className="grid w-full grid-cols-4 mx-4 mt-2">
+          <TabsTrigger value="metrics">Metrics</TabsTrigger>
+          <TabsTrigger value="mcp" disabled={!sdkMode}>MCP</TabsTrigger>
+          <TabsTrigger value="sessions" disabled={!sdkMode}>Sessions</TabsTrigger>
+          <TabsTrigger value="raw">Raw</TabsTrigger>
+        </TabsList>
+
+        {/* METRICS TAB */}
+        <TabsContent value="metrics" className="flex-1">
+          <ScrollArea className="h-full">
+            <div className="p-4 space-y-4">
+              {/* Key Metrics */}
         <div className="grid grid-cols-2 gap-2">
           <Card>
             <CardContent className="pt-4 pb-3">
@@ -240,75 +253,212 @@ export default function DebugPanel() {
           </>
         )}
 
-        <Separator />
+            </div>
+          </ScrollArea>
+        </TabsContent>
 
-        {/* Raw Response */}
-        <Tabs defaultValue="formatted" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="formatted">Formatted</TabsTrigger>
-            <TabsTrigger value="raw">Raw JSON</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="formatted" className="space-y-3">
-            {debugInfo.sdkMode ? (
+        {/* MCP TAB */}
+        <TabsContent value="mcp" className="flex-1">
+          <ScrollArea className="h-full">
+            <div className="p-4 space-y-4">
               <div>
-                <p className="text-sm text-muted-foreground">
-                  Agent SDK doesn't expose raw API responses. Check usage metrics above for detailed information.
+                <h3 className="text-sm font-semibold mb-2">MCP Resources</h3>
+                <p className="text-xs text-muted-foreground mb-4">
+                  View resources available from configured MCP servers
                 </p>
               </div>
-            ) : debugInfo.rawResponse ? (
-              <>
-                <div>
-                  <p className="text-xs font-medium mb-1">ID</p>
-                  <p className="text-xs font-mono text-muted-foreground">{debugInfo.rawResponse.id}</p>
-                </div>
 
-                <div>
-                  <p className="text-xs font-medium mb-1">Model</p>
-                  <Badge variant="outline" className="text-xs">
-                    {debugInfo.rawResponse.model}
-                  </Badge>
+              {Object.keys(config.mcpServers || {}).length === 0 ? (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    No MCP servers configured. Add MCP servers in the configuration panel to see available resources.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <div className="space-y-3">
+                  {Object.entries(config.mcpServers || {}).map(([name, serverConfig]: [string, any]) => (
+                    <Card key={name}>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm flex items-center justify-between">
+                          <span>{name}</span>
+                          <Badge variant="outline" className="text-xs">MCP Server</Badge>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2 text-xs">
+                          <div>
+                            <span className="font-medium">Command:</span>
+                            <code className="ml-2 text-muted-foreground">{serverConfig.command}</code>
+                          </div>
+                          {serverConfig.args && serverConfig.args.length > 0 && (
+                            <div>
+                              <span className="font-medium">Args:</span>
+                              <code className="ml-2 text-muted-foreground">{serverConfig.args.join(' ')}</code>
+                            </div>
+                          )}
+                          {serverConfig.env && Object.keys(serverConfig.env).length > 0 && (
+                            <div>
+                              <span className="font-medium">Environment:</span>
+                              <div className="ml-2 mt-1 space-y-1">
+                                {Object.entries(serverConfig.env).map(([key, value]: [string, any]) => (
+                                  <div key={key} className="text-muted-foreground">
+                                    {key}: {typeof value === 'string' && value.length > 20 ? '***' : String(value)}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <Alert className="mt-3">
+                          <AlertCircle className="h-3 w-3" />
+                          <AlertDescription className="text-xs">
+                            Use ListMcpResources and ReadMcpResource tools during agent execution to interact with this server
+                          </AlertDescription>
+                        </Alert>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
+              )}
+            </div>
+          </ScrollArea>
+        </TabsContent>
 
-                <div>
-                  <p className="text-xs font-medium mb-1">Role</p>
-                  <Badge variant="outline" className="text-xs">
-                    {debugInfo.rawResponse.role}
-                  </Badge>
+        {/* SESSIONS TAB */}
+        <TabsContent value="sessions" className="flex-1">
+          <ScrollArea className="h-full">
+            <div className="p-4 space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold mb-2">Session Management</h3>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Track and manage Agent SDK sessions
+                </p>
+              </div>
+
+              {debugInfo.sessionId ? (
+                <div className="space-y-3">
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm">Current Session</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <div>
+                        <p className="text-xs font-medium">Session ID</p>
+                        <code className="text-xs text-muted-foreground break-all">{debugInfo.sessionId}</code>
+                      </div>
+                      {debugInfo.numTurns && (
+                        <div>
+                          <p className="text-xs font-medium">Turns Completed</p>
+                          <Badge variant="outline">{debugInfo.numTurns}</Badge>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription className="text-xs">
+                      <strong>Session Controls:</strong><br />
+                      • Use <code>continueSession</code> to continue this session<br />
+                      • Use <code>resumeSessionId</code> to resume from a specific point<br />
+                      • Use <code>forkSession</code> to create a branch
+                    </AlertDescription>
+                  </Alert>
                 </div>
+              ) : (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    No active session. Sessions are created automatically in SDK mode when you send messages.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          </ScrollArea>
+        </TabsContent>
 
-                <div>
-                  <p className="text-xs font-medium mb-1">Content Blocks</p>
-                  <p className="text-xs text-muted-foreground">
-                    {debugInfo.rawResponse.content?.length || 0} blocks
-                  </p>
-                </div>
+        {/* RAW TAB */}
+        <TabsContent value="raw" className="flex-1">
+          <ScrollArea className="h-full">
+            <div className="p-4 space-y-4">
+              <Tabs defaultValue="formatted" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="formatted">Formatted</TabsTrigger>
+                  <TabsTrigger value="json">Raw JSON</TabsTrigger>
+                </TabsList>
 
-                {debugInfo.rawResponse.content && debugInfo.rawResponse.content.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium mb-2">Content Types</p>
-                    <div className="flex flex-wrap gap-1">
-                      {debugInfo.rawResponse.content.map((block, i) => (
-                        <Badge key={i} variant="secondary" className="text-xs">
-                          {block.type}
+                <TabsContent value="formatted" className="space-y-3 mt-4">
+                  {debugInfo.sdkMode ? (
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription className="text-xs">
+                        Agent SDK doesn't expose raw API responses. Check the Metrics tab for detailed usage information.
+                      </AlertDescription>
+                    </Alert>
+                  ) : debugInfo.rawResponse ? (
+                    <>
+                      <div>
+                        <p className="text-xs font-medium mb-1">ID</p>
+                        <p className="text-xs font-mono text-muted-foreground">{debugInfo.rawResponse.id}</p>
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-medium mb-1">Model</p>
+                        <Badge variant="outline" className="text-xs">
+                          {debugInfo.rawResponse.model}
                         </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : null}
-          </TabsContent>
+                      </div>
 
-          <TabsContent value="raw">
-            <ScrollArea className="h-[400px] w-full rounded-md border">
-              <pre className="p-4 text-xs">
-                {JSON.stringify(debugInfo.rawResponse, null, 2)}
-              </pre>
-            </ScrollArea>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </ScrollArea>
+                      <div>
+                        <p className="text-xs font-medium mb-1">Role</p>
+                        <Badge variant="outline" className="text-xs">
+                          {debugInfo.rawResponse.role}
+                        </Badge>
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-medium mb-1">Content Blocks</p>
+                        <p className="text-xs text-muted-foreground">
+                          {debugInfo.rawResponse.content?.length || 0} blocks
+                        </p>
+                      </div>
+
+                      {debugInfo.rawResponse.content && debugInfo.rawResponse.content.length > 0 && (
+                        <div>
+                          <p className="text-xs font-medium mb-2">Content Types</p>
+                          <div className="flex flex-wrap gap-1">
+                            {debugInfo.rawResponse.content.map((block, i) => (
+                              <Badge key={i} variant="secondary" className="text-xs">
+                                {block.type}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription className="text-xs">
+                        No raw response data available
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="json" className="mt-4">
+                  <ScrollArea className="h-[500px] w-full rounded-md border">
+                    <pre className="p-4 text-xs">
+                      {JSON.stringify(debugInfo.rawResponse || debugInfo, null, 2)}
+                    </pre>
+                  </ScrollArea>
+                </TabsContent>
+              </Tabs>
+            </div>
+          </ScrollArea>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }

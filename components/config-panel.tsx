@@ -362,6 +362,48 @@ export default function ConfigPanel() {
                 </AlertDescription>
               </Alert>
             </div>
+
+            {/* Hook Configuration */}
+            <Separator />
+            <div className="space-y-3">
+              <div>
+                <Label className="text-base font-medium">Hooks</Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Intercept and modify agent behavior at specific lifecycle events
+                </p>
+              </div>
+
+              <JsonEditor
+                value={config.hooks || {}}
+                onChange={(value) => setConfig({ hooks: value })}
+                placeholder={`{
+  "pre_tool_use": {
+    "pattern": "^Bash$",
+    "action": "warn"
+  },
+  "on_budget_exceeded": {
+    "action": "stop"
+  }
+}`}
+                rows={10}
+              />
+
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="text-xs space-y-2">
+                  <div><strong>Available Hook Events:</strong></div>
+                  <ul className="list-disc list-inside space-y-1 text-xs">
+                    <li><code>pre_tool_use</code> - Before tool execution</li>
+                    <li><code>post_tool_use</code> - After tool execution</li>
+                    <li><code>on_permission_denied</code> - When permission is denied</li>
+                    <li><code>on_budget_exceeded</code> - When budget limit reached</li>
+                    <li><code>on_turn_start</code> - Start of each turn</li>
+                    <li><code>on_turn_end</code> - End of each turn</li>
+                  </ul>
+                  <div><strong>Actions:</strong> <code>warn</code>, <code>block</code>, <code>log</code>, <code>stop</code></div>
+                </AlertDescription>
+              </Alert>
+            </div>
           </>
         )}
 
