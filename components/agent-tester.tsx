@@ -61,7 +61,7 @@ export default function AgentTester() {
       {/* Header */}
       <div className="border-b px-6 py-4 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Rigger</h1>
+          <h1 className="text-2xl font-bold text-primary">Rigger</h1>
           <p className="text-sm text-muted-foreground">
             Test and debug Claude SDK configurations
           </p>

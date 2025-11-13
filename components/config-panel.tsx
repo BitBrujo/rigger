@@ -87,93 +87,94 @@ export default function ConfigPanel() {
 
             {/* Agent SDK Configuration */}
             <Card className="p-4 bg-muted/50">
-          <div className="space-y-3">
-            <div>
-              <Label className="text-base font-medium">Agent SDK Configuration</Label>
-              <p className="text-xs text-muted-foreground mt-1">
-                File operations, Bash execution, Web access, Multi-turn conversations, Automatic cost calculation
-              </p>
-            </div>
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-base font-medium">Agent SDK Configuration</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    File operations, Bash execution, Web access, Multi-turn conversations, Automatic cost calculation
+                  </p>
+                </div>
 
-            {/* Max Turns */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="max-turns" className="text-sm">Max Turns</Label>
-                <Input
-                  id="max-turns"
-                  type="number"
-                  value={config.maxTurns || 20}
-                  onChange={(e) => setConfig({ maxTurns: parseInt(e.target.value) || 20 })}
-                  className="w-20 h-7 text-xs"
-                  min={1}
-                  max={100}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">Maximum conversation turns</p>
-            </div>
+                {/* Max Turns */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="max-turns" className="text-sm">Max Turns</Label>
+                    <Input
+                      id="max-turns"
+                      type="number"
+                      value={config.maxTurns || 20}
+                      onChange={(e) => setConfig({ maxTurns: parseInt(e.target.value) || 20 })}
+                      className="w-20 h-7 text-xs"
+                      min={1}
+                      max={100}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Maximum conversation turns</p>
+                </div>
 
-            {/* Max Budget USD */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="max-budget" className="text-sm">Max Budget (USD)</Label>
-                <Input
-                  id="max-budget"
-                  type="number"
-                  value={config.maxBudgetUsd || ''}
-                  onChange={(e) => setConfig({ maxBudgetUsd: e.target.value ? parseFloat(e.target.value) : undefined })}
-                  className="w-20 h-7 text-xs"
-                  placeholder="No limit"
-                  step="0.01"
-                  min={0}
-                />
+                {/* Max Budget USD */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="max-budget" className="text-sm">Max Budget (USD)</Label>
+                    <Input
+                      id="max-budget"
+                      type="number"
+                      value={config.maxBudgetUsd || ''}
+                      onChange={(e) => setConfig({ maxBudgetUsd: e.target.value ? parseFloat(e.target.value) : undefined })}
+                      className="w-20 h-7 text-xs"
+                      placeholder="No limit"
+                      step="0.01"
+                      min={0}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Stop when cost exceeds this amount</p>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground">Stop when cost exceeds this amount</p>
-            </div>
+            </Card>
 
             {/* Permission Mode */}
-            <div className="space-y-2">
-              <Label htmlFor="permission-mode" className="text-sm">Permission Mode</Label>
-              <Select
-                value={config.permissionMode || 'acceptEdits'}
-                onValueChange={(value: any) => setConfig({ permissionMode: value })}
-              >
-                <SelectTrigger id="permission-mode" className="h-11 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="default">
-                    <div className="flex flex-col">
-                      <span className="font-medium">Default</span>
-                      <span className="text-xs text-muted-foreground">Prompt for all file/bash operations</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="acceptEdits">
-                    <div className="flex flex-col">
-                      <span className="font-medium">Accept Edits</span>
-                      <span className="text-xs text-muted-foreground">Auto-approve file edits, prompt for bash</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="bypassPermissions">
-                    <div className="flex flex-col">
-                      <span className="font-medium">Bypass Permissions</span>
-                      <span className="text-xs text-muted-foreground">Auto-approve all operations (use with caution)</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="plan">
-                    <div className="flex flex-col">
-                      <span className="font-medium">Plan Mode</span>
-                      <span className="text-xs text-muted-foreground">Agent plans before executing</span>
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-              <Alert className="mt-2">
-                <AlertCircle className="h-3 w-3" />
-                <AlertDescription className="text-xs">
-                  Controls which operations require user approval during agent execution
-                </AlertDescription>
-              </Alert>
-            </div>
+            <Card className="p-4 bg-muted/50">
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-base font-medium">Permission Mode</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Controls which operations require user approval during agent execution
+                  </p>
+                </div>
+                <Select
+                  value={config.permissionMode || 'acceptEdits'}
+                  onValueChange={(value: any) => setConfig({ permissionMode: value })}
+                >
+                  <SelectTrigger id="permission-mode" className="h-11 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">
+                      <div className="flex flex-col">
+                        <span className="font-medium">Default</span>
+                        <span className="text-xs text-muted-foreground">Prompt for all file/bash operations</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="acceptEdits">
+                      <div className="flex flex-col">
+                        <span className="font-medium">Accept Edits</span>
+                        <span className="text-xs text-muted-foreground">Auto-approve file edits, prompt for bash</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="bypassPermissions">
+                      <div className="flex flex-col">
+                        <span className="font-medium">Bypass Permissions</span>
+                        <span className="text-xs text-muted-foreground">Auto-approve all operations (use with caution)</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="plan">
+                      <div className="flex flex-col">
+                        <span className="font-medium">Plan Mode</span>
+                        <span className="text-xs text-muted-foreground">Agent plans before executing</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </Card>
 
@@ -191,29 +192,29 @@ export default function ConfigPanel() {
 
             {/* Hook Configuration */}
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-base font-medium">Hooks</Label>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Intercept and modify agent behavior at specific lifecycle events
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setConfig({ hooks: {} })}
-                  className="text-xs"
-                >
-                  Clear All
-                </Button>
+              <div>
+                <Label className="text-base font-medium">Hooks</Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Intercept and modify agent behavior at specific lifecycle events
+                </p>
               </div>
 
               {/* Hook Templates */}
               <Card className="p-3 bg-muted/30">
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Wand2 className="h-4 w-4 text-muted-foreground" />
-                    <Label className="text-sm font-medium">Quick Templates</Label>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Wand2 className="h-4 w-4 text-muted-foreground" />
+                      <Label className="text-sm font-medium">Quick Templates</Label>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setConfig({ hooks: {} })}
+                      className="text-xs h-7"
+                    >
+                      Clear All
+                    </Button>
                   </div>
 
                   {/* Category Filter */}
@@ -295,94 +296,6 @@ export default function ConfigPanel() {
                 />
               </div>
             </div>
-
-            {/* Advanced Model Parameters - Collapsible */}
-            <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
-          <CollapsibleTrigger asChild>
-            <Button variant="outline" className="w-full justify-between" size="sm">
-              <span className="text-sm">Advanced Model Parameters</span>
-              <ChevronDown className={`h-4 w-4 transition-transform ${advancedOpen ? 'rotate-180' : ''}`} />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-4 pt-4">
-              {/* Max Tokens */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="max-tokens">Max Tokens</Label>
-                  <Input
-                    id="max-tokens-input"
-                    type="number"
-                    value={config.max_tokens}
-                    onChange={(e) => setConfig({ max_tokens: parseInt(e.target.value) || 1024 })}
-                    className="w-20 h-8"
-                    min={1}
-                    max={8192}
-                  />
-                </div>
-                <Slider
-                  id="max-tokens"
-                  value={[config.max_tokens]}
-                  onValueChange={([value]) => setConfig({ max_tokens: value })}
-                  min={256}
-                  max={8192}
-                  step={256}
-                />
-              </div>
-
-              {/* Temperature */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="temperature">Temperature</Label>
-                  <Badge variant="outline">{config.temperature?.toFixed(2) || '0.70'}</Badge>
-                </div>
-                <Slider
-                  id="temperature"
-                  value={[config.temperature || 0.7]}
-                  onValueChange={([value]) => setConfig({ temperature: value })}
-                  min={0}
-                  max={1}
-                  step={0.01}
-                />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Deterministic</span>
-                  <span>Creative</span>
-                </div>
-              </div>
-
-              {/* Top P */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="top-p">Top P</Label>
-                  <Badge variant="outline">{config.top_p?.toFixed(2) || '0.90'}</Badge>
-                </div>
-                <Slider
-                  id="top-p"
-                  value={[config.top_p || 0.9]}
-                  onValueChange={([value]) => setConfig({ top_p: value })}
-                  min={0}
-                  max={1}
-                  step={0.01}
-                />
-              </div>
-
-              {/* Top K */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="top-k">Top K</Label>
-                  <Input
-                    id="top-k-input"
-                    type="number"
-                    value={config.top_k || ''}
-                    onChange={(e) => setConfig({ top_k: parseInt(e.target.value) || undefined })}
-                    className="w-20 h-8"
-                    placeholder="Auto"
-                    min={1}
-                    max={500}
-                  />
-                </div>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
           </div>
           {/* END LEFT COLUMN */}
 
@@ -479,6 +392,95 @@ export default function ConfigPanel() {
                 }
               />
             </div>
+
+            {/* Advanced Model Parameters - Collapsible */}
+            <Separator />
+            <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" className="w-full justify-between" size="sm">
+                  <span className="text-sm">Advanced Model Parameters</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${advancedOpen ? 'rotate-180' : ''}`} />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-4 pt-4">
+                {/* Max Tokens */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="max-tokens">Max Tokens</Label>
+                    <Input
+                      id="max-tokens-input"
+                      type="number"
+                      value={config.max_tokens}
+                      onChange={(e) => setConfig({ max_tokens: parseInt(e.target.value) || 1024 })}
+                      className="w-20 h-8"
+                      min={1}
+                      max={8192}
+                    />
+                  </div>
+                  <Slider
+                    id="max-tokens"
+                    value={[config.max_tokens]}
+                    onValueChange={([value]) => setConfig({ max_tokens: value })}
+                    min={256}
+                    max={8192}
+                    step={256}
+                  />
+                </div>
+
+                {/* Temperature */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="temperature">Temperature</Label>
+                    <Badge variant="outline">{config.temperature?.toFixed(2) || '0.70'}</Badge>
+                  </div>
+                  <Slider
+                    id="temperature"
+                    value={[config.temperature || 0.7]}
+                    onValueChange={([value]) => setConfig({ temperature: value })}
+                    min={0}
+                    max={1}
+                    step={0.01}
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Deterministic</span>
+                    <span>Creative</span>
+                  </div>
+                </div>
+
+                {/* Top P */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="top-p">Top P</Label>
+                    <Badge variant="outline">{config.top_p?.toFixed(2) || '0.90'}</Badge>
+                  </div>
+                  <Slider
+                    id="top-p"
+                    value={[config.top_p || 0.9]}
+                    onValueChange={([value]) => setConfig({ top_p: value })}
+                    min={0}
+                    max={1}
+                    step={0.01}
+                  />
+                </div>
+
+                {/* Top K */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="top-k">Top K</Label>
+                    <Input
+                      id="top-k-input"
+                      type="number"
+                      value={config.top_k || ''}
+                      onChange={(e) => setConfig({ top_k: parseInt(e.target.value) || undefined })}
+                      className="w-20 h-8"
+                      placeholder="Auto"
+                      min={1}
+                      max={500}
+                    />
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           </div>
           {/* END RIGHT COLUMN */}
         </div>
