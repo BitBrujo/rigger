@@ -26,6 +26,8 @@ export default function ChatInterface() {
     setDebugInfo,
     conversationId,
     sdkMode,
+    addCost,
+    resetAccumulatedCost,
   } = useAgentStore();
 
   const [input, setInput] = useState('');
@@ -106,6 +108,8 @@ export default function ChatInterface() {
 
           // Handle SDK mode response (with automatic cost calculation)
           if (sdkMode) {
+            const cost = event.cost || 0;
+            addCost(cost);
             setDebugInfo({
               rawResponse: null, // SDK doesn't expose raw response
               latency,
@@ -116,7 +120,7 @@ export default function ChatInterface() {
                 cacheCreation: event.usage?.cache_creation_tokens,
                 cacheRead: event.usage?.cache_read_tokens,
               },
-              cost: event.cost || 0, // SDK provides automatic cost
+              cost,
               stopReason: event.is_error ? 'error' : 'end_turn',
               timestamp: event.timestamp || new Date().toISOString(),
               errors: event.is_error ? ['Error during execution'] : [],
@@ -179,6 +183,8 @@ export default function ChatInterface() {
         content: text,
       });
 
+      const cost = result.cost || 0;
+      addCost(cost);
       setDebugInfo({
         rawResponse: null,
         latency,
@@ -189,7 +195,7 @@ export default function ChatInterface() {
           cacheCreation: result.usage?.cache_creation_input_tokens,
           cacheRead: result.usage?.cache_read_input_tokens,
         },
-        cost: result.cost || 0, // SDK provides automatic cost
+        cost,
         stopReason: result.is_error ? 'error' : 'end_turn',
         timestamp: result.timestamp || new Date().toISOString(),
         errors: result.is_error ? ['Error during execution'] : [],
@@ -281,7 +287,15 @@ export default function ChatInterface() {
             <Download className="w-4 h-4 mr-1" />
             Export
           </Button>
-          <Button size="sm" variant="ghost" onClick={clearMessages} disabled={isStreaming}>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              clearMessages();
+              resetAccumulatedCost();
+            }}
+            disabled={isStreaming}
+          >
             Clear
           </Button>
         </div>

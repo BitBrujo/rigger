@@ -21,7 +21,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ApiClient } from '@/lib/api-client';
-import { Preset } from '@/lib/types';
+import { Preset, ALL_SDK_TOOLS } from '@/lib/types';
+import { ToolSelector } from './tool-selector';
+import { JsonEditor } from './ui/json-editor';
 
 export default function ConfigPanel() {
   const { config, setConfig, resetConfig, sdkMode, setSdkMode } = useAgentStore();
@@ -118,10 +120,45 @@ export default function ConfigPanel() {
             />
           </div>
           {sdkMode && (
-            <div className="mt-3 pt-3 border-t border-border/50">
+            <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
               <p className="text-xs text-muted-foreground">
                 Agent SDK features: File operations, Bash execution, Web access, Multi-turn conversations, Automatic cost calculation
               </p>
+
+              {/* Max Turns */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="max-turns" className="text-sm">Max Turns</Label>
+                  <Input
+                    id="max-turns"
+                    type="number"
+                    value={config.maxTurns || 20}
+                    onChange={(e) => setConfig({ maxTurns: parseInt(e.target.value) || 20 })}
+                    className="w-20 h-7 text-xs"
+                    min={1}
+                    max={100}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">Maximum conversation turns</p>
+              </div>
+
+              {/* Max Budget USD */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="max-budget" className="text-sm">Max Budget (USD)</Label>
+                  <Input
+                    id="max-budget"
+                    type="number"
+                    value={config.maxBudgetUsd || ''}
+                    onChange={(e) => setConfig({ maxBudgetUsd: e.target.value ? parseFloat(e.target.value) : undefined })}
+                    className="w-20 h-7 text-xs"
+                    placeholder="No limit"
+                    step="0.01"
+                    min={0}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">Stop when cost exceeds this amount</p>
+              </div>
             </div>
           )}
         </Card>
@@ -258,17 +295,75 @@ export default function ConfigPanel() {
           />
         </div>
 
-        {/* Tools Section */}
-        <Separator />
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label>Tools</Label>
-            <Badge variant="secondary">{config.tools?.length || 0} defined</Badge>
-          </div>
-          <Button size="sm" variant="outline" className="w-full">
-            Manage Tools
-          </Button>
-        </div>
+        {/* Agent SDK Tools Section */}
+        {sdkMode && (
+          <>
+            <Separator />
+            <div className="space-y-3">
+              <div>
+                <Label className="text-base font-medium">Agent SDK Tools</Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Select which built-in tools the agent can use during execution
+                </p>
+              </div>
+              <ToolSelector
+                selectedTools={config.allowedTools || [...ALL_SDK_TOOLS]}
+                onChange={(tools) => setConfig({ allowedTools: tools })}
+                disabled={false}
+              />
+            </div>
+
+            {/* MCP Server Configuration */}
+            <Separator />
+            <div className="space-y-3">
+              <div>
+                <Label className="text-base font-medium">MCP Servers</Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Configure Model Context Protocol servers for external tool integration
+                </p>
+              </div>
+
+              <JsonEditor
+                value={config.mcpServers || {}}
+                onChange={(value) => setConfig({ mcpServers: value })}
+                placeholder={`{
+  "server-name": {
+    "command": "node",
+    "args": ["path/to/server.js"],
+    "env": { "API_KEY": "..." }
+  }
+}`}
+                rows={8}
+              />
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="strict-mcp"
+                    checked={config.strictMcpConfig || false}
+                    onCheckedChange={(checked) => setConfig({ strictMcpConfig: checked })}
+                  />
+                  <Label htmlFor="strict-mcp" className="text-sm">
+                    Strict MCP Config
+                  </Label>
+                </div>
+                <p className="text-xs text-muted-foreground pl-6">
+                  Fail if MCP server connection fails (otherwise continues without MCP)
+                </p>
+              </div>
+
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="text-xs">
+                  <strong>Example MCP Server:</strong><br />
+                  <code className="text-xs">
+                    {`{ "filesystem": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path"] } }`}
+                  </code>
+                </AlertDescription>
+              </Alert>
+            </div>
+          </>
+        )}
 
         {/* Stop Sequences */}
         <div className="space-y-2">

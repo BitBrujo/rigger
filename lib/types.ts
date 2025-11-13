@@ -1,4 +1,7 @@
-// Anthropic SDK types
+// Agent SDK Only Types
+// Messages API support removed
+
+// Message types
 export interface Message {
   role: 'user' | 'assistant';
   content: string | ContentBlock[];
@@ -14,69 +17,70 @@ export interface ContentBlock {
   content?: string | any[];
 }
 
-export interface Tool {
-  name: string;
-  description: string;
-  input_schema: {
-    type: 'object';
-    properties: Record<string, any>;
-    required?: string[];
-  };
+// MCP Server Configuration
+export interface McpServerConfig {
+  command: string;
+  args?: string[];
+  env?: Record<string, string>;
 }
 
-export interface AgentConfig {
-  model: 'claude-3-5-sonnet-20241022' | 'claude-3-5-haiku-20241022' | 'claude-3-opus-20240229';
-  max_tokens: number;
-  temperature?: number;
-  top_p?: number;
-  top_k?: number;
-  system?: string;
-  tools?: Tool[];
-  stop_sequences?: string[];
+// Custom Agent Definition
+export interface AgentDefinition {
+  systemPrompt?: string;
+  allowedTools?: string[];
+  disallowedTools?: string[];
 }
 
-export interface AgentResponse {
-  id: string;
-  type: 'message';
-  role: 'assistant';
-  content: ContentBlock[];
-  model: string;
-  stop_reason: 'end_turn' | 'max_tokens' | 'stop_sequence' | 'tool_use' | null;
-  stop_sequence: string | null;
-  usage: {
-    input_tokens: number;
-    output_tokens: number;
-  };
+// Hook Configuration
+export interface HookConfig {
+  event: string;
+  pattern: string | Record<string, any>;
 }
 
-export interface StreamEvent {
-  type: 'message' | 'text' | 'content_block_delta' | 'done' | 'error' | 'system';
-  data?: any;
-  latency?: number;
-  timestamp?: string;
-  error?: string;
-  // Agent SDK specific
-  usage?: {
-    input_tokens: number;
-    output_tokens: number;
-    cache_creation_tokens?: number;
-    cache_read_tokens?: number;
-  };
-  cost?: number;
-  num_turns?: number;
-  is_error?: boolean;
+// Agent SDK Configuration (30+ parameters)
+export interface AgentSDKConfig {
+  // Core Settings
+  model: 'claude-3-5-sonnet-20241022' | 'claude-3-5-haiku-20241022' | 'claude-3-opus-20240229' | string;
+  systemPrompt?: string;
+
+  // Agent Behavior
+  maxTurns: number;
+  maxBudgetUsd?: number;
+  maxThinkingTokens?: number | null;
+
+  // Permissions & Security
+  permissionMode: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan';
+  allowDangerouslySkipPermissions?: boolean;
+
+  // Tools (18 built-in tools available)
+  allowedTools: string[];
+  disallowedTools?: string[];
+
+  // Workspace
+  workingDirectory: string;
+  additionalDirectories?: string[];
+  env?: Record<string, string>;
+  executable?: 'bun' | 'deno' | 'node';
+  executableArgs?: string[];
+
+  // Session Management
+  continueSession?: boolean;
+  resumeSessionId?: string;
+  resumeAtMessageId?: string;
+  forkSession?: boolean;
+
+  // Advanced
+  fallbackModel?: string;
+  mcpServers?: Record<string, McpServerConfig>;
+  strictMcpConfig?: boolean;
+  customAgents?: Record<string, AgentDefinition>;
+  hooks?: Record<string, any>;
+  plugins?: any[];
 }
 
-// Agent SDK message types
-export type SDKMessageType =
-  | 'system'
-  | 'user'
-  | 'assistant'
-  | 'result'
-  | 'stream_event';
-
+// Stream event types from Agent SDK
 export interface SDKStreamEvent {
-  type: SDKMessageType;
+  type: 'system' | 'user' | 'assistant' | 'result' | 'stream_event';
   data?: any;
   event?: any;
   message?: any;
@@ -89,7 +93,11 @@ export interface SDKStreamEvent {
   total_cost_usd?: number;
   num_turns?: number;
   is_error?: boolean;
-  permission_denials?: any[];
+  permission_denials?: Array<{
+    tool_name: string;
+    tool_use_id: string;
+    tool_input: any;
+  }>;
   session_id?: string;
   subtype?: string;
 }
@@ -100,7 +108,44 @@ export interface Conversation {
   title: string;
   created_at: string;
   updated_at: string;
-  config: AgentConfig;
+
+  // Core SDK settings
+  model: string;
+  system_prompt?: string;
+  max_turns: number;
+  max_budget_usd?: number;
+  max_thinking_tokens?: number;
+
+  // Permissions & Security
+  permission_mode: string;
+  allow_dangerous_skip_permissions: boolean;
+
+  // Tools
+  allowed_tools: string[];
+  disallowed_tools: string[];
+
+  // Workspace
+  working_directory: string;
+  additional_directories: string[];
+  environment_vars: Record<string, string>;
+  executable: string;
+  executable_args: string[];
+
+  // Session Management
+  continue_session: boolean;
+  resume_session_id?: string;
+  resume_at_message_id?: string;
+  fork_session: boolean;
+
+  // Advanced
+  fallback_model?: string;
+  mcp_servers: Record<string, McpServerConfig>;
+  strict_mcp_config: boolean;
+  custom_agents: Record<string, AgentDefinition>;
+  hooks: Record<string, any>;
+  plugins: any[];
+
+  // Conversation history
   messages: Message[];
 }
 
@@ -108,9 +153,44 @@ export interface Preset {
   id: number;
   name: string;
   description: string | null;
-  config: AgentConfig;
   created_at: string;
   updated_at: string;
+
+  // Core SDK settings
+  model: string;
+  system_prompt?: string;
+  max_turns: number;
+  max_budget_usd?: number;
+  max_thinking_tokens?: number;
+
+  // Permissions & Security
+  permission_mode: string;
+  allow_dangerous_skip_permissions: boolean;
+
+  // Tools
+  allowed_tools: string[];
+  disallowed_tools: string[];
+
+  // Workspace
+  working_directory: string;
+  additional_directories: string[];
+  environment_vars: Record<string, string>;
+  executable: string;
+  executable_args: string[];
+
+  // Session Management
+  continue_session: boolean;
+  resume_session_id?: string;
+  resume_at_message_id?: string;
+  fork_session: boolean;
+
+  // Advanced
+  fallback_model?: string;
+  mcp_servers: Record<string, McpServerConfig>;
+  strict_mcp_config: boolean;
+  custom_agents: Record<string, AgentDefinition>;
+  hooks: Record<string, any>;
+  plugins: any[];
 }
 
 export interface UsageLog {
@@ -119,17 +199,17 @@ export interface UsageLog {
   model: string;
   input_tokens: number;
   output_tokens: number;
-  latency_ms: number | null;
+  cache_creation_tokens: number;
+  cache_read_tokens: number;
   cost_usd: number | null;
+  latency_ms: number | null;
+  api_latency_ms: number | null;
+  num_turns: number | null;
   stop_reason: string | null;
+  permission_denials: any[];
+  tools_used: string[];
   error: string | null;
   created_at: string;
-  // Agent SDK specific fields
-  num_turns?: number | null;
-  api_latency_ms?: number | null;
-  cache_creation_tokens?: number | null;
-  cache_read_tokens?: number | null;
-  permission_denials?: any | null;
 }
 
 export interface UsageStats {
@@ -145,7 +225,6 @@ export interface UsageStats {
 
 // UI State types
 export interface DebugInfo {
-  rawResponse: AgentResponse | null;
   latency: number;
   tokens: {
     input: number;
@@ -158,7 +237,6 @@ export interface DebugInfo {
   stopReason: string;
   timestamp: string;
   errors: string[];
-  // Agent SDK specific fields
   numTurns?: number;
   apiLatency?: number;
   permissionDenials?: Array<{
@@ -166,17 +244,88 @@ export interface DebugInfo {
     tool_use_id: string;
     tool_input: any;
   }>;
-  sdkMode?: boolean; // Track which API was used
+  sessionId?: string;
+  toolsUsed?: string[];
 }
 
-export const DEFAULT_CONFIG: AgentConfig = {
+// Default configuration for Agent SDK
+export const DEFAULT_SDK_CONFIG: AgentSDKConfig = {
   model: 'claude-3-5-sonnet-20241022',
-  max_tokens: 1024,
-  temperature: 0.7,
-  top_p: 0.9,
-  system: 'You are a helpful AI assistant.',
-  tools: [],
+  systemPrompt: 'You are a helpful AI assistant with access to file operations, web browsing, and code execution.',
+  maxTurns: 20,
+  permissionMode: 'acceptEdits',
+  allowDangerouslySkipPermissions: false,
+  allowedTools: [
+    'Read',
+    'Write',
+    'Edit',
+    'Glob',
+    'Grep',
+    'Bash',
+    'BashOutput',
+    'KillShell',
+    'WebFetch',
+    'WebSearch',
+    'TodoWrite',
+    'Task',
+  ],
+  disallowedTools: [],
+  workingDirectory: '/app/workspace',
+  additionalDirectories: [],
+  env: {},
+  executable: 'node',
+  executableArgs: [],
+  continueSession: false,
+  forkSession: false,
+  mcpServers: {},
+  strictMcpConfig: false,
+  customAgents: {},
+  hooks: {},
+  plugins: [],
 };
+
+// All 18 built-in Agent SDK tools
+export const ALL_SDK_TOOLS = [
+  // File Operations
+  'Read',
+  'Write',
+  'Edit',
+  'Glob',
+  'Grep',
+  'NotebookEdit',
+
+  // Execution
+  'Bash',
+  'BashOutput',
+  'KillShell',
+
+  // Web
+  'WebFetch',
+  'WebSearch',
+
+  // Task Management
+  'TodoWrite',
+  'Task',
+
+  // MCP Integration
+  'ListMcpResources',
+  'ReadMcpResource',
+
+  // Planning & Interaction
+  'ExitPlanMode',
+  'TimeMachine',
+  'MultipleChoiceQuestion',
+] as const;
+
+// Tool categories for grouped UI
+export const TOOL_CATEGORIES = {
+  'File Operations': ['Read', 'Write', 'Edit', 'Glob', 'Grep', 'NotebookEdit'],
+  'Execution': ['Bash', 'BashOutput', 'KillShell'],
+  'Web': ['WebFetch', 'WebSearch'],
+  'Task Management': ['TodoWrite', 'Task'],
+  'MCP Integration': ['ListMcpResources', 'ReadMcpResource'],
+  'Planning & Interaction': ['ExitPlanMode', 'TimeMachine', 'MultipleChoiceQuestion'],
+} as const;
 
 export const MODEL_OPTIONS = [
   {
@@ -196,25 +345,66 @@ export const MODEL_OPTIONS = [
   },
 ] as const;
 
+export const PERMISSION_MODE_OPTIONS = [
+  {
+    value: 'default' as const,
+    label: 'Default',
+    description: 'Prompt user for permission on sensitive operations',
+  },
+  {
+    value: 'acceptEdits' as const,
+    label: 'Accept Edits',
+    description: 'Automatically accept file edit operations',
+  },
+  {
+    value: 'bypassPermissions' as const,
+    label: 'Bypass Permissions',
+    description: 'Skip all permission checks (use with caution)',
+  },
+  {
+    value: 'plan' as const,
+    label: 'Plan Mode',
+    description: 'Planning mode without execution',
+  },
+] as const;
+
+export const EXECUTABLE_OPTIONS = [
+  {
+    value: 'node' as const,
+    label: 'Node.js',
+    description: 'Use Node.js runtime',
+  },
+  {
+    value: 'bun' as const,
+    label: 'Bun',
+    description: 'Use Bun runtime (faster)',
+  },
+  {
+    value: 'deno' as const,
+    label: 'Deno',
+    description: 'Use Deno runtime',
+  },
+] as const;
+
 export const SYSTEM_PROMPT_TEMPLATES = [
   {
-    name: 'Default Assistant',
-    prompt: 'You are a helpful AI assistant.',
+    name: 'Full Agent',
+    prompt: 'You are a helpful AI assistant with access to file operations, web browsing, and code execution.',
   },
   {
     name: 'Code Assistant',
-    prompt: 'You are an expert software engineer. Provide clear, concise, and well-documented code solutions.',
+    prompt: 'You are an expert software engineer assistant. Help with coding, debugging, and development tasks. You have access to file reading/writing and code execution.',
   },
   {
-    name: 'Creative Writer',
-    prompt: 'You are a creative writer. Write engaging, imaginative, and compelling content.',
+    name: 'Research Agent',
+    prompt: 'You are a research assistant. Gather information from the web and files, analyze data, and provide comprehensive summaries.',
+  },
+  {
+    name: 'DevOps Agent',
+    prompt: 'You are a DevOps expert. Help with system administration, deployment, monitoring, and infrastructure tasks.',
   },
   {
     name: 'Data Analyst',
-    prompt: 'You are a data analyst. Provide clear insights, identify patterns, and explain findings in an accessible way.',
-  },
-  {
-    name: 'Technical Documenter',
-    prompt: 'You are a technical writer. Create clear, comprehensive documentation with examples.',
+    prompt: 'You are a data analyst. Read and analyze data files, identify patterns, create visualizations, and explain findings.',
   },
 ];

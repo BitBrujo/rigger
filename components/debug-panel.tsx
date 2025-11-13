@@ -7,10 +7,15 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Clock, DollarSign, Zap, AlertCircle } from 'lucide-react';
+import { Clock, DollarSign, Zap, AlertCircle, TrendingUp } from 'lucide-react';
 
 export default function DebugPanel() {
-  const { debugInfo } = useAgentStore();
+  const { debugInfo, config, accumulatedCost, sdkMode } = useAgentStore();
+
+  const budgetRemaining = config.maxBudgetUsd ? config.maxBudgetUsd - accumulatedCost : null;
+  const budgetPercentage = config.maxBudgetUsd ? (accumulatedCost / config.maxBudgetUsd) * 100 : null;
+  const isApproachingLimit = budgetPercentage !== null && budgetPercentage > 80;
+  const isOverBudget = budgetPercentage !== null && budgetPercentage >= 100;
 
   if (!debugInfo) {
     return (
@@ -86,6 +91,83 @@ export default function DebugPanel() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Budget Tracking (SDK Mode only) */}
+        {sdkMode && (
+          <>
+            <Separator />
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-medium">Budget Tracking</h3>
+                {config.maxBudgetUsd && (
+                  <Badge variant={isOverBudget ? 'destructive' : isApproachingLimit ? 'default' : 'secondary'}>
+                    {budgetPercentage?.toFixed(1)}% used
+                  </Badge>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <Card>
+                  <CardContent className="pt-4 pb-3">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Total Spent</p>
+                        <p className="text-lg font-semibold">${accumulatedCost.toFixed(6)}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {config.maxBudgetUsd ? (
+                  <Card className={isOverBudget ? 'border-destructive' : isApproachingLimit ? 'border-yellow-500' : ''}>
+                    <CardContent className="pt-4 pb-3">
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="w-4 h-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Remaining</p>
+                          <p className={`text-lg font-semibold ${isOverBudget ? 'text-destructive' : isApproachingLimit ? 'text-yellow-600' : ''}`}>
+                            ${Math.max(0, budgetRemaining || 0).toFixed(6)}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card>
+                    <CardContent className="pt-4 pb-3">
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="w-4 h-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Budget Limit</p>
+                          <p className="text-sm text-muted-foreground">No limit set</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              {isOverBudget && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    Budget exceeded! You've spent ${accumulatedCost.toFixed(6)} of ${config.maxBudgetUsd?.toFixed(6)}.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {isApproachingLimit && !isOverBudget && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    Warning: {budgetPercentage?.toFixed(1)}% of budget used. ${budgetRemaining?.toFixed(6)} remaining.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          </>
+        )}
 
         {/* SDK Mode Indicator */}
         {debugInfo.sdkMode !== undefined && (
