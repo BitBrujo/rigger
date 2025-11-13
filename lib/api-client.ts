@@ -3,7 +3,7 @@ import { AgentConfig, Message, AgentResponse, Conversation, Preset, UsageLog, Us
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 export class ApiClient {
-  // Agent endpoints
+  // Agent endpoints (Messages API)
   static async sendMessage(messages: Message[], config: AgentConfig, conversationId?: number) {
     const response = await fetch(`${API_BASE_URL}/agent/message`, {
       method: 'POST',
@@ -14,6 +14,22 @@ export class ApiClient {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to send message');
+    }
+
+    return response.json();
+  }
+
+  // Agent SDK endpoints
+  static async sendAgentMessage(messages: Message[], config: AgentConfig, conversationId?: number) {
+    const response = await fetch(`${API_BASE_URL}/agent-sdk/message`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages, config, conversationId }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to send agent message');
     }
 
     return response.json();
@@ -34,6 +50,49 @@ export class ApiClient {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to stream message');
+    }
+
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+
+    if (!reader) throw new Error('No reader available');
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value);
+      const lines = chunk.split('\n');
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          try {
+            const event = JSON.parse(data);
+            onEvent(event);
+          } catch (e) {
+            console.error('Failed to parse SSE data:', e);
+          }
+        }
+      }
+    }
+  }
+
+  static async streamAgentMessage(
+    messages: Message[],
+    config: AgentConfig,
+    conversationId: number | undefined,
+    onEvent: (event: any) => void
+  ) {
+    const response = await fetch(`${API_BASE_URL}/agent-sdk/stream`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages, config, conversationId }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to stream agent message');
     }
 
     const reader = response.body?.getReader();

@@ -13,6 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,7 +24,7 @@ import { ApiClient } from '@/lib/api-client';
 import { Preset } from '@/lib/types';
 
 export default function ConfigPanel() {
-  const { config, setConfig, resetConfig } = useAgentStore();
+  const { config, setConfig, resetConfig, sdkMode, setSdkMode } = useAgentStore();
   const [presets, setPresets] = useState<Preset[]>([]);
   const [savingPreset, setSavingPreset] = useState(false);
 
@@ -93,6 +94,37 @@ export default function ConfigPanel() {
             </Button>
           </div>
         </div>
+
+        <Separator />
+
+        {/* SDK Mode Toggle */}
+        <Card className="p-4 bg-muted/50">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="sdk-mode" className="text-base font-medium">
+                Agent SDK Mode
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                {sdkMode
+                  ? 'Using Agent SDK with built-in tools & containerization'
+                  : 'Using standard Messages API'
+                }
+              </p>
+            </div>
+            <Switch
+              id="sdk-mode"
+              checked={sdkMode}
+              onCheckedChange={setSdkMode}
+            />
+          </div>
+          {sdkMode && (
+            <div className="mt-3 pt-3 border-t border-border/50">
+              <p className="text-xs text-muted-foreground">
+                Agent SDK features: File operations, Bash execution, Web access, Multi-turn conversations, Automatic cost calculation
+              </p>
+            </div>
+          )}
+        </Card>
 
         <Separator />
 

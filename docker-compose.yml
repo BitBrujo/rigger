@@ -26,11 +26,13 @@ services:
       DATABASE_URL: postgresql://agent_user:agent_pass@postgres:5432/agent_db
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       NODE_ENV: development
+      AGENT_WORKSPACE: /app/workspace
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
       - ./backend/src:/app/src
+      - ./workspace:/app/workspace
       - /app/node_modules
 
 volumes:

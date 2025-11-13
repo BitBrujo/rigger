@@ -32,6 +32,10 @@ interface AgentStore {
   setIsLoading: (loading: boolean) => void;
   error: string | null;
   setError: (error: string | null) => void;
+
+  // Agent SDK mode
+  sdkMode: boolean;
+  setSdkMode: (mode: boolean) => void;
 }
 
 export const useAgentStore = create<AgentStore>((set) => ({
@@ -71,4 +75,8 @@ export const useAgentStore = create<AgentStore>((set) => ({
   setIsLoading: (loading) => set({ isLoading: loading }),
   error: null,
   setError: (error) => set({ error }),
+
+  // Agent SDK
+  sdkMode: false,
+  setSdkMode: (mode) => set({ sdkMode: mode }),
 }));

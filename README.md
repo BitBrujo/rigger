@@ -1,15 +1,16 @@
 # Claude Agent SDK Tester
 
-A Next.js application for testing and debugging Claude Agent SDK configurations with real-time streaming support.
+A Next.js application for testing and debugging **both** the Claude Agent SDK and Messages API configurations with real-time streaming support.
 
 ## Features
 
+- **Dual API Support**: Toggle between Agent SDK (with built-in tools) and Messages API
 - **Model Comparison**: Test Claude 3.5 Sonnet, Haiku, and Opus side-by-side
-- **Parameter Testing**: Live adjustment of temperature, top_p, top_k, and max tokens
+- **Parameter Testing**: Live adjustment of temperature and max tokens
 - **System Prompts**: Template library with custom prompt editing
 - **Streaming Support**: Toggle between streaming and batch response modes
-- **Tool Management**: Create and test custom tools
-- **Debug Panel**: Real-time metrics, token usage, costs, and raw API responses
+- **Agent SDK Tools**: 18 built-in tools including file operations, Bash execution, web access
+- **Debug Panel**: Real-time metrics, token usage, costs, cache stats, and API responses
 - **Persistence**: Save conversations, configuration presets, and usage analytics
 - **Three-Panel Layout**: Config (left), Chat (center), Debug (right)
 
@@ -18,7 +19,9 @@ A Next.js application for testing and debugging Claude Agent SDK configurations 
 - **Frontend**: Next.js 15, React 19, TypeScript, shadcn/ui, Tailwind CSS
 - **Backend**: Express.js, Node.js (Docker)
 - **Database**: PostgreSQL (Docker)
-- **SDK**: @anthropic-ai/sdk (latest)
+- **SDKs**:
+  - `@anthropic-ai/claude-agent-sdk` (Agent SDK with tools & containerization)
+  - `@anthropic-ai/sdk` (Standard Messages API)
 - **State**: Zustand
 
 ## Getting Started

@@ -91,7 +91,7 @@ router.post('/stream', async (req: Request, res: Response) => {
       res.write(`data: ${JSON.stringify({ type: 'text', data: text })}\n\n`);
     });
 
-    stream.on('content_block_delta', (delta) => {
+    stream.on('contentBlockDelta' as any, (delta: any) => {
       res.write(`data: ${JSON.stringify({ type: 'content_block_delta', data: delta })}\n\n`);
     });
 

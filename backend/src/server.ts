@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import agentRouter from './routes/agent';
+import agentSdkRouter from './routes/agent-sdk';
 import conversationsRouter from './routes/conversations';
 import presetsRouter from './routes/presets';
 import analyticsRouter from './routes/analytics';
@@ -22,6 +23,7 @@ app.get('/health', (req, res) => {
 
 // Routes
 app.use('/api/agent', agentRouter);
+app.use('/api/agent-sdk', agentSdkRouter);
 app.use('/api/conversations', conversationsRouter);
 app.use('/api/presets', presetsRouter);
 app.use('/api/analytics', analyticsRouter);

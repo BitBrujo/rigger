@@ -50,11 +50,48 @@ export interface AgentResponse {
 }
 
 export interface StreamEvent {
-  type: 'message' | 'text' | 'content_block_delta' | 'done' | 'error';
+  type: 'message' | 'text' | 'content_block_delta' | 'done' | 'error' | 'system';
   data?: any;
   latency?: number;
   timestamp?: string;
   error?: string;
+  // Agent SDK specific
+  usage?: {
+    input_tokens: number;
+    output_tokens: number;
+    cache_creation_tokens?: number;
+    cache_read_tokens?: number;
+  };
+  cost?: number;
+  num_turns?: number;
+  is_error?: boolean;
+}
+
+// Agent SDK message types
+export type SDKMessageType =
+  | 'system'
+  | 'user'
+  | 'assistant'
+  | 'result'
+  | 'stream_event';
+
+export interface SDKStreamEvent {
+  type: SDKMessageType;
+  data?: any;
+  event?: any;
+  message?: any;
+  usage?: {
+    input_tokens: number;
+    output_tokens: number;
+    cache_creation_input_tokens?: number;
+    cache_read_input_tokens?: number;
+  };
+  total_cost_usd?: number;
+  num_turns?: number;
+  is_error?: boolean;
+  permission_denials?: any[];
+  session_id?: string;
+  subtype?: string;
 }
 
 // Database types
@@ -87,6 +124,12 @@ export interface UsageLog {
   stop_reason: string | null;
   error: string | null;
   created_at: string;
+  // Agent SDK specific fields
+  num_turns?: number | null;
+  api_latency_ms?: number | null;
+  cache_creation_tokens?: number | null;
+  cache_read_tokens?: number | null;
+  permission_denials?: any | null;
 }
 
 export interface UsageStats {
@@ -108,11 +151,22 @@ export interface DebugInfo {
     input: number;
     output: number;
     total: number;
+    cacheCreation?: number;
+    cacheRead?: number;
   };
   cost: number;
   stopReason: string;
   timestamp: string;
   errors: string[];
+  // Agent SDK specific fields
+  numTurns?: number;
+  apiLatency?: number;
+  permissionDenials?: Array<{
+    tool_name: string;
+    tool_use_id: string;
+    tool_input: any;
+  }>;
+  sdkMode?: boolean; // Track which API was used
 }
 
 export const DEFAULT_CONFIG: AgentConfig = {

@@ -31,7 +31,13 @@ CREATE TABLE IF NOT EXISTS usage_logs (
     cost_usd DECIMAL(10, 6),
     stop_reason VARCHAR(50),
     error TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    -- Agent SDK specific fields
+    num_turns INTEGER,
+    api_latency_ms INTEGER,
+    cache_creation_tokens INTEGER,
+    cache_read_tokens INTEGER,
+    permission_denials JSONB
 );
 
 -- Indexes for better query performance

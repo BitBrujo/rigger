@@ -4,7 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Claude Agent SDK testing and debugging application built with Next.js 15 and Express.js. It provides a three-panel interface for testing Claude API configurations with real-time streaming, debugging metrics, and persistence.
+This is a Claude Agent SDK and Messages API testing application built with Next.js 15 and Express.js. It provides a three-panel interface for testing both Claude APIs with real-time streaming, debugging metrics, and persistence.
+
+**Dual API Support:**
+- **Agent SDK Mode** (`@anthropic-ai/claude-agent-sdk`): Full agent capabilities with 18 built-in tools, containerization, automatic cost calculation, and multi-turn conversations
+- **Messages API Mode** (`@anthropic-ai/sdk`): Standard Claude Messages API with manual configuration and cost calculation
 
 ## Development Commands
 
@@ -62,6 +66,7 @@ All panels share state via Zustand store (`lib/store.ts`).
 - `debugInfo`: Latest API response metrics
 - `isStreaming`, `streamingMode`: Streaming state
 - `conversationId`: Current conversation for persistence
+- `sdkMode`: Toggle between Agent SDK and Messages API
 
 Components consume and update this store directly. No prop drilling.
 
@@ -70,29 +75,58 @@ Components consume and update this store directly. No prop drilling.
 **Frontend → Backend flow:**
 
 1. **ChatInterface** collects user input and current config from store
-2. **ApiClient** (`lib/api-client.ts`) handles HTTP/SSE communication
-3. Two modes:
-   - **Batch**: `POST /api/agent/message` returns complete response
-   - **Streaming**: `POST /api/agent/stream` uses Server-Sent Events (SSE)
-4. **ChatInterface** updates store with messages and debug info
-5. **DebugPanel** reactively displays metrics from store
+2. **ConfigPanel** SDK mode toggle determines which API to use
+3. **ApiClient** (`lib/api-client.ts`) handles HTTP/SSE communication
+4. Four endpoint combinations:
+   - **Messages API Batch**: `POST /api/agent/message`
+   - **Messages API Streaming**: `POST /api/agent/stream`
+   - **Agent SDK Batch**: `POST /api/agent-sdk/message`
+   - **Agent SDK Streaming**: `POST /api/agent-sdk/stream`
+5. **ChatInterface** updates store with messages and debug info
+6. **DebugPanel** reactively displays metrics from store (including SDK-specific metrics)
 
 ### Backend Architecture
 
 **Express Router Pattern** (`backend/src/routes/`):
-- `agent.ts`: Anthropic SDK wrapper (message + streaming endpoints)
+- `agent.ts`: Messages API wrapper (message + streaming endpoints)
+- `agent-sdk.ts`: **Agent SDK wrapper (message + streaming with built-in tools)**
 - `conversations.ts`: CRUD for conversation history
 - `presets.ts`: CRUD for configuration presets
 - `analytics.ts`: Usage statistics and aggregations
 
 **Database Abstraction:**
 - `backend/db/client.ts`: pg Pool singleton
-- `backend/db/schema.sql`: PostgreSQL schema (auto-initialized on first run)
+- `backend/db/schema.sql`: PostgreSQL schema with Agent SDK fields (auto-initialized on first run)
 
 **Cost Calculation:**
-- Hardcoded in `agent.ts` `calculateCost()` function
-- Also duplicated in `chat-interface.tsx` for frontend display
-- Pricing per million tokens (input/output rates differ by model)
+- **Messages API**: Manual calculation in `agent.ts` and `chat-interface.tsx` using hardcoded pricing
+- **Agent SDK**: Automatic calculation via SDK's `total_cost_usd` field
+
+### Agent SDK vs Messages API
+
+| Feature | Messages API | Agent SDK |
+|---------|--------------|-----------|
+| **Endpoint** | `/api/agent/*` | `/api/agent-sdk/*` |
+| **SDK Package** | `@anthropic-ai/sdk` | `@anthropic-ai/claude-agent-sdk` |
+| **Tools** | Manual implementation | 18 built-in tools (Read, Write, Bash, WebFetch, etc.) |
+| **Cost Calculation** | Manual (hardcoded pricing) | Automatic (`total_cost_usd`) |
+| **Workspace** | N/A | `/app/workspace` volume |
+| **Prompt Caching** | No metrics | Cache creation/read tokens tracked |
+| **Multi-turn** | Manual orchestration | Automatic via `maxTurns` |
+| **Parameters** | Full control (top_p, top_k, etc.) | Simplified (maxTokens, temperature) |
+
+### Agent SDK Built-in Tools
+
+When SDK mode is enabled, agents have access to 18 tools:
+
+**File Operations:** Read, Write, Edit, Glob, Grep, NotebookEdit
+**Execution:** Bash, BashOutput, KillShell
+**Web:** WebFetch, WebSearch
+**Task Management:** TodoWrite, Task
+**MCP Integration:** ListMcpResources, ReadMcpResource
+**Planning:** ExitPlanMode
+
+Configured in `backend/src/routes/agent-sdk.ts` with `allowedTools` array.
 
 ### Type System
 

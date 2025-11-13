@@ -60,7 +60,7 @@ export default function DebugPanel() {
                 <Zap className="w-4 h-4 text-muted-foreground" />
                 <div className="flex-1">
                   <p className="text-xs text-muted-foreground">Tokens</p>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
                     <Badge variant="secondary" className="text-xs">
                       In: {debugInfo.tokens.input.toLocaleString()}
                     </Badge>
@@ -70,6 +70,16 @@ export default function DebugPanel() {
                     <Badge variant="default" className="text-xs">
                       Total: {debugInfo.tokens.total.toLocaleString()}
                     </Badge>
+                    {debugInfo.tokens.cacheCreation !== undefined && debugInfo.tokens.cacheCreation > 0 && (
+                      <Badge variant="outline" className="text-xs">
+                        Cache Created: {debugInfo.tokens.cacheCreation.toLocaleString()}
+                      </Badge>
+                    )}
+                    {debugInfo.tokens.cacheRead !== undefined && debugInfo.tokens.cacheRead > 0 && (
+                      <Badge variant="outline" className="text-xs">
+                        Cache Read: {debugInfo.tokens.cacheRead.toLocaleString()}
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </div>
@@ -77,14 +87,35 @@ export default function DebugPanel() {
           </Card>
         </div>
 
+        {/* SDK Mode Indicator */}
+        {debugInfo.sdkMode !== undefined && (
+          <>
+            <Separator />
+            <div>
+              <p className="text-sm font-medium mb-2">API Mode</p>
+              <Badge variant={debugInfo.sdkMode ? 'default' : 'secondary'}>
+                {debugInfo.sdkMode ? 'Agent SDK' : 'Messages API'}
+              </Badge>
+            </div>
+          </>
+        )}
+
         <Separator />
 
-        {/* Stop Reason */}
-        <div>
-          <p className="text-sm font-medium mb-2">Stop Reason</p>
-          <Badge variant={debugInfo.stopReason === 'end_turn' ? 'default' : 'secondary'}>
-            {debugInfo.stopReason}
-          </Badge>
+        {/* Stop Reason & Agent SDK Metrics */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-sm font-medium mb-2">Stop Reason</p>
+            <Badge variant={debugInfo.stopReason === 'end_turn' ? 'default' : 'secondary'}>
+              {debugInfo.stopReason}
+            </Badge>
+          </div>
+          {debugInfo.numTurns !== undefined && (
+            <div>
+              <p className="text-sm font-medium mb-2">Agent Turns</p>
+              <Badge variant="outline">{debugInfo.numTurns}</Badge>
+            </div>
+          )}
         </div>
 
         {/* Timestamp */}
@@ -94,6 +125,23 @@ export default function DebugPanel() {
             {new Date(debugInfo.timestamp).toLocaleString()}
           </p>
         </div>
+
+        {/* Permission Denials (SDK only) */}
+        {debugInfo.permissionDenials && debugInfo.permissionDenials.length > 0 && (
+          <>
+            <Separator />
+            <div>
+              <p className="text-sm font-medium mb-2">Permission Denials</p>
+              {debugInfo.permissionDenials.map((denial, i) => (
+                <Alert key={i} variant="destructive" className="mb-2">
+                  <AlertDescription className="text-xs">
+                    Tool: {denial.tool_name} (ID: {denial.tool_use_id})
+                  </AlertDescription>
+                </Alert>
+              ))}
+            </div>
+          </>
+        )}
 
         {/* Errors */}
         {debugInfo.errors && debugInfo.errors.length > 0 && (
@@ -120,7 +168,13 @@ export default function DebugPanel() {
           </TabsList>
 
           <TabsContent value="formatted" className="space-y-3">
-            {debugInfo.rawResponse && (
+            {debugInfo.sdkMode ? (
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Agent SDK doesn't expose raw API responses. Check usage metrics above for detailed information.
+                </p>
+              </div>
+            ) : debugInfo.rawResponse ? (
               <>
                 <div>
                   <p className="text-xs font-medium mb-1">ID</p>
@@ -161,7 +215,7 @@ export default function DebugPanel() {
                   </div>
                 )}
               </>
-            )}
+            ) : null}
           </TabsContent>
 
           <TabsContent value="raw">

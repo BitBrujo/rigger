@@ -25,6 +25,7 @@ export default function ChatInterface() {
     setStreamingMode,
     setDebugInfo,
     conversationId,
+    sdkMode,
   } = useAgentStore();
 
   const [input, setInput] = useState('');
@@ -80,7 +81,10 @@ export default function ChatInterface() {
     let finalMessage: any = null;
     const startTime = Date.now();
 
-    await ApiClient.streamMessage(messages, config, conversationId || undefined, (event) => {
+    // Choose API based on SDK mode
+    const streamFn = sdkMode ? ApiClient.streamAgentMessage : ApiClient.streamMessage;
+
+    await streamFn(messages, config, conversationId || undefined, (event) => {
       if (event.type === 'text') {
         fullText += event.data;
         setStreamingText(fullText);
@@ -94,30 +98,53 @@ export default function ChatInterface() {
       } else if (event.type === 'done') {
         const latency = event.latency || Date.now() - startTime;
 
-        if (finalMessage) {
+        if (finalMessage || sdkMode) {
           addMessage({
             role: 'assistant',
             content: fullText,
           });
 
-          setDebugInfo({
-            rawResponse: finalMessage,
-            latency,
-            tokens: {
-              input: finalMessage.usage?.input_tokens || 0,
-              output: finalMessage.usage?.output_tokens || 0,
-              total:
-                (finalMessage.usage?.input_tokens || 0) + (finalMessage.usage?.output_tokens || 0),
-            },
-            cost: calculateCost(
-              finalMessage.model,
-              finalMessage.usage?.input_tokens || 0,
-              finalMessage.usage?.output_tokens || 0
-            ),
-            stopReason: finalMessage.stop_reason || 'unknown',
-            timestamp: event.timestamp || new Date().toISOString(),
-            errors: [],
-          });
+          // Handle SDK mode response (with automatic cost calculation)
+          if (sdkMode) {
+            setDebugInfo({
+              rawResponse: null, // SDK doesn't expose raw response
+              latency,
+              tokens: {
+                input: event.usage?.input_tokens || 0,
+                output: event.usage?.output_tokens || 0,
+                total: (event.usage?.input_tokens || 0) + (event.usage?.output_tokens || 0),
+                cacheCreation: event.usage?.cache_creation_tokens,
+                cacheRead: event.usage?.cache_read_tokens,
+              },
+              cost: event.cost || 0, // SDK provides automatic cost
+              stopReason: event.is_error ? 'error' : 'end_turn',
+              timestamp: event.timestamp || new Date().toISOString(),
+              errors: event.is_error ? ['Error during execution'] : [],
+              numTurns: event.num_turns,
+              sdkMode: true,
+            });
+          } else {
+            // Messages API response
+            setDebugInfo({
+              rawResponse: finalMessage,
+              latency,
+              tokens: {
+                input: finalMessage.usage?.input_tokens || 0,
+                output: finalMessage.usage?.output_tokens || 0,
+                total:
+                  (finalMessage.usage?.input_tokens || 0) + (finalMessage.usage?.output_tokens || 0),
+              },
+              cost: calculateCost(
+                finalMessage.model,
+                finalMessage.usage?.input_tokens || 0,
+                finalMessage.usage?.output_tokens || 0
+              ),
+              stopReason: finalMessage.stop_reason || 'unknown',
+              timestamp: event.timestamp || new Date().toISOString(),
+              errors: [],
+              sdkMode: false,
+            });
+          }
         }
       } else if (event.type === 'error') {
         throw new Error(event.error);
@@ -127,38 +154,80 @@ export default function ChatInterface() {
 
   const handleBatchRequest = async (messages: Message[]) => {
     const startTime = Date.now();
-    const result = await ApiClient.sendMessage(messages, config, conversationId || undefined);
 
-    const response: AgentResponse = result.response;
+    // Choose API based on SDK mode
+    const sendFn = sdkMode ? ApiClient.sendAgentMessage : ApiClient.sendMessage;
+    const result = await sendFn(messages, config, conversationId || undefined);
+
     const latency = result.latency || Date.now() - startTime;
 
-    // Extract text from content blocks
-    let text = '';
-    if (Array.isArray(response.content)) {
-      text = response.content
-        .filter((block: ContentBlock) => block.type === 'text')
-        .map((block: ContentBlock) => block.text)
-        .join('\n');
+    // Handle SDK mode response
+    if (sdkMode) {
+      // SDK response format
+      const response = result.response;
+      let text = '';
+
+      if (response && Array.isArray(response.content)) {
+        text = response.content
+          .filter((block: ContentBlock) => block.type === 'text')
+          .map((block: ContentBlock) => block.text)
+          .join('\n');
+      }
+
+      addMessage({
+        role: 'assistant',
+        content: text,
+      });
+
+      setDebugInfo({
+        rawResponse: null,
+        latency,
+        tokens: {
+          input: result.usage?.input_tokens || 0,
+          output: result.usage?.output_tokens || 0,
+          total: (result.usage?.input_tokens || 0) + (result.usage?.output_tokens || 0),
+          cacheCreation: result.usage?.cache_creation_input_tokens,
+          cacheRead: result.usage?.cache_read_input_tokens,
+        },
+        cost: result.cost || 0, // SDK provides automatic cost
+        stopReason: result.is_error ? 'error' : 'end_turn',
+        timestamp: result.timestamp || new Date().toISOString(),
+        errors: result.is_error ? ['Error during execution'] : [],
+        numTurns: result.num_turns,
+        sdkMode: true,
+      });
+    } else {
+      // Messages API response
+      const response: AgentResponse = result.response;
+
+      let text = '';
+      if (Array.isArray(response.content)) {
+        text = response.content
+          .filter((block: ContentBlock) => block.type === 'text')
+          .map((block: ContentBlock) => block.text)
+          .join('\n');
+      }
+
+      addMessage({
+        role: 'assistant',
+        content: text,
+      });
+
+      setDebugInfo({
+        rawResponse: response,
+        latency,
+        tokens: {
+          input: response.usage.input_tokens,
+          output: response.usage.output_tokens,
+          total: response.usage.input_tokens + response.usage.output_tokens,
+        },
+        cost: calculateCost(response.model, response.usage.input_tokens, response.usage.output_tokens),
+        stopReason: response.stop_reason || 'unknown',
+        timestamp: result.timestamp || new Date().toISOString(),
+        errors: [],
+        sdkMode: false,
+      });
     }
-
-    addMessage({
-      role: 'assistant',
-      content: text,
-    });
-
-    setDebugInfo({
-      rawResponse: response,
-      latency,
-      tokens: {
-        input: response.usage.input_tokens,
-        output: response.usage.output_tokens,
-        total: response.usage.input_tokens + response.usage.output_tokens,
-      },
-      cost: calculateCost(response.model, response.usage.input_tokens, response.usage.output_tokens),
-      stopReason: response.stop_reason || 'unknown',
-      timestamp: result.timestamp || new Date().toISOString(),
-      errors: [],
-    });
   };
 
   const calculateCost = (model: string, inputTokens: number, outputTokens: number): number => {
