@@ -11,8 +11,10 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Send, Download } from 'lucide-react';
 import { toast } from 'sonner';
+import DebugPanel from './debug-panel';
 
 export default function ChatInterface() {
   const {
@@ -295,9 +297,22 @@ export default function ChatInterface() {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="border-b px-6 py-3 flex items-center justify-between">
+    <Tabs defaultValue="messages" className="flex flex-col h-full">
+      {/* Tabs Header */}
+      <div className="border-b">
+        <TabsList className="w-full justify-start rounded-none h-12 bg-transparent px-6">
+          <TabsTrigger value="messages" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
+            Messages
+          </TabsTrigger>
+          <TabsTrigger value="debug" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
+            Debug
+          </TabsTrigger>
+        </TabsList>
+      </div>
+
+      {/* Messages Tab */}
+      <TabsContent value="messages" className="flex-1 flex flex-col m-0 data-[state=inactive]:hidden">
+        <div className="border-b px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Switch
@@ -400,7 +415,13 @@ export default function ChatInterface() {
             {isStreaming ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
           </Button>
         </div>
-      </div>
-    </div>
+        </div>
+      </TabsContent>
+
+      {/* Debug Tab */}
+      <TabsContent value="debug" className="flex-1 m-0 data-[state=inactive]:hidden">
+        <DebugPanel />
+      </TabsContent>
+    </Tabs>
   );
 }

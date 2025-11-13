@@ -138,8 +138,32 @@ export default function ConfigPanel() {
 
         <Separator />
 
-        {/* Agent SDK Configuration */}
-        <Card className="p-4 bg-muted/50">
+        {/* Two-column layout for configuration sections */}
+        <div className="grid grid-cols-2 gap-6">
+          {/* LEFT COLUMN - Core Settings */}
+          <div className="space-y-6">
+            {/* Model Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="model">Model</Label>
+              <Select value={config.model} onValueChange={(value: any) => setConfig({ model: value })}>
+                <SelectTrigger id="model">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MODEL_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      <div className="flex flex-col">
+                        <span>{option.label}</span>
+                        <span className="text-xs text-muted-foreground">{option.description}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Agent SDK Configuration */}
+            <Card className="p-4 bg-muted/50">
           <div className="space-y-3">
             <div>
               <Label className="text-base font-medium">Agent SDK Configuration</Label>
@@ -227,33 +251,11 @@ export default function ConfigPanel() {
                 </AlertDescription>
               </Alert>
             </div>
-          </div>
-        </Card>
+              </div>
+            </Card>
 
-        <Separator />
-
-        {/* Model Selection */}
-        <div className="space-y-2">
-          <Label htmlFor="model">Model</Label>
-          <Select value={config.model} onValueChange={(value: any) => setConfig({ model: value })}>
-            <SelectTrigger id="model">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {MODEL_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  <div className="flex flex-col">
-                    <span>{option.label}</span>
-                    <span className="text-xs text-muted-foreground">{option.description}</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Advanced Model Parameters - Collapsible */}
-        <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+            {/* Advanced Model Parameters - Collapsible */}
+            <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
           <CollapsibleTrigger asChild>
             <Button variant="outline" className="w-full justify-between" size="sm">
               <span className="text-sm">Advanced Model Parameters</span>
@@ -336,14 +338,12 @@ export default function ConfigPanel() {
                     max={500}
                   />
                 </div>
-              </div>
-            </CollapsibleContent>
-        </Collapsible>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
 
-        <Separator />
-
-        {/* System Prompt */}
-        <div className="space-y-2">
+            {/* System Prompt */}
+            <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label htmlFor="system-prompt">System Prompt</Label>
             <DropdownMenu>
@@ -364,18 +364,21 @@ export default function ConfigPanel() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          <Textarea
-            id="system-prompt"
-            value={config.system || ''}
-            onChange={(e) => setConfig({ system: e.target.value })}
-            placeholder="Enter system prompt..."
-            className="min-h-[100px] font-mono text-sm"
-          />
-        </div>
+              <Textarea
+                id="system-prompt"
+                value={config.system || ''}
+                onChange={(e) => setConfig({ system: e.target.value })}
+                placeholder="Enter system prompt..."
+                className="min-h-[100px] font-mono text-sm"
+              />
+            </div>
+          </div>
+          {/* END LEFT COLUMN */}
 
-        {/* Agent SDK Tools Section */}
-        <Separator />
-        <div className="space-y-3">
+          {/* RIGHT COLUMN - Advanced/Tools/Integrations */}
+          <div className="space-y-6">
+            {/* Agent SDK Tools Section */}
+            <div className="space-y-3">
               <div>
                 <Label className="text-base font-medium">Agent SDK Tools</Label>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -561,25 +564,29 @@ export default function ConfigPanel() {
                   </AlertDescription>
                 </Alert>
               </div>
-            </div>
+              </div>
 
-        {/* Stop Sequences */}
-        <div className="space-y-2">
-          <Label htmlFor="stop-sequences">Stop Sequences</Label>
-          <Input
-            id="stop-sequences"
-            placeholder="Comma-separated..."
-            value={config.stop_sequences?.join(', ') || ''}
-            onChange={(e) =>
-              setConfig({
-                stop_sequences: e.target.value
-                  .split(',')
-                  .map((s) => s.trim())
-                  .filter(Boolean),
-              })
-            }
-          />
+            {/* Stop Sequences */}
+            <div className="space-y-2">
+              <Label htmlFor="stop-sequences">Stop Sequences</Label>
+              <Input
+                id="stop-sequences"
+                placeholder="Comma-separated..."
+                value={config.stop_sequences?.join(', ') || ''}
+                onChange={(e) =>
+                  setConfig({
+                    stop_sequences: e.target.value
+                      .split(',')
+                      .map((s) => s.trim())
+                      .filter(Boolean),
+                  })
+                }
+              />
+            </div>
+          </div>
+          {/* END RIGHT COLUMN */}
         </div>
+        {/* END TWO-COLUMN GRID */}
       </div>
     </ScrollArea>
   );

@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import ConfigPanel from './config-panel';
 import ChatInterface from './chat-interface';
-import DebugPanel from './debug-panel';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 
 export default function AgentTester() {
@@ -17,25 +16,18 @@ export default function AgentTester() {
         </p>
       </div>
 
-      {/* Three-panel layout */}
+      {/* Two-panel layout */}
       <ResizablePanelGroup direction="horizontal" className="h-[calc(100vh-80px)]">
-        {/* Left Panel - Configuration */}
-        <ResizablePanel defaultSize={25} minSize={20} maxSize={35}>
+        {/* Left Panel - Configuration (doubled size) */}
+        <ResizablePanel defaultSize={50} minSize={40} maxSize={70}>
           <ConfigPanel />
         </ResizablePanel>
 
         <ResizableHandle withHandle />
 
-        {/* Center Panel - Chat */}
-        <ResizablePanel defaultSize={50} minSize={35}>
+        {/* Right Panel - Chat with Debug Tab */}
+        <ResizablePanel defaultSize={50} minSize={30}>
           <ChatInterface />
-        </ResizablePanel>
-
-        <ResizableHandle withHandle />
-
-        {/* Right Panel - Debug */}
-        <ResizablePanel defaultSize={25} minSize={20} maxSize={35}>
-          <DebugPanel />
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
