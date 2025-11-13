@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useAgentStore } from '@/lib/store';
 import { toast } from 'sonner';
-import { MODEL_OPTIONS, ALL_SDK_TOOLS } from '@/lib/types';
+import { MODEL_OPTIONS, ALL_SDK_TOOLS, SYSTEM_PROMPT_TEMPLATES, CLAUDE_CODE_PRESET_PROMPT, SUBAGENT_TEMPLATES, AgentDefinition } from '@/lib/types';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/collapsible';
 import { ToolSelector } from './tool-selector';
 import { JsonEditor } from './ui/json-editor';
-import { ChevronDown, AlertCircle, Plus, Wand2 } from 'lucide-react';
+import { ChevronDown, AlertCircle, Plus, Wand2, Trash2, Edit2, Users } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { HOOK_TEMPLATES, HOOK_CATEGORIES, HookTemplate } from '@/lib/hook-templates';
@@ -37,6 +37,15 @@ export default function ConfigPanel() {
   const { config, setConfig } = useAgentStore();
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [hookCategory, setHookCategory] = useState<string>('all');
+  const [useClaudeCodePreset, setUseClaudeCodePreset] = useState(false);
+  const [additionalInstructions, setAdditionalInstructions] = useState('');
+  const [editingSubagent, setEditingSubagent] = useState<string | null>(null);
+  const [newSubagentName, setNewSubagentName] = useState('');
+  const [newSubagentDefinition, setNewSubagentDefinition] = useState<AgentDefinition>({
+    systemPrompt: '',
+    allowedTools: [],
+    disallowedTools: [],
+  });
 
   const handleApplyHookTemplate = (template: HookTemplate) => {
     const currentHooks = config.hooks || {};
@@ -54,9 +63,100 @@ export default function ConfigPanel() {
     });
   };
 
+  const handleApplySystemPromptTemplate = (templatePrompt: string) => {
+    setConfig({ system: templatePrompt });
+    toast.success('System prompt template applied');
+  };
+
+  const handleClaudeCodePresetToggle = (checked: boolean) => {
+    setUseClaudeCodePreset(checked);
+    if (checked) {
+      // Combine Claude Code preset with additional instructions
+      const finalPrompt = additionalInstructions
+        ? `${CLAUDE_CODE_PRESET_PROMPT}\n\n**Additional Instructions:**\n${additionalInstructions}`
+        : CLAUDE_CODE_PRESET_PROMPT;
+      setConfig({ system: finalPrompt });
+      toast.success('Claude Code preset enabled');
+    } else {
+      // Clear to manual mode
+      setConfig({ system: additionalInstructions || '' });
+    }
+  };
+
+  const handleAdditionalInstructionsChange = (value: string) => {
+    setAdditionalInstructions(value);
+    if (useClaudeCodePreset) {
+      // Update system prompt with preset + additional instructions
+      const finalPrompt = value
+        ? `${CLAUDE_CODE_PRESET_PROMPT}\n\n**Additional Instructions:**\n${value}`
+        : CLAUDE_CODE_PRESET_PROMPT;
+      setConfig({ system: finalPrompt });
+    }
+  };
+
   const filteredHookTemplates = hookCategory === 'all'
     ? HOOK_TEMPLATES
     : HOOK_TEMPLATES.filter(t => t.category === hookCategory);
+
+  // Subagent handlers
+  const handleApplySubagentTemplate = (template: typeof SUBAGENT_TEMPLATES[0]) => {
+    const currentAgents = config.customAgents || {};
+    const updatedAgents = { ...currentAgents, [template.name]: template.definition };
+    setConfig({ customAgents: updatedAgents });
+    toast.success('Subagent template applied', {
+      description: `Added: ${template.name}`,
+    });
+  };
+
+  const handleDeleteSubagent = (name: string) => {
+    const currentAgents = config.customAgents || {};
+    const { [name]: removed, ...remaining } = currentAgents;
+    setConfig({ customAgents: remaining });
+    toast.success('Subagent deleted', {
+      description: `Removed: ${name}`,
+    });
+  };
+
+  const handleSaveSubagent = () => {
+    if (!newSubagentName.trim()) {
+      toast.error('Please enter a subagent name');
+      return;
+    }
+    const currentAgents = config.customAgents || {};
+    const updatedAgents = { ...currentAgents, [newSubagentName]: newSubagentDefinition };
+    setConfig({ customAgents: updatedAgents });
+    toast.success('Subagent saved', {
+      description: `Saved: ${newSubagentName}`,
+    });
+    // Reset form
+    setNewSubagentName('');
+    setNewSubagentDefinition({
+      systemPrompt: '',
+      allowedTools: [],
+      disallowedTools: [],
+    });
+    setEditingSubagent(null);
+  };
+
+  const handleEditSubagent = (name: string) => {
+    const currentAgents = config.customAgents || {};
+    const agentDef = currentAgents[name];
+    if (agentDef) {
+      setNewSubagentName(name);
+      setNewSubagentDefinition(agentDef);
+      setEditingSubagent(name);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setNewSubagentName('');
+    setNewSubagentDefinition({
+      systemPrompt: '',
+      allowedTools: [],
+      disallowedTools: [],
+    });
+    setEditingSubagent(null);
+  };
 
   return (
     <ScrollArea className="h-full">
@@ -179,15 +279,91 @@ export default function ConfigPanel() {
             </Card>
 
             {/* System Prompt */}
-            <div className="space-y-2">
-              <Label htmlFor="system-prompt">System Prompt</Label>
-              <Textarea
-                id="system-prompt"
-                value={config.system || ''}
-                onChange={(e) => setConfig({ system: e.target.value })}
-                placeholder="Enter system prompt..."
-                className="min-h-[100px] font-mono text-sm"
-              />
+            <div className="space-y-3">
+              <div>
+                <Label className="text-base font-medium">System Prompt</Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Define the agent's persona, capabilities, and behavioral guidelines
+                </p>
+              </div>
+
+              {/* Claude Code Preset Toggle */}
+              <Card className="p-3 bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="use-claude-code-preset"
+                      checked={useClaudeCodePreset}
+                      onCheckedChange={handleClaudeCodePresetToggle}
+                    />
+                    <Label htmlFor="use-claude-code-preset" className="text-sm font-medium cursor-pointer">
+                      Use Claude Code Preset
+                    </Label>
+                  </div>
+                  <Badge variant="secondary" className="text-xs">Recommended</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Professional coding assistant prompt with best practices and tool usage guidelines
+                </p>
+              </Card>
+
+              {/* Template Selector */}
+              {!useClaudeCodePreset && (
+                <Card className="p-3 bg-muted/30">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Wand2 className="h-4 w-4 text-muted-foreground" />
+                      <Label className="text-sm font-medium">Quick Templates</Label>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {SYSTEM_PROMPT_TEMPLATES.map((template) => (
+                        <Button
+                          key={template.name}
+                          size="sm"
+                          variant="outline"
+                          className="text-xs h-8 justify-start"
+                          onClick={() => handleApplySystemPromptTemplate(template.prompt)}
+                        >
+                          {template.name}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {/* Additional Instructions (shown when Claude Code preset is enabled) */}
+              {useClaudeCodePreset && (
+                <div className="space-y-2">
+                  <Label htmlFor="additional-instructions" className="text-sm">
+                    Additional Instructions (Optional)
+                  </Label>
+                  <Textarea
+                    id="additional-instructions"
+                    value={additionalInstructions}
+                    onChange={(e) => handleAdditionalInstructionsChange(e.target.value)}
+                    placeholder="Add project-specific instructions, coding standards, or custom guidelines..."
+                    className="min-h-[80px] text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    These instructions will be appended to the Claude Code preset
+                  </p>
+                </div>
+              )}
+
+              {/* Manual System Prompt Editor (shown when preset is off) */}
+              {!useClaudeCodePreset && (
+                <div className="space-y-2">
+                  <Label htmlFor="system-prompt">Custom System Prompt</Label>
+                  <Textarea
+                    id="system-prompt"
+                    value={config.system || ''}
+                    onChange={(e) => setConfig({ system: e.target.value })}
+                    placeholder="Enter custom system prompt..."
+                    className="min-h-[150px] font-mono text-sm"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Hook Configuration */}
@@ -296,6 +472,214 @@ export default function ConfigPanel() {
                 />
               </div>
             </div>
+
+            {/* Subagent Configuration */}
+            <div className="space-y-3">
+              <div>
+                <Label className="text-base font-medium flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Subagents
+                </Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Define specialized agents for specific tasks (used with Task tool)
+                </p>
+              </div>
+
+              {/* Template Library */}
+              <Card className="p-3 bg-muted/30">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Wand2 className="h-4 w-4 text-muted-foreground" />
+                    <Label className="text-sm font-medium">Template Library</Label>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
+                    {SUBAGENT_TEMPLATES.map((template) => (
+                      <div
+                        key={template.name}
+                        className="p-2 border rounded-md bg-background hover:bg-accent/50 transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-xs font-medium">{template.name}</h4>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">
+                              {template.description}
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-[10px]"
+                            onClick={() => handleApplySubagentTemplate(template)}
+                          >
+                            Add
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </Card>
+
+              {/* Current Subagents List */}
+              {Object.keys(config.customAgents || {}).length > 0 && (
+                <Card className="p-3 bg-muted/30">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Your Subagents</Label>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {Object.entries(config.customAgents || {}).map(([name, definition]) => (
+                        <div
+                          key={name}
+                          className="p-2 border rounded-md bg-background flex items-center justify-between"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium truncate">{name}</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {definition.allowedTools?.length || 0} tools allowed
+                            </p>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0"
+                              onClick={() => handleEditSubagent(name)}
+                              title="Edit"
+                            >
+                              <Edit2 className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                              onClick={() => handleDeleteSubagent(name)}
+                              title="Delete"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {/* Add/Edit Form */}
+              <Collapsible open={editingSubagent !== null}>
+                <CollapsibleContent>
+                  <Card className="p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-medium">
+                        {editingSubagent ? 'Edit Subagent' : 'New Subagent'}
+                      </Label>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 text-xs"
+                        onClick={handleCancelEdit}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+
+                    {/* Name */}
+                    <div className="space-y-1">
+                      <Label htmlFor="subagent-name" className="text-xs">Name</Label>
+                      <Input
+                        id="subagent-name"
+                        value={newSubagentName}
+                        onChange={(e) => setNewSubagentName(e.target.value)}
+                        placeholder="e.g., code-reviewer"
+                        className="h-8 text-sm"
+                        disabled={!!editingSubagent}
+                      />
+                    </div>
+
+                    {/* System Prompt */}
+                    <div className="space-y-1">
+                      <Label htmlFor="subagent-prompt" className="text-xs">System Prompt</Label>
+                      <Textarea
+                        id="subagent-prompt"
+                        value={newSubagentDefinition.systemPrompt || ''}
+                        onChange={(e) =>
+                          setNewSubagentDefinition({
+                            ...newSubagentDefinition,
+                            systemPrompt: e.target.value,
+                          })
+                        }
+                        placeholder="Define the subagent's purpose and instructions..."
+                        className="min-h-[80px] text-xs"
+                      />
+                    </div>
+
+                    {/* Allowed Tools */}
+                    <div className="space-y-1">
+                      <Label htmlFor="subagent-allowed-tools" className="text-xs">
+                        Allowed Tools (comma-separated)
+                      </Label>
+                      <Input
+                        id="subagent-allowed-tools"
+                        value={newSubagentDefinition.allowedTools?.join(', ') || ''}
+                        onChange={(e) =>
+                          setNewSubagentDefinition({
+                            ...newSubagentDefinition,
+                            allowedTools: e.target.value
+                              .split(',')
+                              .map((s) => s.trim())
+                              .filter(Boolean),
+                          })
+                        }
+                        placeholder="Read, Write, Grep, Glob..."
+                        className="h-8 text-xs font-mono"
+                      />
+                    </div>
+
+                    {/* Disallowed Tools */}
+                    <div className="space-y-1">
+                      <Label htmlFor="subagent-disallowed-tools" className="text-xs">
+                        Disallowed Tools (comma-separated)
+                      </Label>
+                      <Input
+                        id="subagent-disallowed-tools"
+                        value={newSubagentDefinition.disallowedTools?.join(', ') || ''}
+                        onChange={(e) =>
+                          setNewSubagentDefinition({
+                            ...newSubagentDefinition,
+                            disallowedTools: e.target.value
+                              .split(',')
+                              .map((s) => s.trim())
+                              .filter(Boolean),
+                          })
+                        }
+                        placeholder="Bash, Edit..."
+                        className="h-8 text-xs font-mono"
+                      />
+                    </div>
+
+                    <Button
+                      size="sm"
+                      onClick={handleSaveSubagent}
+                      className="w-full h-8 text-xs"
+                    >
+                      Save Subagent
+                    </Button>
+                  </Card>
+                </CollapsibleContent>
+              </Collapsible>
+
+              {/* Add New Button */}
+              {editingSubagent === null && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setEditingSubagent('new')}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Create Custom Subagent
+                </Button>
+              )}
+            </div>
           </div>
           {/* END LEFT COLUMN */}
 
@@ -392,6 +776,187 @@ export default function ConfigPanel() {
                 }
               />
             </div>
+
+            {/* Advanced SDK Settings - Collapsible */}
+            <Separator />
+            <Collapsible>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" className="w-full justify-between" size="sm">
+                  <span className="text-sm">Advanced SDK Settings</span>
+                  <ChevronDown className="h-4 w-4 transition-transform" />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-4 pt-4">
+                {/* Max Thinking Tokens */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Label htmlFor="max-thinking-tokens" className="cursor-help">Max Thinking Tokens</Label>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="max-w-xs">Maximum tokens for extended thinking mode. Set to null to disable thinking.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <Input
+                      id="max-thinking-tokens"
+                      type="number"
+                      value={config.maxThinkingTokens === null || config.maxThinkingTokens === undefined ? '' : config.maxThinkingTokens}
+                      onChange={(e) => setConfig({ maxThinkingTokens: e.target.value ? parseInt(e.target.value) : null })}
+                      className="w-24 h-8 text-xs"
+                      placeholder="None"
+                      min={0}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Enable extended thinking mode (Claude 3.7 Sonnet). Leave empty to disable.
+                  </p>
+                </div>
+
+                {/* Fallback Model */}
+                <div className="space-y-2">
+                  <Label htmlFor="fallback-model">Fallback Model</Label>
+                  <Select
+                    value={config.fallbackModel || 'none'}
+                    onValueChange={(value: any) => setConfig({ fallbackModel: value === 'none' ? undefined : value })}
+                  >
+                    <SelectTrigger id="fallback-model" className="h-9 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No fallback</SelectItem>
+                      {MODEL_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Model to use if primary model fails or is unavailable
+                  </p>
+                </div>
+
+                {/* Working Directory */}
+                <div className="space-y-2">
+                  <Label htmlFor="working-directory">Working Directory</Label>
+                  <Input
+                    id="working-directory"
+                    value={config.workingDirectory || ''}
+                    onChange={(e) => setConfig({ workingDirectory: e.target.value })}
+                    placeholder="/app/workspace"
+                    className="font-mono text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Base directory for file operations (default: /app/workspace)
+                  </p>
+                </div>
+
+                {/* Additional Directories */}
+                <div className="space-y-2">
+                  <Label htmlFor="additional-directories">Additional Directories</Label>
+                  <Input
+                    id="additional-directories"
+                    placeholder="Comma-separated paths..."
+                    value={config.additionalDirectories?.join(', ') || ''}
+                    onChange={(e) =>
+                      setConfig({
+                        additionalDirectories: e.target.value
+                          .split(',')
+                          .map((s) => s.trim())
+                          .filter(Boolean),
+                      })
+                    }
+                    className="font-mono text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Extra directories the agent can access
+                  </p>
+                </div>
+
+                {/* Environment Variables */}
+                <div className="space-y-2">
+                  <Label htmlFor="env-variables">Environment Variables</Label>
+                  <JsonEditor
+                    value={config.env || {}}
+                    onChange={(value) => setConfig({ env: value })}
+                    placeholder={`{
+  "API_KEY": "...",
+  "DEBUG": "true"
+}`}
+                    rows={6}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Custom environment variables for Bash tool execution
+                  </p>
+                </div>
+
+                {/* Executable */}
+                <div className="space-y-2">
+                  <Label htmlFor="executable">JavaScript Runtime</Label>
+                  <Select
+                    value={config.executable || 'node'}
+                    onValueChange={(value: any) => setConfig({ executable: value })}
+                  >
+                    <SelectTrigger id="executable" className="h-9 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="node">Node.js</SelectItem>
+                      <SelectItem value="bun">Bun</SelectItem>
+                      <SelectItem value="deno">Deno</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Runtime to use for JavaScript execution
+                  </p>
+                </div>
+
+                {/* Executable Args */}
+                <div className="space-y-2">
+                  <Label htmlFor="executable-args">Runtime Arguments</Label>
+                  <Input
+                    id="executable-args"
+                    placeholder="Comma-separated args..."
+                    value={config.executableArgs?.join(', ') || ''}
+                    onChange={(e) =>
+                      setConfig({
+                        executableArgs: e.target.value
+                          .split(',')
+                          .map((s) => s.trim())
+                          .filter(Boolean),
+                      })
+                    }
+                    className="font-mono text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Arguments passed to the JavaScript runtime (e.g., --experimental-modules)
+                  </p>
+                </div>
+
+                {/* Allow Dangerously Skip Permissions */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="skip-permissions"
+                      checked={config.allowDangerouslySkipPermissions || false}
+                      onCheckedChange={(checked) => setConfig({ allowDangerouslySkipPermissions: checked })}
+                    />
+                    <Label htmlFor="skip-permissions" className="text-sm">
+                      Dangerously Skip All Permissions
+                    </Label>
+                  </div>
+                  <Alert className="border-destructive/50">
+                    <AlertCircle className="h-4 w-4 text-destructive" />
+                    <AlertDescription className="text-xs">
+                      <strong>Warning:</strong> This bypasses ALL permission checks. Only enable in trusted, isolated environments.
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
 
             {/* Advanced Model Parameters - Collapsible */}
             <Separator />

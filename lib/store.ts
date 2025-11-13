@@ -1,5 +1,16 @@
 import { create } from 'zustand';
-import { AgentSDKConfig, Message, DebugInfo, DEFAULT_SDK_CONFIG, McpServerConfig, AgentDefinition } from './types';
+import {
+  AgentSDKConfig,
+  Message,
+  DebugInfo,
+  DEFAULT_SDK_CONFIG,
+  McpServerConfig,
+  AgentDefinition,
+  ToolExecution,
+  SystemInfo,
+  PermissionRequest,
+  McpServerStatus
+} from './types';
 
 interface AgentStore {
   // Agent SDK Configuration (all 30+ parameters)
@@ -55,6 +66,49 @@ interface AgentStore {
   accumulatedCost: number;
   addCost: (cost: number) => void;
   resetAccumulatedCost: () => void;
+
+  // Tool execution tracking
+  toolExecutions: ToolExecution[];
+  addToolExecution: (execution: ToolExecution) => void;
+  updateToolExecution: (id: string, updates: Partial<ToolExecution>) => void;
+  clearToolExecutions: () => void;
+  activeTools: Set<string>; // tool_use_ids currently running
+  addActiveTool: (id: string) => void;
+  removeActiveTool: (id: string) => void;
+
+  // System info (from SDKSystemMessage)
+  systemInfo: SystemInfo | null;
+  setSystemInfo: (info: SystemInfo | null) => void;
+
+  // Permission requests
+  permissionRequests: PermissionRequest[];
+  addPermissionRequest: (request: PermissionRequest) => void;
+  updatePermissionRequest: (id: string, updates: Partial<PermissionRequest>) => void;
+  clearPermissionRequests: () => void;
+
+  // MCP server status
+  mcpServerStatuses: McpServerStatus[];
+  setMcpServerStatuses: (statuses: McpServerStatus[]) => void;
+  updateMcpServerStatus: (name: string, updates: Partial<McpServerStatus>) => void;
+
+  // Hook execution logs
+  hookLogs: Array<{
+    hookName: string;
+    hookEvent: string;
+    stdout: string;
+    stderr: string;
+    exitCode?: number;
+    timestamp: string;
+  }>;
+  addHookLog: (log: {
+    hookName: string;
+    hookEvent: string;
+    stdout: string;
+    stderr: string;
+    exitCode?: number;
+    timestamp: string;
+  }) => void;
+  clearHookLogs: () => void;
 
   // UI state
   isLoading: boolean;
@@ -125,6 +179,67 @@ export const useAgentStore = create<AgentStore>((set) => ({
   accumulatedCost: 0,
   addCost: (cost) => set((state) => ({ accumulatedCost: state.accumulatedCost + cost })),
   resetAccumulatedCost: () => set({ accumulatedCost: 0 }),
+
+  // Tool execution tracking
+  toolExecutions: [],
+  addToolExecution: (execution) =>
+    set((state) => ({
+      toolExecutions: [...state.toolExecutions, execution],
+    })),
+  updateToolExecution: (id, updates) =>
+    set((state) => ({
+      toolExecutions: state.toolExecutions.map((exec) =>
+        exec.id === id ? { ...exec, ...updates } : exec
+      ),
+    })),
+  clearToolExecutions: () => set({ toolExecutions: [] }),
+  activeTools: new Set(),
+  addActiveTool: (id) =>
+    set((state) => ({
+      activeTools: new Set([...state.activeTools, id]),
+    })),
+  removeActiveTool: (id) =>
+    set((state) => {
+      const newActiveTools = new Set(state.activeTools);
+      newActiveTools.delete(id);
+      return { activeTools: newActiveTools };
+    }),
+
+  // System info
+  systemInfo: null,
+  setSystemInfo: (info) => set({ systemInfo: info }),
+
+  // Permission requests
+  permissionRequests: [],
+  addPermissionRequest: (request) =>
+    set((state) => ({
+      permissionRequests: [...state.permissionRequests, request],
+    })),
+  updatePermissionRequest: (id, updates) =>
+    set((state) => ({
+      permissionRequests: state.permissionRequests.map((req) =>
+        req.id === id ? { ...req, ...updates } : req
+      ),
+    })),
+  clearPermissionRequests: () => set({ permissionRequests: [] }),
+
+  // MCP server status
+  mcpServerStatuses: [],
+  setMcpServerStatuses: (statuses) => set({ mcpServerStatuses: statuses }),
+  updateMcpServerStatus: (name, updates) =>
+    set((state) => ({
+      mcpServerStatuses: state.mcpServerStatuses.map((status) =>
+        status.name === name ? { ...status, ...updates } : status
+      ),
+    })),
+
+  // Hook execution logs
+  hookLogs: [],
+  addHookLog: (log) =>
+    set((state) => ({
+      hookLogs: [...state.hookLogs, log],
+    })),
+  clearHookLogs: () => set({ hookLogs: [] }),
 
   // UI
   isLoading: false,

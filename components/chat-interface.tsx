@@ -12,9 +12,10 @@ import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Send, Download } from 'lucide-react';
+import { Loader2, Send, Download, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
 import DebugPanel from './debug-panel';
+import { ToolsPanel } from './tools-panel';
 
 export default function ChatInterface() {
   const {
@@ -28,9 +29,17 @@ export default function ChatInterface() {
     setStreamingMode,
     setDebugInfo,
     conversationId,
-    sdkMode,
     addCost,
     resetAccumulatedCost,
+    // Tool execution tracking
+    addToolExecution,
+    updateToolExecution,
+    addActiveTool,
+    removeActiveTool,
+    // System info
+    setSystemInfo,
+    // Hook logs
+    addHookLog,
   } = useAgentStore();
 
   const [input, setInput] = useState('');
@@ -90,7 +99,7 @@ export default function ChatInterface() {
     const startTime = Date.now();
 
     // Choose API based on SDK mode
-    const streamFn = sdkMode ? ApiClient.streamAgentMessage : ApiClient.streamMessage;
+    const streamFn = ApiClient.streamAgentMessage; // Always use Agent SDK
 
     await streamFn(messages, config, conversationId || undefined, (event) => {
       if (event.type === 'text') {
@@ -101,80 +110,103 @@ export default function ChatInterface() {
           fullText += event.data.delta.text;
           setStreamingText(fullText);
         }
+      } else if (event.type === 'tool_start') {
+        // Tool execution started
+        const toolExecution = {
+          id: event.tool_use_id,
+          toolName: event.tool_name,
+          status: 'running' as const,
+          startTime: Date.now(),
+          input: event.input,
+          parentToolUseId: null,
+        };
+        addToolExecution(toolExecution);
+        addActiveTool(event.tool_use_id);
+      } else if (event.type === 'tool_progress') {
+        // Tool progress update
+        updateToolExecution(event.tool_use_id, {
+          elapsedSeconds: event.elapsed_seconds,
+        });
+      } else if (event.type === 'tool_complete') {
+        // Tool execution completed
+        updateToolExecution(event.tool_use_id, {
+          status: event.is_error ? 'failed' : 'completed',
+          endTime: Date.now(),
+          output: event.content,
+          error: event.is_error ? 'Tool execution failed' : undefined,
+        });
+        removeActiveTool(event.tool_use_id);
+      } else if (event.type === 'system_init') {
+        // System initialization message
+        setSystemInfo({
+          apiKeySource: event.data.apiKeySource || 'unknown',
+          cwd: event.data.cwd || '',
+          tools: event.data.tools || [],
+          mcpServers: event.data.mcp_servers || [],
+          model: event.data.model || '',
+          permissionMode: event.data.permissionMode || 'default',
+          slashCommands: event.data.slash_commands,
+          agents: event.data.agents,
+          plugins: event.data.plugins,
+        });
+      } else if (event.type === 'hook_response') {
+        // Hook execution result
+        addHookLog({
+          hookName: event.data.hook_name,
+          hookEvent: event.data.hook_event,
+          stdout: event.data.stdout,
+          stderr: event.data.stderr,
+          exitCode: event.data.exit_code,
+          timestamp: new Date().toISOString(),
+        });
       } else if (event.type === 'message') {
         finalMessage = event.data;
       } else if (event.type === 'done') {
         const latency = event.latency || Date.now() - startTime;
 
-        if (finalMessage || sdkMode) {
-          addMessage({
-            role: 'assistant',
-            content: fullText,
-          });
+        // Agent SDK always has final message
+        addMessage({
+          role: 'assistant',
+          content: fullText,
+        });
 
-          // Handle SDK mode response (with automatic cost calculation)
-          if (sdkMode) {
-            const cost = event.cost || 0;
-            addCost(cost);
+        // Handle Agent SDK response (with automatic cost calculation)
+        const cost = event.cost || 0;
+        addCost(cost);
 
-            // Budget warning
-            const { config: currentConfig, accumulatedCost: currentAccumulated } = useAgentStore.getState();
-            const totalCost = currentAccumulated + cost;
-            if (currentConfig.maxBudgetUsd && totalCost > currentConfig.maxBudgetUsd * 0.8) {
-              if (totalCost >= currentConfig.maxBudgetUsd) {
-                toast.error('Budget exceeded!', {
-                  description: `Spent $${totalCost.toFixed(6)} of $${currentConfig.maxBudgetUsd.toFixed(6)}`,
-                });
-              } else if (totalCost > currentConfig.maxBudgetUsd * 0.9) {
-                toast.warning('Budget warning', {
-                  description: `90% of budget used: $${totalCost.toFixed(6)} / $${currentConfig.maxBudgetUsd.toFixed(6)}`,
-                });
-              }
-            }
-
-            setDebugInfo({
-              rawResponse: null, // SDK doesn't expose raw response
-              latency,
-              tokens: {
-                input: event.usage?.input_tokens || 0,
-                output: event.usage?.output_tokens || 0,
-                total: (event.usage?.input_tokens || 0) + (event.usage?.output_tokens || 0),
-                cacheCreation: event.usage?.cache_creation_tokens,
-                cacheRead: event.usage?.cache_read_tokens,
-              },
-              cost,
-              stopReason: event.is_error ? 'error' : 'end_turn',
-              timestamp: event.timestamp || new Date().toISOString(),
-              errors: event.is_error ? ['Error during execution'] : [],
-              numTurns: event.num_turns,
-              sessionId: event.session_id,
-              permissionDenials: event.permission_denials,
-              toolsUsed: event.tools_used,
-              sdkMode: true,
+        // Budget warning
+        const { config: currentConfig, accumulatedCost: currentAccumulated } = useAgentStore.getState();
+        const totalCost = currentAccumulated + cost;
+        if (currentConfig.maxBudgetUsd && totalCost > currentConfig.maxBudgetUsd * 0.8) {
+          if (totalCost >= currentConfig.maxBudgetUsd) {
+            toast.error('Budget exceeded!', {
+              description: `Spent $${totalCost.toFixed(6)} of $${currentConfig.maxBudgetUsd.toFixed(6)}`,
             });
-          } else {
-            // Messages API response
-            setDebugInfo({
-              rawResponse: finalMessage,
-              latency,
-              tokens: {
-                input: finalMessage.usage?.input_tokens || 0,
-                output: finalMessage.usage?.output_tokens || 0,
-                total:
-                  (finalMessage.usage?.input_tokens || 0) + (finalMessage.usage?.output_tokens || 0),
-              },
-              cost: calculateCost(
-                finalMessage.model,
-                finalMessage.usage?.input_tokens || 0,
-                finalMessage.usage?.output_tokens || 0
-              ),
-              stopReason: finalMessage.stop_reason || 'unknown',
-              timestamp: event.timestamp || new Date().toISOString(),
-              errors: [],
-              sdkMode: false,
+          } else if (totalCost > currentConfig.maxBudgetUsd * 0.9) {
+            toast.warning('Budget warning', {
+              description: `90% of budget used: $${totalCost.toFixed(6)} / $${currentConfig.maxBudgetUsd.toFixed(6)}`,
             });
           }
         }
+
+        setDebugInfo({
+          latency,
+          tokens: {
+            input: event.usage?.input_tokens || 0,
+            output: event.usage?.output_tokens || 0,
+            total: (event.usage?.input_tokens || 0) + (event.usage?.output_tokens || 0),
+            cacheCreation: event.usage?.cache_creation_tokens,
+            cacheRead: event.usage?.cache_read_tokens,
+          },
+          cost,
+          stopReason: event.is_error ? 'error' : 'end_turn',
+          timestamp: event.timestamp || new Date().toISOString(),
+          errors: event.is_error ? ['Error during execution'] : [],
+          numTurns: event.num_turns,
+          sessionId: event.session_id,
+          permissionDenials: event.permission_denials,
+          toolsUsed: event.tools_used,
+        });
       } else if (event.type === 'error') {
         throw new Error(event.error);
       }
@@ -184,84 +216,47 @@ export default function ChatInterface() {
   const handleBatchRequest = async (messages: Message[]) => {
     const startTime = Date.now();
 
-    // Choose API based on SDK mode
-    const sendFn = sdkMode ? ApiClient.sendAgentMessage : ApiClient.sendMessage;
-    const result = await sendFn(messages, config, conversationId || undefined);
+    // Always use Agent SDK
+    const result = await ApiClient.sendAgentMessage(messages, config, conversationId || undefined);
 
     const latency = result.latency || Date.now() - startTime;
 
-    // Handle SDK mode response
-    if (sdkMode) {
-      // SDK response format
-      const response = result.response;
-      let text = '';
+    // Handle Agent SDK response
+    const response = result.response;
+    let text = '';
 
-      if (response && Array.isArray(response.content)) {
-        text = response.content
-          .filter((block: ContentBlock) => block.type === 'text')
-          .map((block: ContentBlock) => block.text)
-          .join('\n');
-      }
-
-      addMessage({
-        role: 'assistant',
-        content: text,
-      });
-
-      const cost = result.cost || 0;
-      addCost(cost);
-      setDebugInfo({
-        rawResponse: null,
-        latency,
-        tokens: {
-          input: result.usage?.input_tokens || 0,
-          output: result.usage?.output_tokens || 0,
-          total: (result.usage?.input_tokens || 0) + (result.usage?.output_tokens || 0),
-          cacheCreation: result.usage?.cache_creation_input_tokens,
-          cacheRead: result.usage?.cache_read_input_tokens,
-        },
-        cost,
-        stopReason: result.is_error ? 'error' : 'end_turn',
-        timestamp: result.timestamp || new Date().toISOString(),
-        errors: result.is_error ? ['Error during execution'] : [],
-        numTurns: result.num_turns,
-        sessionId: result.session_id,
-        permissionDenials: result.permission_denials,
-        toolsUsed: result.tools_used,
-        sdkMode: true,
-      });
-    } else {
-      // Messages API response
-      const response: AgentResponse = result.response;
-
-      let text = '';
-      if (Array.isArray(response.content)) {
-        text = response.content
-          .filter((block: ContentBlock) => block.type === 'text')
-          .map((block: ContentBlock) => block.text)
-          .join('\n');
-      }
-
-      addMessage({
-        role: 'assistant',
-        content: text,
-      });
-
-      setDebugInfo({
-        rawResponse: response,
-        latency,
-        tokens: {
-          input: response.usage.input_tokens,
-          output: response.usage.output_tokens,
-          total: response.usage.input_tokens + response.usage.output_tokens,
-        },
-        cost: calculateCost(response.model, response.usage.input_tokens, response.usage.output_tokens),
-        stopReason: response.stop_reason || 'unknown',
-        timestamp: result.timestamp || new Date().toISOString(),
-        errors: [],
-        sdkMode: false,
-      });
+    if (response && Array.isArray(response.content)) {
+      text = response.content
+        .filter((block: ContentBlock) => block.type === 'text')
+        .map((block: ContentBlock) => block.text)
+        .join('\n');
     }
+
+    addMessage({
+      role: 'assistant',
+      content: text,
+    });
+
+    const cost = result.cost || 0;
+    addCost(cost);
+    setDebugInfo({
+      latency,
+      tokens: {
+        input: result.usage?.input_tokens || 0,
+        output: result.usage?.output_tokens || 0,
+        total: (result.usage?.input_tokens || 0) + (result.usage?.output_tokens || 0),
+        cacheCreation: result.usage?.cache_creation_input_tokens,
+        cacheRead: result.usage?.cache_read_input_tokens,
+      },
+      cost,
+      stopReason: result.is_error ? 'error' : 'end_turn',
+      timestamp: result.timestamp || new Date().toISOString(),
+      errors: result.is_error ? ['Error during execution'] : [],
+      numTurns: result.num_turns,
+      sessionId: result.session_id,
+      permissionDenials: result.permission_denials,
+      toolsUsed: result.tools_used,
+    });
   };
 
   const calculateCost = (model: string, inputTokens: number, outputTokens: number): number => {
@@ -303,6 +298,10 @@ export default function ChatInterface() {
         <TabsList className="w-full justify-start rounded-none h-12 bg-transparent px-6">
           <TabsTrigger value="messages" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
             Messages
+          </TabsTrigger>
+          <TabsTrigger value="tools" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none flex items-center gap-1">
+            <Wrench className="h-4 w-4" />
+            Tools
           </TabsTrigger>
           <TabsTrigger value="debug" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
             Debug
@@ -416,6 +415,11 @@ export default function ChatInterface() {
           </Button>
         </div>
         </div>
+      </TabsContent>
+
+      {/* Tools Tab */}
+      <TabsContent value="tools" className="flex-1 m-0 data-[state=inactive]:hidden">
+        <ToolsPanel />
       </TabsContent>
 
       {/* Debug Tab */}

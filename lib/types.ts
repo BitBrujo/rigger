@@ -78,26 +78,267 @@ export interface AgentSDKConfig {
   plugins?: any[];
 }
 
-// Stream event types from Agent SDK
+// Complete SDK Message Types (from TypeScript SDK Reference)
+
+// Base types
+export interface Usage {
+  input_tokens: number;
+  output_tokens: number;
+  cache_creation_input_tokens?: number;
+  cache_read_input_tokens?: number;
+}
+
+export interface PermissionDenial {
+  tool_name: string;
+  tool_use_id: string;
+  tool_input: any;
+}
+
+// SDK Message Types
+export type SDKMessage =
+  | SDKAssistantMessage
+  | SDKUserMessage
+  | SDKResultMessage
+  | SDKSystemMessage
+  | SDKPartialAssistantMessage
+  | SDKCompactBoundaryMessage
+  | SDKToolProgressMessage
+  | SDKHookResponseMessage
+  | SDKStatusMessage;
+
+export interface SDKAssistantMessage {
+  type: 'assistant';
+  uuid: string;
+  session_id: string;
+  message: {
+    id: string;
+    type: 'message';
+    role: 'assistant';
+    content: Array<{
+      type: 'text' | 'tool_use';
+      text?: string;
+      id?: string;
+      name?: string;
+      input?: any;
+    }>;
+    model: string;
+    stop_reason: string | null;
+    usage: Usage;
+  };
+  parent_tool_use_id: string | null;
+}
+
+export interface SDKUserMessage {
+  type: 'user';
+  uuid?: string;
+  session_id: string;
+  message: {
+    role: 'user';
+    content: string | Array<{
+      type: 'text' | 'image';
+      text?: string;
+      source?: any;
+    }>;
+  };
+  parent_tool_use_id: string | null;
+}
+
+export interface SDKResultMessage {
+  type: 'result';
+  subtype: 'success' | 'error_max_turns' | 'error_during_execution';
+  uuid: string;
+  session_id: string;
+  duration_ms: number;
+  duration_api_ms: number;
+  is_error: boolean;
+  num_turns: number;
+  result?: string;
+  total_cost_usd: number;
+  usage: Usage;
+  permission_denials: PermissionDenial[];
+}
+
+export interface SDKSystemMessage {
+  type: 'system';
+  subtype: 'init' | 'hook_response';
+  uuid: string;
+  session_id: string;
+  // Init fields
+  apiKeySource?: string;
+  cwd?: string;
+  tools?: string[];
+  mcp_servers?: Array<{
+    name: string;
+    status: string;
+  }>;
+  model?: string;
+  permissionMode?: string;
+  slash_commands?: string[];
+  output_style?: string;
+  agents?: string[];
+  plugins?: Array<{
+    name: string;
+    version: string;
+  }>;
+  // Hook response fields
+  hook_name?: string;
+  hook_event?: string;
+  stdout?: string;
+  stderr?: string;
+  exit_code?: number;
+}
+
+export interface SDKPartialAssistantMessage {
+  type: 'stream_event';
+  event: {
+    type: string;
+    index?: number;
+    delta?: {
+      type: 'text_delta' | 'input_json_delta';
+      text?: string;
+      partial_json?: string;
+    };
+    content_block?: {
+      type: 'text' | 'tool_use';
+      text?: string;
+      id?: string;
+      name?: string;
+      input?: any;
+    };
+    message?: any;
+    usage?: Usage;
+  };
+  parent_tool_use_id: string | null;
+  uuid: string;
+  session_id: string;
+}
+
+export interface SDKCompactBoundaryMessage {
+  type: 'system';
+  subtype: 'compact_boundary';
+  uuid: string;
+  session_id: string;
+  compact_metadata: {
+    trigger: 'manual' | 'auto';
+    pre_tokens: number;
+  };
+}
+
+export interface SDKToolProgressMessage {
+  type: 'tool_progress';
+  tool_use_id: string;
+  tool_name: string;
+  elapsed_time_seconds: number;
+  parent_tool_use_id: string | null;
+  uuid: string;
+  session_id: string;
+}
+
+export interface SDKHookResponseMessage {
+  type: 'system';
+  subtype: 'hook_response';
+  uuid: string;
+  session_id: string;
+  hook_name: string;
+  hook_event: string;
+  stdout: string;
+  stderr: string;
+  exit_code?: number;
+}
+
+export interface SDKStatusMessage {
+  type: 'status';
+  status: 'thinking' | 'tool_executing' | 'waiting';
+  message?: string;
+  uuid: string;
+  session_id: string;
+}
+
+// Tool Execution Tracking
+export interface ToolExecution {
+  id: string; // tool_use_id
+  toolName: string;
+  status: 'running' | 'completed' | 'failed';
+  startTime: number;
+  endTime?: number;
+  elapsedSeconds?: number;
+  input: any;
+  output?: any;
+  error?: string;
+  parentToolUseId: string | null;
+}
+
+// Permission System
+export interface PermissionRequest {
+  id: string; // tool_use_id
+  toolName: string;
+  input: any;
+  timestamp: number;
+  status: 'pending' | 'approved' | 'denied';
+  suggestions?: PermissionUpdate[];
+}
+
+export interface PermissionUpdate {
+  type: 'addRules' | 'replaceRules' | 'removeRules' | 'setMode' | 'addDirectories' | 'removeDirectories';
+  rules?: PermissionRuleValue[];
+  behavior?: 'allow' | 'deny' | 'ask';
+  destination?: 'userSettings' | 'projectSettings' | 'localSettings' | 'session';
+  mode?: string;
+  directories?: string[];
+}
+
+export interface PermissionRuleValue {
+  toolName: string;
+  ruleContent?: string;
+}
+
+export interface PermissionResult {
+  behavior: 'allow' | 'deny';
+  message?: string;
+  updatedInput?: any;
+  updatedPermissions?: PermissionUpdate[];
+  interrupt?: boolean;
+}
+
+// MCP Server Status
+export interface McpServerStatus {
+  name: string;
+  status: 'connected' | 'failed' | 'connecting';
+  error?: string;
+  resources?: number;
+  tools?: number;
+}
+
+// System Info (from SDKSystemMessage)
+export interface SystemInfo {
+  apiKeySource: string;
+  cwd: string;
+  tools: string[];
+  mcpServers: Array<{
+    name: string;
+    status: string;
+  }>;
+  model: string;
+  permissionMode: string;
+  slashCommands?: string[];
+  agents?: string[];
+  plugins?: Array<{
+    name: string;
+    version: string;
+  }>;
+}
+
+// Legacy stream event type (for backward compatibility)
 export interface SDKStreamEvent {
   type: 'system' | 'user' | 'assistant' | 'result' | 'stream_event';
   data?: any;
   event?: any;
   message?: any;
-  usage?: {
-    input_tokens: number;
-    output_tokens: number;
-    cache_creation_input_tokens?: number;
-    cache_read_input_tokens?: number;
-  };
+  usage?: Usage;
   total_cost_usd?: number;
   num_turns?: number;
   is_error?: boolean;
-  permission_denials?: Array<{
-    tool_name: string;
-    tool_use_id: string;
-    tool_input: any;
-  }>;
+  permission_denials?: PermissionDenial[];
   session_id?: string;
   subtype?: string;
 }
@@ -419,6 +660,38 @@ export const EXECUTABLE_OPTIONS = [
   },
 ] as const;
 
+export const CLAUDE_CODE_PRESET_PROMPT = `You are Claude Code, an AI coding assistant powered by Anthropic's Claude API. Your purpose is to help developers write, debug, and improve code efficiently.
+
+**Core Capabilities:**
+- Write clean, well-documented code following best practices
+- Debug complex issues with detailed analysis
+- Refactor code for better performance and maintainability
+- Explain technical concepts clearly
+- Suggest architectural improvements
+- Review code for potential issues
+
+**Guidelines:**
+- Always prefer existing code patterns and conventions in the project
+- Write comprehensive comments for complex logic
+- Consider edge cases and error handling
+- Suggest tests when appropriate
+- Be concise but thorough in explanations
+- Ask clarifying questions when requirements are ambiguous
+
+**Tool Usage:**
+- Use Read tool to examine existing code before making changes
+- Use Edit tool for surgical code modifications
+- Use Write tool only for new files
+- Use Grep/Glob to find patterns and files
+- Use Bash for testing and verification
+- Use WebSearch for latest documentation when needed
+
+**Communication Style:**
+- Be direct and professional
+- Focus on solving problems, not validating feelings
+- Provide honest technical feedback even if critical
+- Explain trade-offs when multiple approaches exist`;
+
 export const SYSTEM_PROMPT_TEMPLATES = [
   {
     name: 'Full Agent',
@@ -439,5 +712,89 @@ export const SYSTEM_PROMPT_TEMPLATES = [
   {
     name: 'Data Analyst',
     prompt: 'You are a data analyst. Read and analyze data files, identify patterns, create visualizations, and explain findings.',
+  },
+];
+
+// Pre-built subagent templates
+export const SUBAGENT_TEMPLATES = [
+  {
+    name: 'code-reviewer',
+    description: 'Specialized agent for code review and quality analysis',
+    definition: {
+      systemPrompt: `You are a code review specialist. Your task is to:
+- Analyze code for potential bugs, security issues, and performance problems
+- Check for code style and convention adherence
+- Suggest improvements for readability and maintainability
+- Identify missing error handling and edge cases
+- Recommend tests that should be written
+
+Focus on constructive, actionable feedback.`,
+      allowedTools: ['Read', 'Grep', 'Glob'],
+      disallowedTools: ['Write', 'Edit', 'Bash'],
+    },
+  },
+  {
+    name: 'test-writer',
+    description: 'Generates comprehensive test suites',
+    definition: {
+      systemPrompt: `You are a test automation specialist. Your task is to:
+- Write comprehensive unit tests with good coverage
+- Create integration tests for critical paths
+- Generate test data and fixtures
+- Follow testing best practices (AAA pattern, clear assertions)
+- Write descriptive test names and comments
+
+Use the project's existing test framework and conventions.`,
+      allowedTools: ['Read', 'Write', 'Grep', 'Glob', 'Bash'],
+      disallowedTools: [],
+    },
+  },
+  {
+    name: 'doc-writer',
+    description: 'Creates documentation and README files',
+    definition: {
+      systemPrompt: `You are a technical documentation specialist. Your task is to:
+- Write clear, comprehensive documentation
+- Create README files with setup instructions
+- Document APIs and function interfaces
+- Generate code examples and usage guides
+- Maintain consistent documentation style
+
+Focus on clarity and completeness for both beginners and experts.`,
+      allowedTools: ['Read', 'Write', 'Grep', 'Glob', 'WebSearch'],
+      disallowedTools: ['Bash', 'Edit'],
+    },
+  },
+  {
+    name: 'refactorer',
+    description: 'Improves code structure and quality',
+    definition: {
+      systemPrompt: `You are a code refactoring specialist. Your task is to:
+- Identify code smells and anti-patterns
+- Extract reusable functions and components
+- Improve naming and code organization
+- Reduce complexity and duplication
+- Maintain existing functionality (no behavior changes)
+
+Make incremental, safe refactoring changes.`,
+      allowedTools: ['Read', 'Edit', 'Grep', 'Glob', 'Bash'],
+      disallowedTools: ['Write'],
+    },
+  },
+  {
+    name: 'researcher',
+    description: 'Gathers information and analyzes data',
+    definition: {
+      systemPrompt: `You are a research specialist. Your task is to:
+- Search the web for relevant information
+- Read and analyze documentation
+- Compare different approaches and technologies
+- Summarize findings with citations
+- Provide recommendations based on research
+
+Focus on accuracy and comprehensive analysis.`,
+      allowedTools: ['WebSearch', 'WebFetch', 'Read', 'Grep'],
+      disallowedTools: ['Write', 'Edit', 'Bash'],
+    },
   },
 ];

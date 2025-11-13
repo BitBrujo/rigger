@@ -149,10 +149,33 @@ router.post('/stream', async (req: Request, res: Response) => {
       prompt: userPrompt,
       options: sdkOptions
     })) {
-      // Track tools used
-      if (msg.type === 'stream_event' && msg.event?.type === 'tool_use' && msg.event?.name) {
-        if (!toolsUsed.includes(msg.event.name)) {
-          toolsUsed.push(msg.event.name);
+      // Track tools used from stream events and assistant messages
+      if (msg.type === 'stream_event') {
+        // Tool use detected in streaming content block
+        if (msg.event?.type === 'content_block_start' && msg.event?.content_block?.type === 'tool_use') {
+          const toolName = msg.event.content_block.name;
+          if (toolName && !toolsUsed.includes(toolName)) {
+            toolsUsed.push(toolName);
+          }
+          // Send tool_start event to frontend
+          res.write(`data: ${JSON.stringify({
+            type: 'tool_start',
+            tool_name: toolName,
+            tool_use_id: msg.event.content_block.id,
+            input: msg.event.content_block.input,
+            timestamp: new Date().toISOString()
+          })}\n\n`);
+        }
+
+        // Tool result detected (completion or error)
+        if (msg.event?.type === 'content_block_start' && msg.event?.content_block?.type === 'tool_result') {
+          res.write(`data: ${JSON.stringify({
+            type: 'tool_complete',
+            tool_use_id: msg.event.content_block.tool_use_id,
+            content: msg.event.content_block.content,
+            is_error: msg.event.content_block.is_error || false,
+            timestamp: new Date().toISOString()
+          })}\n\n`);
         }
       }
 
@@ -161,7 +184,9 @@ router.post('/stream', async (req: Request, res: Response) => {
         // Partial message chunks during streaming
         res.write(`data: ${JSON.stringify({
           type: 'content_block_delta',
-          data: msg.event
+          data: msg.event,
+          uuid: msg.uuid,
+          session_id: msg.session_id
         })}\n\n`);
       } else if (msg.type === 'assistant') {
         // Complete assistant message
@@ -170,17 +195,71 @@ router.post('/stream', async (req: Request, res: Response) => {
           data: {
             role: 'assistant',
             content: msg.message.content
-          }
+          },
+          uuid: msg.uuid,
+          session_id: msg.session_id
         })}\n\n`);
       } else if (msg.type === 'system') {
-        // System initialization message
+        // System messages (init, hook_response, compact_boundary)
         sessionId = msg.session_id || null;
-        res.write(`data: ${JSON.stringify({
-          type: 'system',
-          data: {
-            subtype: msg.subtype,
+
+        if (msg.subtype === 'init') {
+          // Send complete system info to frontend
+          res.write(`data: ${JSON.stringify({
+            type: 'system_init',
+            data: {
+              session_id: msg.session_id,
+              cwd: msg.cwd,
+              tools: msg.tools,
+              mcp_servers: msg.mcp_servers,
+              model: msg.model,
+              permissionMode: msg.permissionMode,
+              agents: msg.agents,
+              plugins: msg.plugins
+            },
+            uuid: msg.uuid
+          })}\n\n`);
+        } else if (msg.subtype === 'hook_response') {
+          // Hook execution result
+          res.write(`data: ${JSON.stringify({
+            type: 'hook_response',
+            data: {
+              hook_name: msg.hook_name,
+              hook_event: msg.hook_event,
+              stdout: msg.stdout,
+              stderr: msg.stderr,
+              exit_code: msg.exit_code
+            },
+            uuid: msg.uuid,
             session_id: msg.session_id
-          }
+          })}\n\n`);
+        } else if (msg.subtype === 'compact_boundary') {
+          // Conversation compaction event
+          res.write(`data: ${JSON.stringify({
+            type: 'compact_boundary',
+            data: msg.compact_metadata,
+            uuid: msg.uuid,
+            session_id: msg.session_id
+          })}\n\n`);
+        }
+      } else if (msg.type === 'tool_progress') {
+        // Tool progress update
+        res.write(`data: ${JSON.stringify({
+          type: 'tool_progress',
+          tool_name: msg.tool_name,
+          tool_use_id: msg.tool_use_id,
+          elapsed_seconds: msg.elapsed_time_seconds,
+          uuid: msg.uuid,
+          session_id: msg.session_id
+        })}\n\n`);
+      } else if (msg.type === 'status') {
+        // Status update (thinking, tool_executing, waiting)
+        res.write(`data: ${JSON.stringify({
+          type: 'status',
+          status: msg.status,
+          message: msg.message,
+          uuid: msg.uuid,
+          session_id: msg.session_id
         })}\n\n`);
       } else if (msg.type === 'result') {
         // Final result with usage stats
