@@ -176,22 +176,137 @@
 
 ---
 
-## In Progress
+## Completed Phases (Continued)
 
-### 🔄 Phase 4: Interactive Permission System
-**Status**: Next up (backend-heavy task)
+### ✅ Phase 5: Enhanced Visibility Features
+**Completed**: 2025-11-13
+
+**Objective**: Display system information, MCP server monitoring, and hooks execution logs
+
+**Implementation**:
+- Added 2 new tabs to Debug Panel (System + Hooks)
+- Enhanced tab UI with icons
+- Comprehensive display of all SDK initialization data
+
+**New Features**:
+
+1. **System Info Tab**:
+   - **Model Configuration Card**:
+     - Active model badge
+     - Permission mode display
+     - API key source
+   - **Working Directory**: Shows current cwd
+   - **Available Tools**: All enabled tools with badges
+   - **MCP Servers Status**: Live connection status with color-coded icons
+     - Green checkmark: Connected
+     - Red X: Failed
+     - Blue spinner: Connecting
+   - **Configured Agents**: Lists custom subagents
+   - **Loaded Plugins**: Plugin name + version
+   - **Slash Commands**: Available slash commands
+   - Empty state with helpful message
+
+2. **Hooks Execution Logs Tab**:
+   - Chronological list of hook executions (newest first)
+   - **Hook cards showing**:
+     - Hook name with Terminal icon
+     - Hook event type badge
+     - Exit code badge (green for 0, red for errors)
+   - **Output display**:
+     - stdout (green checkmark icon)
+     - stderr (red X icon, destructive styling)
+     - Both in scrollable code blocks (max-height 32)
+   - Timestamp for each execution
+   - Empty state with explanation of hooks
+
+3. **Enhanced Tab List**:
+   - Changed from 4 to 6 tabs
+   - Added icons to System, MCP, and Hooks tabs
+   - Better visual hierarchy
+
+**UI/UX Features**:
+- Consistent card-based layout
+- Color-coded status indicators
+- Scrollable content areas
+- Responsive grid layouts
+- Empty states with helpful explanations
+- Proper text wrapping and truncation
+
+**Technical Implementation**:
+- Uses `systemInfo` from store (populated via `system_init` event)
+- Uses `hookLogs` from store (populated via `hook_response` events)
+- Real-time updates as events are received
+- Conditional rendering for optional fields
+
+**Files Modified**:
+- `components/debug-panel.tsx` (+190 lines)
+
+**Integration**:
+- System info populated by backend SSE `system_init` event
+- Hook logs populated by backend SSE `hook_response` events
+- All data flows through Zustand store
+- No backend changes required (events already implemented in Phase 1)
+
+---
+
+## Pending Phases
+
+### Phase 4: Interactive Permission System
+**Status**: Ready to implement (backend-heavy task)
 
 **Objective**: Implement interactive tool permission requests with real-time approval UI
 
-**Tasks**:
-1. Implement `canUseTool` callback in backend agent-sdk route
-2. Create permission request queue (async handler)
-3. Send `permission_request` SSE event to frontend
-4. Wait for frontend response via WebSocket or POST
-5. Create permission modal component
-6. Add permission rules management UI
+**Architecture Requirements**:
+1. **Backend Permission Callback**:
+   - Implement `canUseTool(toolName, input)` callback in `buildSdkOptions()`
+   - Create permission request queue with promise-based resolution
+   - Generate unique request IDs for tracking
+   - Send `permission_request` SSE event to frontend with:
+     - Request ID
+     - Tool name
+     - Input parameters
+     - Risk level assessment
+     - Suggested action (allow/deny)
+   - Wait for frontend response via POST endpoint `/api/agent/permission-response`
+   - Handle timeout (default: deny after 30s)
+   - Return boolean decision to SDK
 
-**Expected Outcome**: Users can approve/deny tool usage in real-time during agent execution.
+2. **Frontend Permission Modal**:
+   - Create `<PermissionModal>` component
+   - Display when `permission_request` event received
+   - Show:
+     - Tool name (with icon)
+     - Input parameters (formatted JSON)
+     - Risk assessment (file paths, commands, etc.)
+     - SDK recommendation
+   - Action buttons:
+     - **Allow Once** - Approve this request
+     - **Always Allow** - Add permanent rule
+     - **Deny** - Reject this request
+     - **Modify Input** - Edit parameters before approval
+   - Send decision to `/api/agent/permission-response`
+   - Update permission rules in store if "Always Allow"
+
+3. **Permission Rules Management**:
+   - Add "Permissions" section to ConfigPanel
+   - List current rules (tool + pattern)
+   - Add/edit/delete rules
+   - Export/import permission profiles
+   - Rule format: `{ tool: string, pattern?: string, action: 'allow' | 'deny' }`
+
+**Technical Challenges**:
+- Async callback blocking during SDK execution
+- Race conditions between multiple permission requests
+- Timeout handling and error recovery
+- Persisting rules to localStorage/database
+- Testing permission flows without breaking existing features
+
+**Implementation Estimate**: 400-500 lines of code
+- Backend: ~200 lines (callback + queue + endpoint)
+- Frontend Modal: ~150 lines
+- Rules UI: ~150 lines
+
+**Expected Outcome**: Users can approve/deny tool usage in real-time during agent execution with persistent rules.
 
 ---
 
@@ -451,23 +566,112 @@
 
 ---
 
-### Phase 6: File Operations Enhancements
+### ✅ Phase 6: File Operations Enhancements
+**Completed**: 2025-11-13
 
-#### Notifications
-- Toast/notification system for file operations
-- "✓ Created hello.py" when Write completes
-- "✓ Updated 15 lines in config.json" when Edit completes
+#### 6.1 File Operation Toast Notifications
+**Completed**: Intelligent toast system for file operations
 
-#### Diff Viewer
-- Component for Edit tool results
-- Side-by-side or unified diff view
-- Syntax highlighting
-- Optional: Undo button (create reverse edit)
+**Implementation**:
+- `showFileOperationToast()` helper function in tools-panel.tsx
+- Monitors completed tool executions via `useEffect` hook
+- Detects file operations: Read, Write, Edit, Glob, Grep, NotebookEdit
+- Extracts relevant details from tool execution inputs/outputs
 
-#### File Browser
-- File tree component for workspace
-- Click to insert path into Read/Write tool suggestions
-- Show recently accessed files
+**Toast Messages**:
+- **Read**: "File read successfully" with filename
+- **Write**: "File written successfully" with filename
+- **Edit**: "File edited successfully" with filename
+- **Glob**: "Files found" with count (e.g., "12 files matched")
+- **Grep**: "Search completed" with match count (e.g., "5 matches found")
+- **NotebookEdit**: "Notebook updated" with filename
+
+**Technical Details**:
+- Lines 433-509: Toast helper function with switch case for each tool
+- Lines 512-524: useEffect hook with processedExecutionsRef to prevent duplicate toasts
+- Uses sonner toast library with custom icons (FileText, FileEdit, Search, FolderOpen)
+- 3-second duration with icon + description
+
+**Files Modified**:
+- `components/tools-panel.tsx` (+95 lines)
+
+---
+
+#### 6.2 Diff Viewer for Edit Tool
+**Completed**: Side-by-side diff visualization for Edit operations
+
+**Implementation**:
+- `DiffViewer` component displays old_string vs new_string
+- Integrated into `ToolExecutionCard` for Edit tool executions
+- Auto-detects Edit tools with old_string/new_string in input
+- Shows "Diff Available" badge on Edit tool cards
+
+**Diff Display**:
+- Split-pane layout (old on left, new on right)
+- Color-coded backgrounds (red for old, green for new)
+- Header with XCircle icon (old) and CheckCircle2 icon (new)
+- Border styling matching dark/light themes
+- File path displayed above diff
+
+**Technical Details**:
+- Lines 15-43: DiffViewer component with grid layout
+- Lines 80-88: Detection logic for Edit tools with diff data
+- Lines 103: "Diff Available" badge indicator
+- Lines 121-136: Conditional rendering of diff view
+- Red/green color scheme: `bg-red-50 dark:bg-red-950/20` and `bg-green-50 dark:bg-green-950/20`
+- max-h-48 scrollable for long diffs
+
+**Files Modified**:
+- `components/tools-panel.tsx` (+75 lines)
+
+---
+
+#### 6.3 File Browser with Tree View
+**Completed**: Hierarchical file tree showing accessed files
+
+**Implementation**:
+- `FileBrowser` component builds tree from tool executions
+- `FileTreeItem` recursive component for tree rendering
+- New "Files" tab added to Tools Panel
+- Auto-expands first 2 directory levels
+
+**File Tree Features**:
+- **Directory nodes**: Folder icon, collapsible, shows operation count badge
+- **File nodes**: File icon, shows recent operation (Read/Write/Edit) with status
+- **Status indicators**: Green checkmark (completed), red X (failed), blue spinner (running)
+- **Sorting**: Directories first, then alphabetically
+- **Path normalization**: Handles absolute and relative paths
+
+**Tree Building Logic**:
+- Lines 315-396: FileBrowser component with useMemo for performance
+- Lines 317-379: Build directory structure from file_path/notebook_path inputs
+- Lines 381-393: Recursive sorting (directories first)
+- Lines 398-408: Count total files accessed
+- Lines 250-313: FileTreeItem recursive component with collapsible directories
+
+**UI Integration**:
+- Lines 544-561: Updated TabsList with 4 tabs (History, Active, Files, Stats)
+- Lines 600-604: Files TabContent with FileBrowser
+- Grid layout for 4 tabs with icons
+
+**Technical Details**:
+- `FileTreeNode` interface: path, name, type, children, operations array
+- `useMemo` for tree building (performance optimization)
+- Tracks all operations per file (timestamp, tool name, status)
+- Indentation via paddingLeft: `${level * 12 + 8}px`
+- Empty state message when no files accessed
+
+**Files Modified**:
+- `components/tools-panel.tsx` (+210 lines)
+
+---
+
+**Phase 6 Summary**:
+- ✅ File operation toast notifications (6 tool types)
+- ✅ Diff viewer for Edit tool with color-coded display
+- ✅ File browser with hierarchical tree view
+- ✅ 4-tab Tools Panel (History, Active, Files, Stats)
+- **Total: ~380 lines added to tools-panel.tsx**
 
 ---
 
@@ -530,12 +734,50 @@
 
 ---
 
+## Summary of Progress
+
+**Completed: Phases 1, 2, 3, 5, and 6 (Core Infrastructure, Tool Visibility, Configuration, Enhanced Visibility, File Operations)**
+
+**Status as of 2025-11-13:**
+- ✅ Complete SDK message type system
+- ✅ Real-time tool execution tracking
+- ✅ Comprehensive Tools Panel with 4 tabs (History, Active, Files, Statistics)
+- ✅ All 30+ SDK configuration options exposed in UI
+- ✅ Advanced settings (thinking mode, fallback model, env vars, runtime config)
+- ✅ System prompt templates and Claude Code preset
+- ✅ Complete subagent definition and management UI
+- ✅ 5 pre-built subagent templates
+- ✅ System Info display (model, tools, MCP servers, agents, plugins)
+- ✅ Hooks execution logs with stdout/stderr
+- ✅ Enhanced Debug Panel with 6 tabs
+- ✅ **File operation toast notifications (6 tool types)**
+- ✅ **Diff viewer for Edit tool with side-by-side display**
+- ✅ **File browser with hierarchical tree view**
+
+**Lines of Code Added:**
+- Types/Constants: ~200 lines
+- Store Management: ~60 lines
+- Backend Events: ~100 lines
+- Tools Panel: ~630 lines (Phase 2 + Phase 6)
+- Configuration UI: ~380 lines
+- Debug Panel Enhancements: ~190 lines
+- **Total: ~1,560 lines of production-ready code**
+
+**Files Modified:**
+- `lib/types.ts`
+- `lib/store.ts`
+- `backend/src/routes/agent.ts`
+- `components/tools-panel.tsx` (new, enhanced)
+- `components/chat-interface.tsx`
+- `components/config-panel.tsx`
+- `components/debug-panel.tsx`
+- `PROGRESS.md`
+
 ## Next Actions
 
-1. **Immediate**: Complete Phase 2.3 (wire up real-time updates)
-2. **Short-term**: Phase 3 (expose all config options)
-3. **Medium-term**: Phase 4-5 (permissions + visibility)
-4. **Long-term**: Phase 6-8 (file ops, sessions, monitoring)
+1. **Phase 4**: Interactive permission system (requires backend callback implementation + modal UI) - **DEFERRED**
+2. **Phase 7**: Session management UI and subagent visualization
+3. **Phase 8**: Cost dashboard and performance metrics
 
 ---
 

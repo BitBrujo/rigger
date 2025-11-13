@@ -8,11 +8,11 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Clock, DollarSign, Zap, AlertCircle, TrendingUp } from 'lucide-react';
+import { Clock, DollarSign, Zap, AlertCircle, TrendingUp, Info, Terminal, Server, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function DebugPanel() {
-  const { debugInfo, config, accumulatedCost, sdkMode } = useAgentStore();
+  const { debugInfo, config, accumulatedCost, sdkMode, systemInfo, hookLogs } = useAgentStore();
 
   const budgetRemaining = config.maxBudgetUsd ? config.maxBudgetUsd - accumulatedCost : null;
   const budgetPercentage = config.maxBudgetUsd ? (accumulatedCost / config.maxBudgetUsd) * 100 : null;
@@ -37,10 +37,21 @@ export default function DebugPanel() {
       </div>
 
       <Tabs defaultValue="metrics" className="flex-1 flex flex-col">
-        <TabsList className="grid w-full grid-cols-4 mx-4 mt-2">
+        <TabsList className="grid w-full grid-cols-6 mx-4 mt-2">
           <TabsTrigger value="metrics">Metrics</TabsTrigger>
-          <TabsTrigger value="mcp" disabled={!sdkMode}>MCP</TabsTrigger>
-          <TabsTrigger value="sessions" disabled={!sdkMode}>Sessions</TabsTrigger>
+          <TabsTrigger value="system">
+            <Info className="h-3 w-3 mr-1" />
+            System
+          </TabsTrigger>
+          <TabsTrigger value="mcp">
+            <Server className="h-3 w-3 mr-1" />
+            MCP
+          </TabsTrigger>
+          <TabsTrigger value="hooks">
+            <Terminal className="h-3 w-3 mr-1" />
+            Hooks
+          </TabsTrigger>
+          <TabsTrigger value="sessions">Sessions</TabsTrigger>
           <TabsTrigger value="raw">Raw</TabsTrigger>
         </TabsList>
 
@@ -276,6 +287,181 @@ export default function DebugPanel() {
           </ScrollArea>
         </TabsContent>
 
+        {/* SYSTEM INFO TAB */}
+        <TabsContent value="system" className="flex-1">
+          <ScrollArea className="h-full">
+            <div className="p-4 space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold mb-2">System Initialization</h3>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Information from the Agent SDK session initialization
+                </p>
+              </div>
+
+              {systemInfo ? (
+                <div className="space-y-4">
+                  {/* Model Information */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm">Model Configuration</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Model:</span>
+                        <Badge variant="default">{systemInfo.model}</Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Permission Mode:</span>
+                        <Badge variant="outline">{systemInfo.permissionMode}</Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">API Key Source:</span>
+                        <Badge variant="secondary">{systemInfo.apiKeySource}</Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Working Directory */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm">Working Directory</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <code className="text-xs text-muted-foreground break-all">{systemInfo.cwd}</code>
+                    </CardContent>
+                  </Card>
+
+                  {/* Available Tools */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm flex items-center justify-between">
+                        <span>Available Tools</span>
+                        <Badge variant="secondary">{systemInfo.tools.length}</Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-wrap gap-1">
+                        {systemInfo.tools.map((tool, i) => (
+                          <Badge key={i} variant="outline" className="text-xs">
+                            {tool}
+                          </Badge>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* MCP Servers Status */}
+                  {systemInfo.mcpServers && systemInfo.mcpServers.length > 0 && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm flex items-center justify-between">
+                          <span>MCP Servers</span>
+                          <Badge variant="secondary">{systemInfo.mcpServers.length}</Badge>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        {systemInfo.mcpServers.map((server, i) => (
+                          <div key={i} className="flex items-center justify-between p-2 border rounded-md">
+                            <div className="flex items-center gap-2">
+                              {server.status === 'connected' ? (
+                                <CheckCircle className="h-4 w-4 text-green-600" />
+                              ) : server.status === 'failed' ? (
+                                <XCircle className="h-4 w-4 text-destructive" />
+                              ) : (
+                                <RefreshCw className="h-4 w-4 text-blue-600 animate-spin" />
+                              )}
+                              <span className="text-xs font-medium">{server.name}</span>
+                            </div>
+                            <Badge
+                              variant={
+                                server.status === 'connected' ? 'default' :
+                                server.status === 'failed' ? 'destructive' :
+                                'secondary'
+                              }
+                              className="text-xs"
+                            >
+                              {server.status}
+                            </Badge>
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Agents */}
+                  {systemInfo.agents && systemInfo.agents.length > 0 && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm flex items-center justify-between">
+                          <span>Configured Agents</span>
+                          <Badge variant="secondary">{systemInfo.agents.length}</Badge>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-wrap gap-1">
+                          {systemInfo.agents.map((agent, i) => (
+                            <Badge key={i} variant="default" className="text-xs">
+                              {agent}
+                            </Badge>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Plugins */}
+                  {systemInfo.plugins && systemInfo.plugins.length > 0 && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm flex items-center justify-between">
+                          <span>Loaded Plugins</span>
+                          <Badge variant="secondary">{systemInfo.plugins.length}</Badge>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        {systemInfo.plugins.map((plugin, i) => (
+                          <div key={i} className="flex items-center justify-between text-xs">
+                            <span className="font-medium">{plugin.name}</span>
+                            <Badge variant="outline" className="text-xs">{plugin.version}</Badge>
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Slash Commands */}
+                  {systemInfo.slashCommands && systemInfo.slashCommands.length > 0 && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm flex items-center justify-between">
+                          <span>Slash Commands</span>
+                          <Badge variant="secondary">{systemInfo.slashCommands.length}</Badge>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-wrap gap-1">
+                          {systemInfo.slashCommands.map((cmd, i) => (
+                            <Badge key={i} variant="outline" className="text-xs font-mono">
+                              /{cmd}
+                            </Badge>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              ) : (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    No system information available. System info is sent when a new Agent SDK session is initialized.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
         {/* MCP TAB */}
         <TabsContent value="mcp" className="flex-1">
           <ScrollArea className="h-full">
@@ -339,6 +525,94 @@ export default function DebugPanel() {
                     </Card>
                   ))}
                 </div>
+              )}
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        {/* HOOKS TAB */}
+        <TabsContent value="hooks" className="flex-1">
+          <ScrollArea className="h-full">
+            <div className="p-4 space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold mb-2">Hook Execution Logs</h3>
+                <p className="text-xs text-muted-foreground mb-4">
+                  View results from hooks executed during agent lifecycle events
+                </p>
+              </div>
+
+              {hookLogs && hookLogs.length > 0 ? (
+                <div className="space-y-3">
+                  {hookLogs.slice().reverse().map((log, i) => (
+                    <Card key={i}>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Terminal className="h-4 w-4" />
+                            <span>{log.hookName}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              {log.hookEvent}
+                            </Badge>
+                            {log.exitCode !== undefined && (
+                              <Badge
+                                variant={log.exitCode === 0 ? 'default' : 'destructive'}
+                                className="text-xs"
+                              >
+                                Exit: {log.exitCode}
+                              </Badge>
+                            )}
+                          </div>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {/* Stdout */}
+                        {log.stdout && (
+                          <div>
+                            <p className="text-xs font-medium mb-1 flex items-center gap-1">
+                              <CheckCircle className="h-3 w-3 text-green-600" />
+                              stdout
+                            </p>
+                            <pre className="text-xs bg-muted p-2 rounded-md overflow-x-auto max-h-32">
+                              {log.stdout}
+                            </pre>
+                          </div>
+                        )}
+
+                        {/* Stderr */}
+                        {log.stderr && (
+                          <div>
+                            <p className="text-xs font-medium mb-1 flex items-center gap-1 text-destructive">
+                              <XCircle className="h-3 w-3" />
+                              stderr
+                            </p>
+                            <pre className="text-xs bg-destructive/10 text-destructive p-2 rounded-md overflow-x-auto max-h-32">
+                              {log.stderr}
+                            </pre>
+                          </div>
+                        )}
+
+                        {!log.stdout && !log.stderr && (
+                          <p className="text-xs text-muted-foreground italic">No output</p>
+                        )}
+
+                        {/* Timestamp */}
+                        <Separator />
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(log.timestamp).toLocaleString()}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    No hooks executed yet. Hooks are custom scripts that run at specific agent lifecycle events. Configure hooks in the Config Panel to see execution logs here.
+                  </AlertDescription>
+                </Alert>
               )}
             </div>
           </ScrollArea>
