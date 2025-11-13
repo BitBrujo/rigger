@@ -12,6 +12,7 @@ import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Loader2, Send, Download } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function ChatInterface() {
   const {
@@ -63,6 +64,9 @@ export default function ChatInterface() {
       }
     } catch (error: any) {
       console.error('Error sending message:', error);
+      toast.error('Failed to send message', {
+        description: error.message,
+      });
       setDebugInfo({
         rawResponse: null,
         latency: 0,
@@ -110,6 +114,22 @@ export default function ChatInterface() {
           if (sdkMode) {
             const cost = event.cost || 0;
             addCost(cost);
+
+            // Budget warning
+            const { config: currentConfig, accumulatedCost: currentAccumulated } = useAgentStore.getState();
+            const totalCost = currentAccumulated + cost;
+            if (currentConfig.maxBudgetUsd && totalCost > currentConfig.maxBudgetUsd * 0.8) {
+              if (totalCost >= currentConfig.maxBudgetUsd) {
+                toast.error('Budget exceeded!', {
+                  description: `Spent $${totalCost.toFixed(6)} of $${currentConfig.maxBudgetUsd.toFixed(6)}`,
+                });
+              } else if (totalCost > currentConfig.maxBudgetUsd * 0.9) {
+                toast.warning('Budget warning', {
+                  description: `90% of budget used: $${totalCost.toFixed(6)} / $${currentConfig.maxBudgetUsd.toFixed(6)}`,
+                });
+              }
+            }
+
             setDebugInfo({
               rawResponse: null, // SDK doesn't expose raw response
               latency,
@@ -266,8 +286,12 @@ export default function ChatInterface() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `conversation-${Date.now()}.json`;
+    const filename = `conversation-${Date.now()}.json`;
+    a.download = filename;
     a.click();
+    toast.success('Conversation exported', {
+      description: `Saved as ${filename}`,
+    });
   };
 
   return (

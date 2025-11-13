@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Clock, DollarSign, Zap, AlertCircle, TrendingUp } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function DebugPanel() {
   const { debugInfo, config, accumulatedCost, sdkMode } = useAgentStore();
@@ -382,8 +383,10 @@ export default function DebugPanel() {
                             variant="outline"
                             className="text-xs"
                             onClick={() => {
-                              // Copy session ID to clipboard
                               navigator.clipboard.writeText(debugInfo.sessionId || '');
+                              toast.success('Session ID copied', {
+                                description: 'Copied to clipboard',
+                              });
                             }}
                           >
                             Copy ID
@@ -393,9 +396,11 @@ export default function DebugPanel() {
                             variant="outline"
                             className="text-xs"
                             onClick={() => {
-                              // Set config to continue this session
                               const { setConfig } = useAgentStore.getState();
                               setConfig({ continueSession: true });
+                              toast.info('Continue session enabled', {
+                                description: 'Next message will continue this session',
+                              });
                             }}
                           >
                             Continue
@@ -407,6 +412,9 @@ export default function DebugPanel() {
                             onClick={() => {
                               const { setConfig } = useAgentStore.getState();
                               setConfig({ resumeSessionId: debugInfo.sessionId });
+                              toast.info('Resume session set', {
+                                description: `Will resume from ${debugInfo.sessionId?.slice(0, 8)}...`,
+                              });
                             }}
                           >
                             Resume
@@ -418,6 +426,9 @@ export default function DebugPanel() {
                             onClick={() => {
                               const { setConfig } = useAgentStore.getState();
                               setConfig({ forkSession: true });
+                              toast.info('Fork session enabled', {
+                                description: 'Next message will fork this session',
+                              });
                             }}
                           >
                             Fork

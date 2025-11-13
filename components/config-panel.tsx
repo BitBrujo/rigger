@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAgentStore } from '@/lib/store';
+import { toast } from 'sonner';
 import { MODEL_OPTIONS, SYSTEM_PROMPT_TEMPLATES } from '@/lib/types';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -51,8 +52,13 @@ export default function ConfigPanel() {
     try {
       await ApiClient.createPreset(name, config);
       await loadPresets();
+      toast.success('Preset saved successfully', {
+        description: `"${name}" has been saved to your presets`,
+      });
     } catch (error: any) {
-      alert('Failed to save preset: ' + error.message);
+      toast.error('Failed to save preset', {
+        description: error.message,
+      });
     } finally {
       setSavingPreset(false);
     }
@@ -60,6 +66,9 @@ export default function ConfigPanel() {
 
   const handleLoadPreset = async (preset: Preset) => {
     setConfig(preset.config);
+    toast.success('Preset loaded', {
+      description: `Loaded configuration: ${preset.name}`,
+    });
   };
 
   return (
