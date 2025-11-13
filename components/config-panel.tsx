@@ -159,6 +159,51 @@ export default function ConfigPanel() {
                 </div>
                 <p className="text-xs text-muted-foreground">Stop when cost exceeds this amount</p>
               </div>
+
+              {/* Permission Mode */}
+              <div className="space-y-2">
+                <Label htmlFor="permission-mode" className="text-sm">Permission Mode</Label>
+                <Select
+                  value={config.permissionMode || 'acceptEdits'}
+                  onValueChange={(value: any) => setConfig({ permissionMode: value })}
+                >
+                  <SelectTrigger id="permission-mode" className="h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">
+                      <div className="flex flex-col">
+                        <span className="font-medium">Default</span>
+                        <span className="text-xs text-muted-foreground">Prompt for all file/bash operations</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="acceptEdits">
+                      <div className="flex flex-col">
+                        <span className="font-medium">Accept Edits</span>
+                        <span className="text-xs text-muted-foreground">Auto-approve file edits, prompt for bash</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="bypassPermissions">
+                      <div className="flex flex-col">
+                        <span className="font-medium">Bypass Permissions</span>
+                        <span className="text-xs text-muted-foreground">Auto-approve all operations (use with caution)</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="plan">
+                      <div className="flex flex-col">
+                        <span className="font-medium">Plan Mode</span>
+                        <span className="text-xs text-muted-foreground">Agent plans before executing</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <Alert className="mt-2">
+                  <AlertCircle className="h-3 w-3" />
+                  <AlertDescription className="text-xs">
+                    Controls which operations require user approval during agent execution
+                  </AlertDescription>
+                </Alert>
+              </div>
             </div>
           )}
         </Card>

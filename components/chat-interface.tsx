@@ -127,6 +127,7 @@ export default function ChatInterface() {
               numTurns: event.num_turns,
               sessionId: event.session_id,
               permissionDenials: event.permission_denials,
+              toolsUsed: event.tools_used,
               sdkMode: true,
             });
           } else {
@@ -204,6 +205,7 @@ export default function ChatInterface() {
         numTurns: result.num_turns,
         sessionId: result.session_id,
         permissionDenials: result.permission_denials,
+        toolsUsed: result.tools_used,
         sdkMode: true,
       });
     } else {

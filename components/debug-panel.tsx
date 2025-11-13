@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { Clock, DollarSign, Zap, AlertCircle, TrendingUp } from 'lucide-react';
 
 export default function DebugPanel() {
@@ -213,6 +214,23 @@ export default function DebugPanel() {
           )}
         </div>
 
+        {/* Tools Used (SDK only) */}
+        {debugInfo.toolsUsed && debugInfo.toolsUsed.length > 0 && (
+          <>
+            <Separator />
+            <div>
+              <p className="text-sm font-medium mb-2">Tools Used</p>
+              <div className="flex flex-wrap gap-1">
+                {debugInfo.toolsUsed.map((tool, i) => (
+                  <Badge key={i} variant="default" className="text-xs">
+                    {tool}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
         {/* Timestamp */}
         <div>
           <p className="text-sm font-medium mb-2">Timestamp</p>
@@ -342,7 +360,7 @@ export default function DebugPanel() {
                     <CardHeader className="pb-3">
                       <CardTitle className="text-sm">Current Session</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-2">
+                    <CardContent className="space-y-3">
                       <div>
                         <p className="text-xs font-medium">Session ID</p>
                         <code className="text-xs text-muted-foreground break-all">{debugInfo.sessionId}</code>
@@ -353,16 +371,69 @@ export default function DebugPanel() {
                           <Badge variant="outline">{debugInfo.numTurns}</Badge>
                         </div>
                       )}
+
+                      <Separator />
+
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium">Session Controls</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs"
+                            onClick={() => {
+                              // Copy session ID to clipboard
+                              navigator.clipboard.writeText(debugInfo.sessionId || '');
+                            }}
+                          >
+                            Copy ID
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs"
+                            onClick={() => {
+                              // Set config to continue this session
+                              const { setConfig } = useAgentStore.getState();
+                              setConfig({ continueSession: true });
+                            }}
+                          >
+                            Continue
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs"
+                            onClick={() => {
+                              const { setConfig } = useAgentStore.getState();
+                              setConfig({ resumeSessionId: debugInfo.sessionId });
+                            }}
+                          >
+                            Resume
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs"
+                            onClick={() => {
+                              const { setConfig } = useAgentStore.getState();
+                              setConfig({ forkSession: true });
+                            }}
+                          >
+                            Fork
+                          </Button>
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
 
                   <Alert>
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription className="text-xs">
-                      <strong>Session Controls:</strong><br />
-                      • Use <code>continueSession</code> to continue this session<br />
-                      • Use <code>resumeSessionId</code> to resume from a specific point<br />
-                      • Use <code>forkSession</code> to create a branch
+                      <strong>Session Operations:</strong><br />
+                      • <strong>Continue:</strong> Resume from where this session left off<br />
+                      • <strong>Resume:</strong> Start a new conversation from this session<br />
+                      • <strong>Fork:</strong> Create a branch from this session
                     </AlertDescription>
                   </Alert>
                 </div>
