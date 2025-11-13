@@ -30,14 +30,16 @@ import { ApiClient } from '@/lib/api-client';
 import { Preset, ALL_SDK_TOOLS } from '@/lib/types';
 import { ToolSelector } from './tool-selector';
 import { JsonEditor } from './ui/json-editor';
-import { ChevronDown, AlertCircle } from 'lucide-react';
+import { ChevronDown, AlertCircle, Plus, Wand2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { HOOK_TEMPLATES, HOOK_CATEGORIES, HookTemplate } from '@/lib/hook-templates';
 
 export default function ConfigPanel() {
   const { config, setConfig, resetConfig } = useAgentStore();
   const [presets, setPresets] = useState<Preset[]>([]);
   const [savingPreset, setSavingPreset] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [hookCategory, setHookCategory] = useState<string>('all');
 
   useEffect(() => {
     loadPresets();
@@ -78,6 +80,26 @@ export default function ConfigPanel() {
       description: `Loaded configuration: ${preset.name}`,
     });
   };
+
+  const handleApplyHookTemplate = (template: HookTemplate) => {
+    const currentHooks = config.hooks || {};
+    const mergedHooks = { ...currentHooks, ...template.hooks };
+    setConfig({ hooks: mergedHooks });
+    toast.success('Hook template applied', {
+      description: `Applied: ${template.name}`,
+    });
+  };
+
+  const handleReplaceWithHookTemplate = (template: HookTemplate) => {
+    setConfig({ hooks: template.hooks });
+    toast.success('Hooks replaced', {
+      description: `Replaced with: ${template.name}`,
+    });
+  };
+
+  const filteredHookTemplates = hookCategory === 'all'
+    ? HOOK_TEMPLATES
+    : HOOK_TEMPLATES.filter(t => t.category === hookCategory);
 
   return (
     <ScrollArea className="h-full">
@@ -420,17 +442,98 @@ export default function ConfigPanel() {
             {/* Hook Configuration */}
             <Separator />
             <div className="space-y-3">
-              <div>
-                <Label className="text-base font-medium">Hooks</Label>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Intercept and modify agent behavior at specific lifecycle events
-                </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-base font-medium">Hooks</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Intercept and modify agent behavior at specific lifecycle events
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setConfig({ hooks: {} })}
+                  className="text-xs"
+                >
+                  Clear All
+                </Button>
               </div>
 
-              <JsonEditor
-                value={config.hooks || {}}
-                onChange={(value) => setConfig({ hooks: value })}
-                placeholder={`{
+              {/* Hook Templates */}
+              <Card className="p-3 bg-muted/30">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Wand2 className="h-4 w-4 text-muted-foreground" />
+                    <Label className="text-sm font-medium">Quick Templates</Label>
+                  </div>
+
+                  {/* Category Filter */}
+                  <Select value={hookCategory} onValueChange={setHookCategory}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {HOOK_CATEGORIES.map((cat) => (
+                        <SelectItem key={cat.value} value={cat.value}>
+                          {cat.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {/* Template Grid */}
+                  <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
+                    {filteredHookTemplates.map((template) => (
+                      <div
+                        key={template.name}
+                        className="p-2 border rounded-md bg-background hover:bg-accent/50 transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-xs font-medium truncate">{template.name}</h4>
+                              <Badge variant="outline" className="text-[10px] px-1 py-0">
+                                {template.category}
+                              </Badge>
+                            </div>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">
+                              {template.description}
+                            </p>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0"
+                              onClick={() => handleApplyHookTemplate(template)}
+                              title="Merge with current hooks"
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 px-2 text-[10px]"
+                              onClick={() => handleReplaceWithHookTemplate(template)}
+                              title="Replace all hooks"
+                            >
+                              Use
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </Card>
+
+              {/* Manual JSON Editor */}
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground">Custom Hooks (JSON)</Label>
+                <JsonEditor
+                  value={config.hooks || {}}
+                  onChange={(value) => setConfig({ hooks: value })}
+                  placeholder={`{
   "pre_tool_use": {
     "pattern": "^Bash$",
     "action": "warn"
@@ -439,24 +542,25 @@ export default function ConfigPanel() {
     "action": "stop"
   }
 }`}
-                rows={10}
-              />
+                  rows={10}
+                />
 
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription className="text-xs space-y-2">
-                  <div><strong>Available Hook Events:</strong></div>
-                  <ul className="list-disc list-inside space-y-1 text-xs">
-                    <li><code>pre_tool_use</code> - Before tool execution</li>
-                    <li><code>post_tool_use</code> - After tool execution</li>
-                    <li><code>on_permission_denied</code> - When permission is denied</li>
-                    <li><code>on_budget_exceeded</code> - When budget limit reached</li>
-                    <li><code>on_turn_start</code> - Start of each turn</li>
-                    <li><code>on_turn_end</code> - End of each turn</li>
-                  </ul>
-                  <div><strong>Actions:</strong> <code>warn</code>, <code>block</code>, <code>log</code>, <code>stop</code></div>
-                </AlertDescription>
-              </Alert>
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-xs space-y-2">
+                    <div><strong>Available Hook Events:</strong></div>
+                    <ul className="list-disc list-inside space-y-1 text-xs">
+                      <li><code>pre_tool_use</code> - Before tool execution</li>
+                      <li><code>post_tool_use</code> - After tool execution</li>
+                      <li><code>on_permission_denied</code> - When permission is denied</li>
+                      <li><code>on_budget_exceeded</code> - When budget limit reached</li>
+                      <li><code>on_turn_start</code> - Start of each turn</li>
+                      <li><code>on_turn_end</code> - End of each turn</li>
+                    </ul>
+                    <div><strong>Actions:</strong> <code>warn</code>, <code>block</code>, <code>log</code>, <code>stop</code></div>
+                  </AlertDescription>
+                </Alert>
+              </div>
             </div>
 
         {/* Stop Sequences */}
