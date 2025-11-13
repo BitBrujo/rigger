@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useAgentStore } from '@/lib/store';
 import { toast } from 'sonner';
-import { MODEL_OPTIONS, SYSTEM_PROMPT_TEMPLATES } from '@/lib/types';
+import { MODEL_OPTIONS, ALL_SDK_TOOLS } from '@/lib/types';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
@@ -26,60 +26,17 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { ApiClient } from '@/lib/api-client';
-import { Preset, ALL_SDK_TOOLS } from '@/lib/types';
 import { ToolSelector } from './tool-selector';
 import { JsonEditor } from './ui/json-editor';
 import { ChevronDown, AlertCircle, Plus, Wand2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { HOOK_TEMPLATES, HOOK_CATEGORIES, HookTemplate } from '@/lib/hook-templates';
 
 export default function ConfigPanel() {
-  const { config, setConfig, resetConfig } = useAgentStore();
-  const [presets, setPresets] = useState<Preset[]>([]);
-  const [savingPreset, setSavingPreset] = useState(false);
+  const { config, setConfig } = useAgentStore();
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [hookCategory, setHookCategory] = useState<string>('all');
-
-  useEffect(() => {
-    loadPresets();
-  }, []);
-
-  const loadPresets = async () => {
-    try {
-      const data = await ApiClient.getPresets();
-      setPresets(data);
-    } catch (error) {
-      console.error('Failed to load presets:', error);
-    }
-  };
-
-  const handleSavePreset = async () => {
-    const name = prompt('Enter preset name:');
-    if (!name) return;
-
-    setSavingPreset(true);
-    try {
-      await ApiClient.createPreset(name, config);
-      await loadPresets();
-      toast.success('Preset saved successfully', {
-        description: `"${name}" has been saved to your presets`,
-      });
-    } catch (error: any) {
-      toast.error('Failed to save preset', {
-        description: error.message,
-      });
-    } finally {
-      setSavingPreset(false);
-    }
-  };
-
-  const handleLoadPreset = async (preset: Preset) => {
-    setConfig(preset.config);
-    toast.success('Preset loaded', {
-      description: `Loaded configuration: ${preset.name}`,
-    });
-  };
 
   const handleApplyHookTemplate = (template: HookTemplate) => {
     const currentHooks = config.hooks || {};
@@ -104,40 +61,6 @@ export default function ConfigPanel() {
   return (
     <ScrollArea className="h-full">
       <div className="p-6 space-y-6">
-        {/* Header */}
-        <div>
-          <h2 className="text-lg font-semibold mb-2">Configuration</h2>
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={handleSavePreset} disabled={savingPreset}>
-              Save Preset
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="outline">
-                  Load Preset
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-64">
-                {presets.map((preset) => (
-                  <DropdownMenuItem key={preset.id} onClick={() => handleLoadPreset(preset)}>
-                    <div className="flex flex-col">
-                      <span className="font-medium">{preset.name}</span>
-                      {preset.description && (
-                        <span className="text-xs text-muted-foreground">{preset.description}</span>
-                      )}
-                    </div>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button size="sm" variant="ghost" onClick={resetConfig}>
-              Reset
-            </Button>
-          </div>
-        </div>
-
-        <Separator />
-
         {/* Two-column layout for configuration sections */}
         <div className="grid grid-cols-2 gap-6">
           {/* LEFT COLUMN - Core Settings */}
@@ -146,7 +69,7 @@ export default function ConfigPanel() {
             <div className="space-y-2">
               <Label htmlFor="model">Model</Label>
               <Select value={config.model} onValueChange={(value: any) => setConfig({ model: value })}>
-                <SelectTrigger id="model">
+                <SelectTrigger id="model" className="h-11">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -214,7 +137,7 @@ export default function ConfigPanel() {
                 value={config.permissionMode || 'acceptEdits'}
                 onValueChange={(value: any) => setConfig({ permissionMode: value })}
               >
-                <SelectTrigger id="permission-mode" className="h-8 text-xs">
+                <SelectTrigger id="permission-mode" className="h-11 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -254,116 +177,9 @@ export default function ConfigPanel() {
               </div>
             </Card>
 
-            {/* Advanced Model Parameters - Collapsible */}
-            <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
-          <CollapsibleTrigger asChild>
-            <Button variant="outline" className="w-full justify-between" size="sm">
-              <span className="text-sm">Advanced Model Parameters</span>
-              <ChevronDown className={`h-4 w-4 transition-transform ${advancedOpen ? 'rotate-180' : ''}`} />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-4 pt-4">
-              {/* Max Tokens */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="max-tokens">Max Tokens</Label>
-                  <Input
-                    id="max-tokens-input"
-                    type="number"
-                    value={config.max_tokens}
-                    onChange={(e) => setConfig({ max_tokens: parseInt(e.target.value) || 1024 })}
-                    className="w-20 h-8"
-                    min={1}
-                    max={8192}
-                  />
-                </div>
-                <Slider
-                  id="max-tokens"
-                  value={[config.max_tokens]}
-                  onValueChange={([value]) => setConfig({ max_tokens: value })}
-                  min={256}
-                  max={8192}
-                  step={256}
-                />
-              </div>
-
-              {/* Temperature */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="temperature">Temperature</Label>
-                  <Badge variant="outline">{config.temperature?.toFixed(2) || '0.70'}</Badge>
-                </div>
-                <Slider
-                  id="temperature"
-                  value={[config.temperature || 0.7]}
-                  onValueChange={([value]) => setConfig({ temperature: value })}
-                  min={0}
-                  max={1}
-                  step={0.01}
-                />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Deterministic</span>
-                  <span>Creative</span>
-                </div>
-              </div>
-
-              {/* Top P */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="top-p">Top P</Label>
-                  <Badge variant="outline">{config.top_p?.toFixed(2) || '0.90'}</Badge>
-                </div>
-                <Slider
-                  id="top-p"
-                  value={[config.top_p || 0.9]}
-                  onValueChange={([value]) => setConfig({ top_p: value })}
-                  min={0}
-                  max={1}
-                  step={0.01}
-                />
-              </div>
-
-              {/* Top K */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="top-k">Top K</Label>
-                  <Input
-                    id="top-k-input"
-                    type="number"
-                    value={config.top_k || ''}
-                    onChange={(e) => setConfig({ top_k: parseInt(e.target.value) || undefined })}
-                    className="w-20 h-8"
-                    placeholder="Auto"
-                    min={1}
-                    max={500}
-                  />
-                </div>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-
             {/* System Prompt */}
             <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="system-prompt">System Prompt</Label>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="ghost">
-                  Templates
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64">
-                {SYSTEM_PROMPT_TEMPLATES.map((template) => (
-                  <DropdownMenuItem
-                    key={template.name}
-                    onClick={() => setConfig({ system: template.prompt })}
-                  >
-                    {template.name}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+              <Label htmlFor="system-prompt">System Prompt</Label>
               <Textarea
                 id="system-prompt"
                 value={config.system || ''}
@@ -372,78 +188,8 @@ export default function ConfigPanel() {
                 className="min-h-[100px] font-mono text-sm"
               />
             </div>
-          </div>
-          {/* END LEFT COLUMN */}
-
-          {/* RIGHT COLUMN - Advanced/Tools/Integrations */}
-          <div className="space-y-6">
-            {/* Agent SDK Tools Section */}
-            <div className="space-y-3">
-              <div>
-                <Label className="text-base font-medium">Agent SDK Tools</Label>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Select which built-in tools the agent can use during execution
-                </p>
-              </div>
-              <ToolSelector
-                selectedTools={config.allowedTools || [...ALL_SDK_TOOLS]}
-                onChange={(tools) => setConfig({ allowedTools: tools })}
-                disabled={false}
-              />
-            </div>
-
-            {/* MCP Server Configuration */}
-            <Separator />
-            <div className="space-y-3">
-              <div>
-                <Label className="text-base font-medium">MCP Servers</Label>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Configure Model Context Protocol servers for external tool integration
-                </p>
-              </div>
-
-              <JsonEditor
-                value={config.mcpServers || {}}
-                onChange={(value) => setConfig({ mcpServers: value })}
-                placeholder={`{
-  "server-name": {
-    "command": "node",
-    "args": ["path/to/server.js"],
-    "env": { "API_KEY": "..." }
-  }
-}`}
-                rows={8}
-              />
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="strict-mcp"
-                    checked={config.strictMcpConfig || false}
-                    onCheckedChange={(checked) => setConfig({ strictMcpConfig: checked })}
-                  />
-                  <Label htmlFor="strict-mcp" className="text-sm">
-                    Strict MCP Config
-                  </Label>
-                </div>
-                <p className="text-xs text-muted-foreground pl-6">
-                  Fail if MCP server connection fails (otherwise continues without MCP)
-                </p>
-              </div>
-
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription className="text-xs">
-                  <strong>Example MCP Server:</strong><br />
-                  <code className="text-xs">
-                    {`{ "filesystem": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path"] } }`}
-                  </code>
-                </AlertDescription>
-              </Alert>
-            </div>
 
             {/* Hook Configuration */}
-            <Separator />
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -547,28 +293,178 @@ export default function ConfigPanel() {
 }`}
                   rows={10}
                 />
+              </div>
+            </div>
 
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription className="text-xs space-y-2">
-                    <div><strong>Available Hook Events:</strong></div>
-                    <ul className="list-disc list-inside space-y-1 text-xs">
-                      <li><code>pre_tool_use</code> - Before tool execution</li>
-                      <li><code>post_tool_use</code> - After tool execution</li>
-                      <li><code>on_permission_denied</code> - When permission is denied</li>
-                      <li><code>on_budget_exceeded</code> - When budget limit reached</li>
-                      <li><code>on_turn_start</code> - Start of each turn</li>
-                      <li><code>on_turn_end</code> - End of each turn</li>
-                    </ul>
-                    <div><strong>Actions:</strong> <code>warn</code>, <code>block</code>, <code>log</code>, <code>stop</code></div>
-                  </AlertDescription>
-                </Alert>
+            {/* Advanced Model Parameters - Collapsible */}
+            <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" className="w-full justify-between" size="sm">
+              <span className="text-sm">Advanced Model Parameters</span>
+              <ChevronDown className={`h-4 w-4 transition-transform ${advancedOpen ? 'rotate-180' : ''}`} />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-4 pt-4">
+              {/* Max Tokens */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="max-tokens">Max Tokens</Label>
+                  <Input
+                    id="max-tokens-input"
+                    type="number"
+                    value={config.max_tokens}
+                    onChange={(e) => setConfig({ max_tokens: parseInt(e.target.value) || 1024 })}
+                    className="w-20 h-8"
+                    min={1}
+                    max={8192}
+                  />
+                </div>
+                <Slider
+                  id="max-tokens"
+                  value={[config.max_tokens]}
+                  onValueChange={([value]) => setConfig({ max_tokens: value })}
+                  min={256}
+                  max={8192}
+                  step={256}
+                />
               </div>
+
+              {/* Temperature */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="temperature">Temperature</Label>
+                  <Badge variant="outline">{config.temperature?.toFixed(2) || '0.70'}</Badge>
+                </div>
+                <Slider
+                  id="temperature"
+                  value={[config.temperature || 0.7]}
+                  onValueChange={([value]) => setConfig({ temperature: value })}
+                  min={0}
+                  max={1}
+                  step={0.01}
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Deterministic</span>
+                  <span>Creative</span>
+                </div>
               </div>
+
+              {/* Top P */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="top-p">Top P</Label>
+                  <Badge variant="outline">{config.top_p?.toFixed(2) || '0.90'}</Badge>
+                </div>
+                <Slider
+                  id="top-p"
+                  value={[config.top_p || 0.9]}
+                  onValueChange={([value]) => setConfig({ top_p: value })}
+                  min={0}
+                  max={1}
+                  step={0.01}
+                />
+              </div>
+
+              {/* Top K */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="top-k">Top K</Label>
+                  <Input
+                    id="top-k-input"
+                    type="number"
+                    value={config.top_k || ''}
+                    onChange={(e) => setConfig({ top_k: parseInt(e.target.value) || undefined })}
+                    className="w-20 h-8"
+                    placeholder="Auto"
+                    min={1}
+                    max={500}
+                  />
+                </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
+          {/* END LEFT COLUMN */}
+
+          {/* RIGHT COLUMN - Advanced/Tools/Integrations */}
+          <div className="space-y-6">
+            {/* Agent SDK Tools Section */}
+            <div className="space-y-3">
+              <div>
+                <Label className="text-base font-medium">Agent SDK Tools</Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Select which built-in tools the agent can use during execution
+                </p>
+              </div>
+              <ToolSelector
+                selectedTools={config.allowedTools || [...ALL_SDK_TOOLS]}
+                onChange={(tools) => setConfig({ allowedTools: tools })}
+                disabled={false}
+              />
+            </div>
+
+            {/* MCP Server Configuration */}
+            <Separator />
+            <div className="space-y-3">
+              <div>
+                <Label className="text-base font-medium">MCP Servers</Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Configure Model Context Protocol servers for external tool integration
+                </p>
+              </div>
+
+              <JsonEditor
+                value={config.mcpServers || {}}
+                onChange={(value) => setConfig({ mcpServers: value })}
+                placeholder={`{
+  "server-name": {
+    "command": "node",
+    "args": ["path/to/server.js"],
+    "env": { "API_KEY": "..." }
+  }
+}`}
+                rows={8}
+              />
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="strict-mcp"
+                    checked={config.strictMcpConfig || false}
+                    onCheckedChange={(checked) => setConfig({ strictMcpConfig: checked })}
+                  />
+                  <Label htmlFor="strict-mcp" className="text-sm">
+                    Strict MCP Config
+                  </Label>
+                </div>
+                <p className="text-xs text-muted-foreground pl-6">
+                  Fail if MCP server connection fails (otherwise continues without MCP)
+                </p>
+              </div>
+
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="text-xs">
+                  <strong>Example MCP Server:</strong><br />
+                  <code className="text-xs">
+                    {`{ "filesystem": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path"] } }`}
+                  </code>
+                </AlertDescription>
+              </Alert>
+            </div>
 
             {/* Stop Sequences */}
             <div className="space-y-2">
-              <Label htmlFor="stop-sequences">Stop Sequences</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Label htmlFor="stop-sequences" className="cursor-help">Stop Sequences</Label>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="max-w-xs">Sequences that will cause the model to stop generating (e.g., custom delimiters or tokens)</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <Input
                 id="stop-sequences"
                 placeholder="Comma-separated..."

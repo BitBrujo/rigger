@@ -327,6 +327,39 @@ export const TOOL_CATEGORIES = {
   'Planning & Interaction': ['ExitPlanMode', 'TimeMachine', 'MultipleChoiceQuestion'],
 } as const;
 
+// Tool descriptions for tooltips
+export const TOOL_DESCRIPTIONS: Record<string, string> = {
+  // File Operations
+  'Read': 'Read file contents from the filesystem',
+  'Write': 'Write new files or overwrite existing ones',
+  'Edit': 'Make targeted edits to existing files',
+  'Glob': 'Find files using pattern matching (*.js, **/*.tsx)',
+  'Grep': 'Search file contents using regex patterns',
+  'NotebookEdit': 'Edit Jupyter notebook cells',
+
+  // Execution
+  'Bash': 'Execute bash commands in a persistent shell',
+  'BashOutput': 'Retrieve output from background bash shells',
+  'KillShell': 'Terminate a running background shell',
+
+  // Web
+  'WebFetch': 'Fetch and process content from URLs',
+  'WebSearch': 'Search the web for information',
+
+  // Task Management
+  'TodoWrite': 'Create and manage task lists',
+  'Task': 'Launch specialized sub-agents for complex tasks',
+
+  // MCP Integration
+  'ListMcpResources': 'List resources from MCP servers',
+  'ReadMcpResource': 'Read specific resources from MCP servers',
+
+  // Planning & Interaction
+  'ExitPlanMode': 'Exit planning mode and present plan to user',
+  'TimeMachine': 'View and restore previous file states',
+  'MultipleChoiceQuestion': 'Ask user multiple choice questions',
+};
+
 export const MODEL_OPTIONS = [
   {
     value: 'claude-3-5-sonnet-20241022',

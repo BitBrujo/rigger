@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { TOOL_CATEGORIES, ALL_SDK_TOOLS } from '@/lib/types';
+import { TOOL_CATEGORIES, ALL_SDK_TOOLS, TOOL_DESCRIPTIONS } from '@/lib/types';
 import { Checkbox } from './ui/checkbox';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import {
   Accordion,
   AccordionContent,
@@ -145,12 +146,21 @@ export function ToolSelector({ selectedTools, onChange, disabled = false }: Tool
                         onCheckedChange={() => handleToggleTool(tool)}
                         disabled={disabled}
                       />
-                      <label
-                        htmlFor={`tool-${tool}`}
-                        className="text-sm font-mono cursor-pointer flex-1"
-                      >
-                        {tool}
-                      </label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <label
+                              htmlFor={`tool-${tool}`}
+                              className="text-sm font-mono cursor-pointer flex-1"
+                            >
+                              {tool}
+                            </label>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{TOOL_DESCRIPTIONS[tool] || 'No description available'}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
                   ))}
                 </div>
