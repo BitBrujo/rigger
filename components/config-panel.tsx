@@ -48,11 +48,12 @@ export default function ConfigPanel() {
   });
 
   // Collapsible state for expandable cards
-  const [agentSdkOpen, setAgentSdkOpen] = useState(true);
-  const [systemPromptOpen, setSystemPromptOpen] = useState(true);
-  const [hooksOpen, setHooksOpen] = useState(true);
-  const [sdkToolsOpen, setSdkToolsOpen] = useState(true);
-  const [mcpServersOpen, setMcpServersOpen] = useState(true);
+  const [agentSdkOpen, setAgentSdkOpen] = useState(false);
+  const [systemPromptOpen, setSystemPromptOpen] = useState(false);
+  const [hooksOpen, setHooksOpen] = useState(false);
+  const [sdkToolsOpen, setSdkToolsOpen] = useState(false);
+  const [mcpServersOpen, setMcpServersOpen] = useState(false);
+  const [stopSequencesOpen, setStopSequencesOpen] = useState(false);
 
   const handleApplyHookTemplate = (template: HookTemplate) => {
     const currentHooks = config.hooks || {};
@@ -738,31 +739,116 @@ export default function ConfigPanel() {
             </Collapsible>
 
             {/* Stop Sequences */}
-            <div className="space-y-2">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Label htmlFor="stop-sequences" className="cursor-help">Stop Sequences</Label>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="max-w-xs">Sequences that will cause the model to stop generating (e.g., custom delimiters or tokens)</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <Input
-                id="stop-sequences"
-                placeholder="Comma-separated..."
-                value={config.stop_sequences?.join(', ') || ''}
-                onChange={(e) =>
-                  setConfig({
-                    stop_sequences: e.target.value
-                      .split(',')
-                      .map((s) => s.trim())
-                      .filter(Boolean),
-                  })
-                }
-              />
-            </div>
+            <Collapsible open={stopSequencesOpen} onOpenChange={setStopSequencesOpen}>
+              <Card className="p-4 border-2 bg-muted/50">
+                <CollapsibleTrigger asChild>
+                  <div className="flex items-start gap-2 cursor-pointer">
+                    <ChevronDown className={`h-5 w-5 transition-transform flex-shrink-0 mt-0.5 ${stopSequencesOpen ? 'rotate-180' : ''}`} />
+                    <div className="flex-1">
+                      <Label className="text-base font-medium cursor-pointer">Stop Sequences</Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Special strings that tell the AI when to stop generating text
+                      </p>
+                    </div>
+                  </div>
+                </CollapsibleTrigger>
+
+                <CollapsibleContent>
+                  <div className="mt-3">
+                    <Card className="p-3 bg-background">
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="stop-sequences" className="text-sm">Custom Stop Sequences</Label>
+                      <Input
+                        id="stop-sequences"
+                        placeholder='e.g., "\n\n", "User:", "END"'
+                        value={config.stop_sequences?.join(', ') || ''}
+                        onChange={(e) =>
+                          setConfig({
+                            stop_sequences: e.target.value
+                              .split(',')
+                              .map((s) => s.trim())
+                              .filter(Boolean),
+                          })
+                        }
+                        className="font-mono text-xs"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Enter comma-separated values. Model stops when it encounters any of these strings.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Quick Templates</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          type="button"
+                          onClick={() => {
+                            const current = config.stop_sequences || [];
+                            if (!current.includes('\n\n')) {
+                              setConfig({ stop_sequences: [...current, '\n\n'] });
+                            }
+                          }}
+                          className="justify-start text-xs h-auto py-2"
+                        >
+                          <code className="font-mono">\n\n</code>
+                          <span className="ml-2 text-muted-foreground">Double newline</span>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          type="button"
+                          onClick={() => {
+                            const current = config.stop_sequences || [];
+                            if (!current.includes('User:')) {
+                              setConfig({ stop_sequences: [...current, 'User:'] });
+                            }
+                          }}
+                          className="justify-start text-xs h-auto py-2"
+                        >
+                          <code className="font-mono">User:</code>
+                          <span className="ml-2 text-muted-foreground">User turn</span>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          type="button"
+                          onClick={() => {
+                            const current = config.stop_sequences || [];
+                            if (!current.includes('</response>')) {
+                              setConfig({ stop_sequences: [...current, '</response>'] });
+                            }
+                          }}
+                          className="justify-start text-xs h-auto py-2"
+                        >
+                          <code className="font-mono">{"</response>"}</code>
+                          <span className="ml-2 text-muted-foreground">XML tag</span>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          type="button"
+                          onClick={() => {
+                            const current = config.stop_sequences || [];
+                            if (!current.includes('---')) {
+                              setConfig({ stop_sequences: [...current, '---'] });
+                            }
+                          }}
+                          className="justify-start text-xs h-auto py-2"
+                        >
+                          <code className="font-mono">---</code>
+                          <span className="ml-2 text-muted-foreground">Delimiter</span>
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                    </Card>
+                  </div>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
 
             {/* Advanced SDK Settings - Collapsible */}
             <Separator />
