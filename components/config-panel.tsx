@@ -278,18 +278,15 @@ export default function ConfigPanel() {
 
               {/* Claude Code Preset Toggle */}
               <Card className="p-3 bg-muted/30">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      id="use-claude-code-preset"
-                      checked={useClaudeCodePreset}
-                      onCheckedChange={handleClaudeCodePresetToggle}
-                    />
-                    <Label htmlFor="use-claude-code-preset" className="text-sm font-medium cursor-pointer">
-                      Use Claude Code Preset
-                    </Label>
-                  </div>
-                  <Badge variant="secondary" className="text-xs">Recommended</Badge>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="use-claude-code-preset"
+                    checked={useClaudeCodePreset}
+                    onCheckedChange={handleClaudeCodePresetToggle}
+                  />
+                  <Label htmlFor="use-claude-code-preset" className="text-sm font-medium cursor-pointer">
+                    Use Claude Code Preset
+                  </Label>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
                   Professional coding assistant prompt with best practices and tool usage guidelines
