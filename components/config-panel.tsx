@@ -150,10 +150,8 @@ export default function ConfigPanel() {
   return (
     <ScrollArea className="h-full">
       <div className="p-6 space-y-6">
-        {/* Two-column layout for configuration sections */}
-        <div className="grid grid-cols-2 gap-6">
-          {/* LEFT COLUMN - Core Settings */}
-          <div className="space-y-6">
+        {/* Configuration sections */}
+        <div className="space-y-6">
             {/* Model Selection */}
             <Card className="p-4 border-2 bg-muted/50">
               <div className="space-y-2">
@@ -610,11 +608,6 @@ export default function ConfigPanel() {
               </div>
             </Card>
 
-          </div>
-          {/* END LEFT COLUMN */}
-
-          {/* RIGHT COLUMN - Advanced/Tools/Integrations */}
-          <div className="space-y-6">
             {/* Agent SDK Tools Section */}
             <Card className="p-4 border-2">
               <div className="space-y-3">
@@ -633,7 +626,6 @@ export default function ConfigPanel() {
             </Card>
 
             {/* MCP Server Configuration */}
-            <Separator />
             <Card className="p-4 border-2">
               <div className="space-y-3">
                 <div>
