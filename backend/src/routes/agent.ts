@@ -168,15 +168,16 @@ router.post('/stream', async (req: Request, res: Response) => {
         }
 
         // Tool result detected (completion or error)
-        if (msg.event?.type === 'content_block_start' && msg.event?.content_block?.type === 'tool_result') {
-          res.write(`data: ${JSON.stringify({
-            type: 'tool_complete',
-            tool_use_id: msg.event.content_block.tool_use_id,
-            content: msg.event.content_block.content,
-            is_error: msg.event.content_block.is_error || false,
-            timestamp: new Date().toISOString()
-          })}\n\n`);
-        }
+        // NOTE: Commented out - SDK 0.68.0 no longer has 'tool_result' content block type
+        // if (msg.event?.type === 'content_block_start' && msg.event?.content_block?.type === 'tool_result') {
+        //   res.write(`data: ${JSON.stringify({
+        //     type: 'tool_complete',
+        //     tool_use_id: msg.event.content_block.tool_use_id,
+        //     content: msg.event.content_block.content,
+        //     is_error: msg.event.content_block.is_error || false,
+        //     timestamp: new Date().toISOString()
+        //   })}\n\n`);
+        // }
       }
 
       // Stream different message types to client
@@ -252,16 +253,18 @@ router.post('/stream', async (req: Request, res: Response) => {
           uuid: msg.uuid,
           session_id: msg.session_id
         })}\n\n`);
-      } else if (msg.type === 'status') {
-        // Status update (thinking, tool_executing, waiting)
-        res.write(`data: ${JSON.stringify({
-          type: 'status',
-          status: msg.status,
-          message: msg.message,
-          uuid: msg.uuid,
-          session_id: msg.session_id
-        })}\n\n`);
-      } else if (msg.type === 'result') {
+      } // NOTE: Removed 'status' message type handling - SDK 0.68.0 no longer has this type
+      // else if (msg.type === 'status') {
+      //   // Status update (thinking, tool_executing, waiting)
+      //   res.write(`data: ${JSON.stringify({
+      //     type: 'status',
+      //     status: msg.status,
+      //     message: msg.message,
+      //     uuid: msg.uuid,
+      //     session_id: msg.session_id
+      //   })}\n\n`);
+      // }
+      else if (msg.type === 'result') {
         // Final result with usage stats
         finalResult = msg;
 
