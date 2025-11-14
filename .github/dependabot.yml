@@ -1,0 +1,90 @@
+# Dependabot configuration for Claude Agent SDK Testing App
+# Automatically monitors dependencies and creates PRs for updates
+
+version: 2
+updates:
+  # Frontend dependencies (Next.js app)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    # Group related packages to reduce PR noise
+    groups:
+      # Group all Radix UI components together
+      radix-ui:
+        patterns:
+          - "@radix-ui/*"
+      # Group Anthropic packages (critical - check these PRs first!)
+      anthropic:
+        patterns:
+          - "@anthropic-ai/*"
+        update-types:
+          - "minor"
+          - "patch"
+      # Group React packages
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react*"
+    # Auto-label PRs for easier filtering
+    labels:
+      - "dependencies"
+      - "frontend"
+    # Commit message prefix
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(dev-deps)"
+
+  # Backend dependencies (Express API)
+  - package-ecosystem: "npm"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    groups:
+      # Critical: Agent SDK updates (pre-1.0, may have breaking changes)
+      anthropic:
+        patterns:
+          - "@anthropic-ai/*"
+        update-types:
+          - "minor"
+          - "patch"
+      # Group TypeScript dev dependencies
+      typescript:
+        patterns:
+          - "typescript"
+          - "ts-node*"
+          - "@types/*"
+    labels:
+      - "dependencies"
+      - "backend"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(dev-deps)"
+
+  # Docker base images (PostgreSQL and Node.js)
+  - package-ecosystem: "docker"
+    directory: "/backend"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "chore(docker)"
+
+# Important notes:
+# 1. Anthropic SDK updates are grouped but CHECK THESE FIRST - pre-1.0 versions can break
+# 2. Weekly checks on Mondays at 9am
+# 3. Docker images checked monthly (more stable)
+# 4. Max 5 PRs at a time to avoid overwhelming review queue
+# 5. Dependabot will also create immediate PRs for security vulnerabilities
