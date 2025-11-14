@@ -54,6 +54,7 @@ export default function ConfigPanel() {
   const [sdkToolsOpen, setSdkToolsOpen] = useState(false);
   const [mcpServersOpen, setMcpServersOpen] = useState(false);
   const [stopSequencesOpen, setStopSequencesOpen] = useState(false);
+  const [subagentsOpen, setSubagentsOpen] = useState(false);
 
   const handleApplyHookTemplate = (template: HookTemplate) => {
     const currentHooks = config.hooks || {};
@@ -356,16 +357,23 @@ export default function ConfigPanel() {
             </Collapsible>
 
             {/* Subagent Configuration */}
-            <Card className="p-4 border-2 bg-muted/50">
-              <div className="space-y-3">
-                <div>
-                  <Label className="text-base font-medium">Subagents</Label>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Define specialized agents for specific tasks (used with Task tool)
-                  </p>
-                </div>
+            <Collapsible open={subagentsOpen} onOpenChange={setSubagentsOpen}>
+              <Card className="p-4 border-2 bg-muted/50">
+                <CollapsibleTrigger asChild>
+                  <div className="flex items-start gap-2 cursor-pointer">
+                    <ChevronDown className={`h-5 w-5 transition-transform flex-shrink-0 mt-0.5 ${subagentsOpen ? 'rotate-180' : ''}`} />
+                    <div className="flex-1">
+                      <Label className="text-base font-medium cursor-pointer">Subagents</Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Define specialized agents for specific tasks (used with Task tool)
+                      </p>
+                    </div>
+                  </div>
+                </CollapsibleTrigger>
 
-                {/* Current Subagents List */}
+                <CollapsibleContent>
+                  <div className="mt-3 space-y-3">
+                    {/* Current Subagents List */}
                 {Object.keys(config.customAgents || {}).length > 0 && (
                   <Card className="p-3 bg-background">
                     <div className="space-y-2">
@@ -512,20 +520,22 @@ export default function ConfigPanel() {
                   </CollapsibleContent>
                 </Collapsible>
 
-                {/* Add New Button */}
-                {editingSubagent === null && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => setEditingSubagent('new')}
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Create Custom Subagent
-                  </Button>
-                )}
-              </div>
-            </Card>
+                    {/* Add New Button */}
+                    {editingSubagent === null && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => setEditingSubagent('new')}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Create Custom Subagent
+                      </Button>
+                    )}
+                  </div>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
 
             {/* Hook Configuration */}
             <Collapsible open={hooksOpen} onOpenChange={setHooksOpen}>
