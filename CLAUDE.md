@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Claude Agent SDK testing application built with Next.js 16 and Express.js. It provides a comprehensive interface for testing the Claude Agent SDK with real-time streaming, debugging metrics, and persistence.
+Rigger is a Claude Agent SDK testing application built with Next.js 16 and Express.js. It provides a comprehensive interface for testing the Claude Agent SDK with real-time streaming, debugging metrics, and persistence.
 
 **Features:**
 - **Agent SDK** (`@anthropic-ai/claude-agent-sdk`): Full agent capabilities with built-in tools, containerization, automatic cost calculation, and multi-turn conversations
@@ -43,7 +43,7 @@ docker-compose down -v            # Stop and remove volumes (reset database)
 ### Database
 ```bash
 # Connect to PostgreSQL
-docker exec -it gunnyclaude-postgres-1 psql -U agent_user -d agent_db
+docker exec -it rigger-postgres-1 psql -U agent_user -d agent_db
 
 # Reset database (re-runs schema.sql)
 docker-compose down -v && docker-compose up -d

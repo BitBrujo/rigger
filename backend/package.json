@@ -1,7 +1,7 @@
 {
-  "name": "agent-backend",
+  "name": "rigger-backend",
   "version": "1.0.0",
-  "description": "Backend API for Claude Agent Testing",
+  "description": "Backend API for Rigger - Claude Agent Testing",
   "main": "dist/server.js",
   "scripts": {
     "build": "tsc",
