@@ -246,7 +246,7 @@ export default function ConfigPanel() {
 
                 <CollapsibleContent>
                   <div className="mt-3">
-                    <Card className="p-3 bg-muted/50">
+                    <Card className="p-3 bg-background">
                   <div className="space-y-3">
                     {/* Max Turns */}
                     <div className="space-y-1">
@@ -295,7 +295,7 @@ export default function ConfigPanel() {
 
             {/* System Prompt */}
             <Collapsible open={systemPromptOpen} onOpenChange={setSystemPromptOpen}>
-              <Card className="p-4 border-2">
+              <Card className="p-4 border-2 bg-muted/50">
                 <CollapsibleTrigger asChild>
                   <div className="flex items-start gap-2 cursor-pointer">
                     <ChevronDown className={`h-5 w-5 transition-transform flex-shrink-0 mt-0.5 ${systemPromptOpen ? 'rotate-180' : ''}`} />
@@ -311,7 +311,7 @@ export default function ConfigPanel() {
                 <CollapsibleContent>
                   <div className="mt-3 space-y-3">
                     {/* Claude Code Preset Toggle */}
-                <Card className="p-3 bg-muted/30">
+                <Card className="p-3 bg-background">
                   <div className="flex items-center gap-2">
                     <Switch
                       id="use-claude-code-preset"
@@ -355,7 +355,7 @@ export default function ConfigPanel() {
             </Collapsible>
 
             {/* Subagent Configuration */}
-            <Card className="p-4 border-2">
+            <Card className="p-4 border-2 bg-muted/50">
               <div className="space-y-3">
                 <div>
                   <Label className="text-base font-medium">Subagents</Label>
@@ -366,7 +366,7 @@ export default function ConfigPanel() {
 
                 {/* Current Subagents List */}
                 {Object.keys(config.customAgents || {}).length > 0 && (
-                  <Card className="p-3 bg-muted/30">
+                  <Card className="p-3 bg-background">
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Your Subagents</Label>
                       <div className="space-y-2 max-h-48 overflow-y-auto">
@@ -528,7 +528,7 @@ export default function ConfigPanel() {
 
             {/* Hook Configuration */}
             <Collapsible open={hooksOpen} onOpenChange={setHooksOpen}>
-              <Card className="p-4 border-2">
+              <Card className="p-4 border-2 bg-muted/50">
                 <CollapsibleTrigger asChild>
                   <div className="flex items-start gap-2 cursor-pointer">
                     <ChevronDown className={`h-5 w-5 transition-transform flex-shrink-0 mt-0.5 ${hooksOpen ? 'rotate-180' : ''}`} />
@@ -544,7 +544,7 @@ export default function ConfigPanel() {
                 <CollapsibleContent>
                   <div className="mt-3 space-y-3">
                     {/* Hook Templates */}
-                <Card className="p-3 bg-muted/30">
+                <Card className="p-3 bg-background">
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -651,7 +651,7 @@ export default function ConfigPanel() {
           <div className="space-y-6">
             {/* Agent SDK Tools Section */}
             <Collapsible open={sdkToolsOpen} onOpenChange={setSdkToolsOpen}>
-              <Card className="p-4 border-2">
+              <Card className="p-4 border-2 bg-muted/50">
                 <CollapsibleTrigger asChild>
                   <div className="flex items-start gap-2 cursor-pointer">
                     <ChevronDown className={`h-5 w-5 transition-transform flex-shrink-0 mt-0.5 ${sdkToolsOpen ? 'rotate-180' : ''}`} />
@@ -678,7 +678,7 @@ export default function ConfigPanel() {
 
             {/* MCP Server Configuration */}
             <Collapsible open={mcpServersOpen} onOpenChange={setMcpServersOpen}>
-              <Card className="p-4 border-2">
+              <Card className="p-4 border-2 bg-muted/50">
                 <CollapsibleTrigger asChild>
                   <div className="flex items-start gap-2 cursor-pointer">
                     <ChevronDown className={`h-5 w-5 transition-transform flex-shrink-0 mt-0.5 ${mcpServersOpen ? 'rotate-180' : ''}`} />
