@@ -444,7 +444,7 @@ export default function ConfigPanel() {
                           onChange={(e) => setNewSubagentName(e.target.value)}
                           placeholder="e.g., code-reviewer"
                           className="h-8 text-sm"
-                          disabled={!!editingSubagent}
+                          disabled={editingSubagent !== null && editingSubagent !== 'new'}
                         />
                       </div>
 
