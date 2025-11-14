@@ -55,6 +55,7 @@ export default function ConfigPanel() {
   const [mcpServersOpen, setMcpServersOpen] = useState(false);
   const [stopSequencesOpen, setStopSequencesOpen] = useState(false);
   const [subagentsOpen, setSubagentsOpen] = useState(false);
+  const [advancedSdkOpen, setAdvancedSdkOpen] = useState(false);
 
   const handleApplyHookTemplate = (template: HookTemplate) => {
     const currentHooks = config.hooks || {};
@@ -861,15 +862,21 @@ export default function ConfigPanel() {
             </Collapsible>
 
             {/* Advanced SDK Settings - Collapsible */}
-            <Separator />
-            <Collapsible>
-              <CollapsibleTrigger asChild>
-                <Button variant="outline" className="w-full justify-between" size="sm">
-                  <span className="text-sm">Advanced SDK Settings</span>
-                  <ChevronDown className="h-4 w-4 transition-transform" />
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-4 pt-4">
+            <Collapsible open={advancedSdkOpen} onOpenChange={setAdvancedSdkOpen}>
+              <Card className="p-4 border-2 bg-muted/50">
+                <CollapsibleTrigger asChild>
+                  <div className="flex items-start gap-2 cursor-pointer">
+                    <ChevronDown className={`h-5 w-5 transition-transform flex-shrink-0 mt-0.5 ${advancedSdkOpen ? 'rotate-180' : ''}`} />
+                    <div className="flex-1">
+                      <Label className="text-base font-medium cursor-pointer">Advanced SDK Settings</Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Extended thinking, fallback model, working directory, environment variables
+                      </p>
+                    </div>
+                  </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="mt-3 space-y-4">
                 {/* Max Thinking Tokens */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -1038,19 +1045,27 @@ export default function ConfigPanel() {
                     </AlertDescription>
                   </Alert>
                 </div>
-              </CollapsibleContent>
+                  </div>
+                </CollapsibleContent>
+              </Card>
             </Collapsible>
 
             {/* Advanced Model Parameters - Collapsible */}
-            <Separator />
             <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
-              <CollapsibleTrigger asChild>
-                <Button variant="outline" className="w-full justify-between" size="sm">
-                  <span className="text-sm">Advanced Model Parameters</span>
-                  <ChevronDown className={`h-4 w-4 transition-transform ${advancedOpen ? 'rotate-180' : ''}`} />
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-4 pt-4">
+              <Card className="p-4 border-2 bg-muted/50">
+                <CollapsibleTrigger asChild>
+                  <div className="flex items-start gap-2 cursor-pointer">
+                    <ChevronDown className={`h-5 w-5 transition-transform flex-shrink-0 mt-0.5 ${advancedOpen ? 'rotate-180' : ''}`} />
+                    <div className="flex-1">
+                      <Label className="text-base font-medium cursor-pointer">Advanced Model Parameters</Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Max tokens, temperature, top-p, top-k sampling parameters
+                      </p>
+                    </div>
+                  </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="mt-3 space-y-4">
                 {/* Max Tokens */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -1127,7 +1142,9 @@ export default function ConfigPanel() {
                     />
                   </div>
                 </div>
-              </CollapsibleContent>
+                  </div>
+                </CollapsibleContent>
+              </Card>
             </Collapsible>
           </div>
           {/* END RIGHT COLUMN */}
