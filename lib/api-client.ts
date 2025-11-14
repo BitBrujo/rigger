@@ -262,4 +262,11 @@ export class ApiClient {
     if (!response.ok) throw new Error('Failed to fetch timeline');
     return response.json();
   }
+
+  // Status endpoint
+  static async checkApiKey(): Promise<{ hasApiKey: boolean; timestamp: string }> {
+    const response = await fetch(`${API_BASE_URL}/status`);
+    if (!response.ok) throw new Error('Failed to check API key status');
+    return response.json();
+  }
 }

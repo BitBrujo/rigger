@@ -6,19 +6,34 @@ import ChatInterface from './chat-interface';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAgentStore } from '@/lib/store';
 import { ApiClient } from '@/lib/api-client';
 import { Preset } from '@/lib/types';
 import { toast } from 'sonner';
+import { AlertCircle } from 'lucide-react';
 
 export default function AgentTester() {
   const { config, setConfig, resetConfig } = useAgentStore();
   const [presets, setPresets] = useState<Preset[]>([]);
   const [savingPreset, setSavingPreset] = useState(false);
+  const [hasApiKey, setHasApiKey] = useState(true);
 
   useEffect(() => {
     loadPresets();
+    checkApiKey();
   }, []);
+
+  const checkApiKey = async () => {
+    try {
+      const status = await ApiClient.checkApiKey();
+      setHasApiKey(status.hasApiKey);
+    } catch (error) {
+      console.error('Failed to check API key status:', error);
+      // Assume API key is missing if we can't check
+      setHasApiKey(false);
+    }
+  };
 
   const loadPresets = async () => {
     try {
@@ -66,6 +81,19 @@ export default function AgentTester() {
             Test and debug Claude SDK configurations
           </p>
         </div>
+
+        {/* API Key Missing Alert - Centered */}
+        {!hasApiKey && (
+          <div className="flex-1 flex justify-center px-4">
+            <Alert variant="destructive" className="w-fit">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                ANTHROPIC_API_KEY is missing
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
+
         <div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={handleSavePreset} disabled={savingPreset}>
             Save Preset

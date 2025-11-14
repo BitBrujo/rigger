@@ -20,6 +20,15 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// API key check
+app.get('/api/status', (req, res) => {
+  const hasApiKey = !!process.env.ANTHROPIC_API_KEY;
+  res.json({
+    hasApiKey,
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Routes (Agent SDK only)
 app.use('/api/agent', agentRouter);
 app.use('/api/conversations', conversationsRouter);
