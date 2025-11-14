@@ -155,24 +155,26 @@ export default function ConfigPanel() {
           {/* LEFT COLUMN - Core Settings */}
           <div className="space-y-6">
             {/* Model Selection */}
-            <div className="space-y-2">
-              <Label htmlFor="model">Model</Label>
-              <Select value={config.model} onValueChange={(value: any) => setConfig({ model: value })}>
-                <SelectTrigger id="model" className="h-11">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {MODEL_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      <div className="flex flex-col">
-                        <span>{option.label}</span>
-                        <span className="text-xs text-muted-foreground">{option.description}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <Card className="p-4 border-2">
+              <div className="space-y-2">
+                <Label htmlFor="model" className="text-base font-medium">Model</Label>
+                <Select value={config.model} onValueChange={(value: any) => setConfig({ model: value })}>
+                  <SelectTrigger id="model" className="h-11">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MODEL_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        <div className="flex flex-col">
+                          <span>{option.label}</span>
+                          <span className="text-xs text-muted-foreground">{option.description}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </Card>
 
             {/* Agent SDK Configuration */}
             <Card className="p-4 bg-muted/50">
@@ -268,149 +270,152 @@ export default function ConfigPanel() {
             </Card>
 
             {/* System Prompt */}
-            <div className="space-y-3">
-              <div>
-                <Label className="text-base font-medium">System Prompt</Label>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Define the agent's persona, capabilities, and behavioral guidelines
-                </p>
-              </div>
-
-              {/* Claude Code Preset Toggle */}
-              <Card className="p-3 bg-muted/30">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="use-claude-code-preset"
-                    checked={useClaudeCodePreset}
-                    onCheckedChange={handleClaudeCodePresetToggle}
-                  />
-                  <Label htmlFor="use-claude-code-preset" className="text-sm font-medium cursor-pointer">
-                    Use Claude Code Preset
-                  </Label>
+            <Card className="p-4 border-2">
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-base font-medium">System Prompt</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Define the agent's persona, capabilities, and behavioral guidelines
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Professional coding assistant prompt with best practices and tool usage guidelines
-                </p>
-              </Card>
 
-              {/* System Prompt Field */}
-              <div className="space-y-2">
-                <Label htmlFor="system-prompt" className="text-sm">
-                  System Prompt {useClaudeCodePreset && '(Additional Instructions)'}
-                </Label>
-                <Textarea
-                  id="system-prompt"
-                  value={systemPromptText}
-                  onChange={(e) => handleSystemPromptChange(e.target.value)}
-                  placeholder={
-                    useClaudeCodePreset
-                      ? "Add project-specific instructions, coding standards, or custom guidelines..."
-                      : "Enter your system prompt..."
-                  }
-                  className={`min-h-[150px] text-sm ${useClaudeCodePreset ? '' : 'font-mono'}`}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {useClaudeCodePreset
-                    ? "These instructions will be appended to the Claude Code preset"
-                    : "Define the agent's persona, capabilities, and behavioral guidelines"}
-                </p>
+                {/* Claude Code Preset Toggle */}
+                <Card className="p-3 bg-muted/30">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="use-claude-code-preset"
+                      checked={useClaudeCodePreset}
+                      onCheckedChange={handleClaudeCodePresetToggle}
+                    />
+                    <Label htmlFor="use-claude-code-preset" className="text-sm font-medium cursor-pointer">
+                      Use Claude Code Preset
+                    </Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Professional coding assistant prompt with best practices and tool usage guidelines
+                  </p>
+                </Card>
+
+                {/* System Prompt Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="system-prompt" className="text-sm">
+                    System Prompt {useClaudeCodePreset && '(Additional Instructions)'}
+                  </Label>
+                  <Textarea
+                    id="system-prompt"
+                    value={systemPromptText}
+                    onChange={(e) => handleSystemPromptChange(e.target.value)}
+                    placeholder={
+                      useClaudeCodePreset
+                        ? "Add project-specific instructions, coding standards, or custom guidelines..."
+                        : "Enter your system prompt..."
+                    }
+                    className={`min-h-[150px] text-sm ${useClaudeCodePreset ? '' : 'font-mono'}`}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {useClaudeCodePreset
+                      ? "These instructions will be appended to the Claude Code preset"
+                      : "Define the agent's persona, capabilities, and behavioral guidelines"}
+                  </p>
+                </div>
               </div>
-            </div>
+            </Card>
 
             {/* Hook Configuration */}
-            <div className="space-y-3">
-              <div>
-                <Label className="text-base font-medium">Hooks</Label>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Intercept and modify agent behavior at specific lifecycle events
-                </p>
-              </div>
+            <Card className="p-4 border-2">
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-base font-medium">Hooks</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Intercept and modify agent behavior at specific lifecycle events
+                  </p>
+                </div>
 
-              {/* Hook Templates */}
-              <Card className="p-3 bg-muted/30">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Wand2 className="h-4 w-4 text-muted-foreground" />
-                      <Label className="text-sm font-medium">Quick Templates</Label>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setConfig({ hooks: {} })}
-                      className="text-xs h-7"
-                    >
-                      Clear All
-                    </Button>
-                  </div>
-
-                  {/* Category Filter */}
-                  <Select value={hookCategory} onValueChange={setHookCategory}>
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {HOOK_CATEGORIES.map((cat) => (
-                        <SelectItem key={cat.value} value={cat.value}>
-                          {cat.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  {/* Template Grid */}
-                  <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
-                    {filteredHookTemplates.map((template) => (
-                      <div
-                        key={template.name}
-                        className="p-2 border rounded-md bg-background hover:bg-accent/50 transition-colors"
+                {/* Hook Templates */}
+                <Card className="p-3 bg-muted/30">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Wand2 className="h-4 w-4 text-muted-foreground" />
+                        <Label className="text-sm font-medium">Quick Templates</Label>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setConfig({ hooks: {} })}
+                        className="text-xs h-7"
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <h4 className="text-xs font-medium truncate">{template.name}</h4>
-                              <Badge variant="outline" className="text-[10px] px-1 py-0">
-                                {template.category}
-                              </Badge>
+                        Clear All
+                      </Button>
+                    </div>
+
+                    {/* Category Filter */}
+                    <Select value={hookCategory} onValueChange={setHookCategory}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {HOOK_CATEGORIES.map((cat) => (
+                          <SelectItem key={cat.value} value={cat.value}>
+                            {cat.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Template Grid */}
+                    <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
+                      {filteredHookTemplates.map((template) => (
+                        <div
+                          key={template.name}
+                          className="p-2 border rounded-md bg-background hover:bg-accent/50 transition-colors"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <h4 className="text-xs font-medium truncate">{template.name}</h4>
+                                <Badge variant="outline" className="text-[10px] px-1 py-0">
+                                  {template.category}
+                                </Badge>
+                              </div>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">
+                                {template.description}
+                              </p>
                             </div>
-                            <p className="text-[10px] text-muted-foreground mt-0.5">
-                              {template.description}
-                            </p>
-                          </div>
-                          <div className="flex gap-1">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 w-6 p-0"
-                              onClick={() => handleApplyHookTemplate(template)}
-                              title="Merge with current hooks"
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 px-2 text-[10px]"
-                              onClick={() => handleReplaceWithHookTemplate(template)}
-                              title="Replace all hooks"
-                            >
-                              Use
-                            </Button>
+                            <div className="flex gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0"
+                                onClick={() => handleApplyHookTemplate(template)}
+                                title="Merge with current hooks"
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 px-2 text-[10px]"
+                                onClick={() => handleReplaceWithHookTemplate(template)}
+                                title="Replace all hooks"
+                              >
+                                Use
+                              </Button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              </Card>
+                </Card>
 
-              {/* Manual JSON Editor */}
-              <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">Custom Hooks (JSON)</Label>
-                <JsonEditor
-                  value={config.hooks || {}}
-                  onChange={(value) => setConfig({ hooks: value })}
-                  placeholder={`{
+                {/* Manual JSON Editor */}
+                <div className="space-y-2">
+                  <Label className="text-sm text-muted-foreground">Custom Hooks (JSON)</Label>
+                  <JsonEditor
+                    value={config.hooks || {}}
+                    onChange={(value) => setConfig({ hooks: value })}
+                    placeholder={`{
   "pre_tool_use": {
     "pattern": "^Bash$",
     "action": "warn"
@@ -419,252 +424,259 @@ export default function ConfigPanel() {
     "action": "stop"
   }
 }`}
-                  rows={10}
-                />
+                    rows={10}
+                  />
+                </div>
               </div>
-            </div>
+            </Card>
 
             {/* Subagent Configuration */}
-            <div className="space-y-3">
-              <div>
-                <Label className="text-base font-medium flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Subagents
-                </Label>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Define specialized agents for specific tasks (used with Task tool)
-                </p>
-              </div>
+            <Card className="p-4 border-2">
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-base font-medium flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Subagents
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Define specialized agents for specific tasks (used with Task tool)
+                  </p>
+                </div>
 
-              {/* Current Subagents List */}
-              {Object.keys(config.customAgents || {}).length > 0 && (
-                <Card className="p-3 bg-muted/30">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Your Subagents</Label>
-                    <div className="space-y-2 max-h-48 overflow-y-auto">
-                      {Object.entries(config.customAgents || {}).map(([name, definition]) => (
-                        <div
-                          key={name}
-                          className="p-2 border rounded-md bg-background flex items-center justify-between"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium truncate">{name}</p>
-                            <p className="text-[10px] text-muted-foreground">
-                              {definition.allowedTools?.length || 0} tools allowed
-                            </p>
+                {/* Current Subagents List */}
+                {Object.keys(config.customAgents || {}).length > 0 && (
+                  <Card className="p-3 bg-muted/30">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Your Subagents</Label>
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {Object.entries(config.customAgents || {}).map(([name, definition]) => (
+                          <div
+                            key={name}
+                            className="p-2 border rounded-md bg-background flex items-center justify-between"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium truncate">{name}</p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {definition.allowedTools?.length || 0} tools allowed
+                              </p>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0"
+                                onClick={() => handleEditSubagent(name)}
+                                title="Edit"
+                              >
+                                <Edit2 className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                                onClick={() => handleDeleteSubagent(name)}
+                                title="Delete"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
-                          <div className="flex gap-1">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 w-6 p-0"
-                              onClick={() => handleEditSubagent(name)}
-                              title="Edit"
-                            >
-                              <Edit2 className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-                              onClick={() => handleDeleteSubagent(name)}
-                              title="Delete"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                </Card>
-              )}
+                  </Card>
+                )}
 
-              {/* Add/Edit Form */}
-              <Collapsible open={editingSubagent !== null}>
-                <CollapsibleContent>
-                  <Card className="p-3 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium">
-                        {editingSubagent ? 'Edit Subagent' : 'New Subagent'}
-                      </Label>
+                {/* Add/Edit Form */}
+                <Collapsible open={editingSubagent !== null}>
+                  <CollapsibleContent>
+                    <Card className="p-3 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">
+                          {editingSubagent ? 'Edit Subagent' : 'New Subagent'}
+                        </Label>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 text-xs"
+                          onClick={handleCancelEdit}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+
+                      {/* Name */}
+                      <div className="space-y-1">
+                        <Label htmlFor="subagent-name" className="text-xs">Name</Label>
+                        <Input
+                          id="subagent-name"
+                          value={newSubagentName}
+                          onChange={(e) => setNewSubagentName(e.target.value)}
+                          placeholder="e.g., code-reviewer"
+                          className="h-8 text-sm"
+                          disabled={!!editingSubagent}
+                        />
+                      </div>
+
+                      {/* System Prompt */}
+                      <div className="space-y-1">
+                        <Label htmlFor="subagent-prompt" className="text-xs">System Prompt</Label>
+                        <Textarea
+                          id="subagent-prompt"
+                          value={newSubagentDefinition.systemPrompt || ''}
+                          onChange={(e) =>
+                            setNewSubagentDefinition({
+                              ...newSubagentDefinition,
+                              systemPrompt: e.target.value,
+                            })
+                          }
+                          placeholder="Define the subagent's purpose and instructions..."
+                          className="min-h-[80px] text-xs"
+                        />
+                      </div>
+
+                      {/* Allowed Tools */}
+                      <div className="space-y-1">
+                        <Label htmlFor="subagent-allowed-tools" className="text-xs">
+                          Allowed Tools (comma-separated)
+                        </Label>
+                        <Input
+                          id="subagent-allowed-tools"
+                          value={newSubagentDefinition.allowedTools?.join(', ') || ''}
+                          onChange={(e) =>
+                            setNewSubagentDefinition({
+                              ...newSubagentDefinition,
+                              allowedTools: e.target.value
+                                .split(',')
+                                .map((s) => s.trim())
+                                .filter(Boolean),
+                            })
+                          }
+                          placeholder="Read, Write, Grep, Glob..."
+                          className="h-8 text-xs font-mono"
+                        />
+                      </div>
+
+                      {/* Disallowed Tools */}
+                      <div className="space-y-1">
+                        <Label htmlFor="subagent-disallowed-tools" className="text-xs">
+                          Disallowed Tools (comma-separated)
+                        </Label>
+                        <Input
+                          id="subagent-disallowed-tools"
+                          value={newSubagentDefinition.disallowedTools?.join(', ') || ''}
+                          onChange={(e) =>
+                            setNewSubagentDefinition({
+                              ...newSubagentDefinition,
+                              disallowedTools: e.target.value
+                                .split(',')
+                                .map((s) => s.trim())
+                                .filter(Boolean),
+                            })
+                          }
+                          placeholder="Bash, Edit..."
+                          className="h-8 text-xs font-mono"
+                        />
+                      </div>
+
                       <Button
                         size="sm"
-                        variant="ghost"
-                        className="h-6 text-xs"
-                        onClick={handleCancelEdit}
+                        onClick={handleSaveSubagent}
+                        className="w-full h-8 text-xs"
                       >
-                        Cancel
+                        Save Subagent
                       </Button>
-                    </div>
+                    </Card>
+                  </CollapsibleContent>
+                </Collapsible>
 
-                    {/* Name */}
-                    <div className="space-y-1">
-                      <Label htmlFor="subagent-name" className="text-xs">Name</Label>
-                      <Input
-                        id="subagent-name"
-                        value={newSubagentName}
-                        onChange={(e) => setNewSubagentName(e.target.value)}
-                        placeholder="e.g., code-reviewer"
-                        className="h-8 text-sm"
-                        disabled={!!editingSubagent}
-                      />
-                    </div>
-
-                    {/* System Prompt */}
-                    <div className="space-y-1">
-                      <Label htmlFor="subagent-prompt" className="text-xs">System Prompt</Label>
-                      <Textarea
-                        id="subagent-prompt"
-                        value={newSubagentDefinition.systemPrompt || ''}
-                        onChange={(e) =>
-                          setNewSubagentDefinition({
-                            ...newSubagentDefinition,
-                            systemPrompt: e.target.value,
-                          })
-                        }
-                        placeholder="Define the subagent's purpose and instructions..."
-                        className="min-h-[80px] text-xs"
-                      />
-                    </div>
-
-                    {/* Allowed Tools */}
-                    <div className="space-y-1">
-                      <Label htmlFor="subagent-allowed-tools" className="text-xs">
-                        Allowed Tools (comma-separated)
-                      </Label>
-                      <Input
-                        id="subagent-allowed-tools"
-                        value={newSubagentDefinition.allowedTools?.join(', ') || ''}
-                        onChange={(e) =>
-                          setNewSubagentDefinition({
-                            ...newSubagentDefinition,
-                            allowedTools: e.target.value
-                              .split(',')
-                              .map((s) => s.trim())
-                              .filter(Boolean),
-                          })
-                        }
-                        placeholder="Read, Write, Grep, Glob..."
-                        className="h-8 text-xs font-mono"
-                      />
-                    </div>
-
-                    {/* Disallowed Tools */}
-                    <div className="space-y-1">
-                      <Label htmlFor="subagent-disallowed-tools" className="text-xs">
-                        Disallowed Tools (comma-separated)
-                      </Label>
-                      <Input
-                        id="subagent-disallowed-tools"
-                        value={newSubagentDefinition.disallowedTools?.join(', ') || ''}
-                        onChange={(e) =>
-                          setNewSubagentDefinition({
-                            ...newSubagentDefinition,
-                            disallowedTools: e.target.value
-                              .split(',')
-                              .map((s) => s.trim())
-                              .filter(Boolean),
-                          })
-                        }
-                        placeholder="Bash, Edit..."
-                        className="h-8 text-xs font-mono"
-                      />
-                    </div>
-
-                    <Button
-                      size="sm"
-                      onClick={handleSaveSubagent}
-                      className="w-full h-8 text-xs"
-                    >
-                      Save Subagent
-                    </Button>
-                  </Card>
-                </CollapsibleContent>
-              </Collapsible>
-
-              {/* Add New Button */}
-              {editingSubagent === null && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => setEditingSubagent('new')}
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Create Custom Subagent
-                </Button>
-              )}
-            </div>
+                {/* Add New Button */}
+                {editingSubagent === null && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => setEditingSubagent('new')}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Create Custom Subagent
+                  </Button>
+                )}
+              </div>
+            </Card>
           </div>
           {/* END LEFT COLUMN */}
 
           {/* RIGHT COLUMN - Advanced/Tools/Integrations */}
           <div className="space-y-6">
             {/* Agent SDK Tools Section */}
-            <div className="space-y-3">
-              <div>
-                <Label className="text-base font-medium">Agent SDK Tools</Label>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Select which built-in tools the agent can use during execution
-                </p>
+            <Card className="p-4 border-2">
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-base font-medium">Agent SDK Tools</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Select which built-in tools the agent can use during execution
+                  </p>
+                </div>
+                <ToolSelector
+                  selectedTools={config.allowedTools || [...ALL_SDK_TOOLS]}
+                  onChange={(tools) => setConfig({ allowedTools: tools })}
+                  disabled={false}
+                />
               </div>
-              <ToolSelector
-                selectedTools={config.allowedTools || [...ALL_SDK_TOOLS]}
-                onChange={(tools) => setConfig({ allowedTools: tools })}
-                disabled={false}
-              />
-            </div>
+            </Card>
 
             {/* MCP Server Configuration */}
             <Separator />
-            <div className="space-y-3">
-              <div>
-                <Label className="text-base font-medium">MCP Servers</Label>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Configure Model Context Protocol servers for external tool integration
-                </p>
-              </div>
+            <Card className="p-4 border-2">
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-base font-medium">MCP Servers</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Configure Model Context Protocol servers for external tool integration
+                  </p>
+                </div>
 
-              <JsonEditor
-                value={config.mcpServers || {}}
-                onChange={(value) => setConfig({ mcpServers: value })}
-                placeholder={`{
+                <JsonEditor
+                  value={config.mcpServers || {}}
+                  onChange={(value) => setConfig({ mcpServers: value })}
+                  placeholder={`{
   "server-name": {
     "command": "node",
     "args": ["path/to/server.js"],
     "env": { "API_KEY": "..." }
   }
 }`}
-                rows={8}
-              />
+                  rows={8}
+                />
 
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="strict-mcp"
-                    checked={config.strictMcpConfig || false}
-                    onCheckedChange={(checked) => setConfig({ strictMcpConfig: checked })}
-                  />
-                  <Label htmlFor="strict-mcp" className="text-sm">
-                    Strict MCP Config
-                  </Label>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="strict-mcp"
+                      checked={config.strictMcpConfig || false}
+                      onCheckedChange={(checked) => setConfig({ strictMcpConfig: checked })}
+                    />
+                    <Label htmlFor="strict-mcp" className="text-sm">
+                      Strict MCP Config
+                    </Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground pl-6">
+                    Fail if MCP server connection fails (otherwise continues without MCP)
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground pl-6">
-                  Fail if MCP server connection fails (otherwise continues without MCP)
-                </p>
-              </div>
 
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription className="text-xs">
-                  <strong>Example MCP Server:</strong><br />
-                  <code className="text-xs">
-                    {`{ "filesystem": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path"] } }`}
-                  </code>
-                </AlertDescription>
-              </Alert>
-            </div>
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    <strong>Example MCP Server:</strong><br />
+                    <code className="text-xs">
+                      {`{ "filesystem": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path"] } }`}
+                    </code>
+                  </AlertDescription>
+                </Alert>
+              </div>
+            </Card>
 
             {/* Stop Sequences */}
             <div className="space-y-2">
