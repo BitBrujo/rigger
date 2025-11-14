@@ -4,15 +4,22 @@ A Next.js application for testing and debugging the Claude Agent SDK with real-t
 
 ## Features
 
-- **Agent SDK Integration**: Full-featured Claude Agent SDK with built-in tools
+- **Agent SDK Integration**: Full-featured Claude Agent SDK with 18 built-in tools
 - **Model Selection**: Test Claude 3.5 Sonnet, Haiku, and Opus
 - **Tool Configuration**: Enable/disable specific tools through the UI
-- **Parameter Testing**: Live adjustment of temperature, maxTurns, and thinking tokens
-- **System Prompts**: Template library with custom prompt editing
-- **Streaming Support**: Toggle between streaming and batch response modes
+- **Advanced Configuration**: 30+ Agent SDK parameters including:
+  - Permission modes (default, acceptEdits, bypassPermissions, plan)
+  - Session management (continue, resume, fork)
+  - Workspace settings and additional directories
+  - Max budget, max thinking tokens, max turns
+  - MCP server integration
+  - Custom agent definitions (subagents)
+  - Hook configuration
+- **System Prompts**: Template library with custom prompt editing and Claude Code preset
+- **Streaming Support**: Real-time SSE streaming with fallback to batch mode
 - **Debug Panel**: Real-time metrics, token usage, costs, cache stats, and API responses
 - **Persistence**: Save conversations, configuration presets, and usage analytics
-- **Four-Panel Layout**: Config (left), Tools (left-center), Chat (center), Debug (right)
+- **Two-Panel Layout**: Comprehensive Config (left), Chat + Debug tabs (right)
 
 ## Tech Stack
 
@@ -84,30 +91,57 @@ Visit [http://localhost:3334](http://localhost:3334)
 
 ### Configuration Panel (Left)
 
+Comprehensive configuration with collapsible sections:
+
+#### Core Settings
 - **Model Selection**: Choose between Claude 3.5 Sonnet, Haiku, or Opus
 - **Max Turns**: Control multi-turn conversation limit
 - **Max Thinking Tokens**: Set extended thinking token budget
-- **Temperature**: Adjust randomness (0.0-1.0)
-- **System Prompt**: Use templates or write custom prompts
-- **Presets**: Save and load configuration presets
+- **System Prompt**: Use templates (including Claude Code preset) or write custom prompts
 
-### Tools Panel (Left-Center)
-
-- **Tool Selection**: Enable/disable individual tools
-- **Categories**: File operations, execution, web, and task management
+#### Tool Configuration
+- **Tool Selector**: Enable/disable individual tools from 18 available tools
+- **Categories**: File operations, execution, web, task management, and agent system tools
 - **Quick Actions**: Enable all or disable all tools
 
-### Chat Interface (Center)
+#### Advanced Configuration (30+ parameters)
+- **Permission Mode**: default, acceptEdits, bypassPermissions, or plan mode
+- **Workspace Settings**: Working directory and additional directories
+- **Executable Settings**: Choose bun, deno, or node with custom args
+- **Environment Variables**: Configure runtime environment
+- **Max Budget**: Set spending limit in USD
+- **Fallback Model**: Configure fallback model
 
-- **Streaming/Batch Toggle**: Switch between response modes
+#### MCP Servers
+- **Add MCP Servers**: Configure external Model Context Protocol servers
+- **Command & Args**: Set server command and arguments
+- **Environment Variables**: Server-specific environment configuration
+
+#### Custom Agents (Subagents)
+- **Define Subagents**: Create specialized agents with custom configurations
+- **System Prompts**: Per-agent system prompts
+- **Tool Control**: Allowed and disallowed tools per agent
+
+#### Hooks
+- **Event Hooks**: Configure event-driven behaviors
+- **Templates**: Pre-built hooks for common integrations (Discord, Slack, GitHub, etc.)
+- **Categories**: Communication, development, monitoring, automation
+
+#### Presets
+- **Save/Load**: Persist entire configuration as named presets
+
+### Chat Interface (Right - Chat Tab)
+
+- **Streaming Mode**: Real-time SSE streaming (primary mode)
 - **Message History**: View conversation with role indicators
 - **Export**: Download conversation as JSON
 - **Clear**: Reset conversation
 
-### Debug Panel (Right)
+### Debug Panel (Right - Debug Tab)
 
-- **Key Metrics**: Latency, cost, token usage
+- **Key Metrics**: Latency, cost, token usage (input/output/cache)
 - **Stop Reason**: Why the model stopped generating
+- **Cache Statistics**: Cache creation and read tokens
 - **Raw Response**: View complete API response in JSON
 - **Error Logs**: Debug API errors
 
@@ -190,30 +224,31 @@ docker-compose up -d
 
 ```
 /jigger
-├── app/                    # Next.js app directory
-│   ├── page.tsx           # Main page
-│   └── globals.css        # Global styles
-├── components/            # React components
-│   ├── agent-tester.tsx  # Main container
-│   ├── config-panel.tsx  # Configuration controls
-│   ├── tools-panel.tsx   # Tool selection
-│   ├── chat-interface.tsx # Chat UI
-│   ├── debug-panel.tsx   # Debug info display
-│   └── ui/               # shadcn components
-├── lib/                  # Utilities
-│   ├── types.ts         # TypeScript types
-│   ├── api-client.ts    # API wrapper
-│   ├── store.ts         # Zustand state
-│   └── utils.ts         # Helpers
-├── backend/             # Express backend
+├── app/                      # Next.js app directory
+│   ├── page.tsx             # Main page
+│   └── globals.css          # Global styles (Tailwind CSS 4)
+├── components/              # React components
+│   ├── agent-tester.tsx    # Main two-panel layout container
+│   ├── config-panel.tsx    # Comprehensive config (tools, MCP, agents, hooks)
+│   ├── tool-selector.tsx   # Tool selection component
+│   ├── chat-interface.tsx  # Tabbed Chat + Debug interface
+│   ├── debug-panel.tsx     # Debug metrics display
+│   └── ui/                 # shadcn/ui components
+├── lib/                    # Utilities
+│   ├── types.ts           # TypeScript types (30+ SDK parameters)
+│   ├── api-client.ts      # API wrapper
+│   ├── store.ts           # Zustand state
+│   ├── hook-templates.ts  # Pre-built hook configs
+│   └── utils.ts           # Helpers
+├── backend/               # Express backend
 │   ├── src/
-│   │   ├── server.ts   # Main server
-│   │   └── routes/     # API routes (agent, conversations, presets, analytics)
-│   └── db/             # Database
-│       ├── schema.sql  # Schema
-│       └── client.ts   # PG client
-├── workspace/           # Agent SDK workspace volume
-└── docker-compose.yml  # Docker services
+│   │   ├── server.ts     # Main server
+│   │   └── routes/       # API routes (agent, conversations, presets, analytics)
+│   └── db/               # Database
+│       ├── schema.sql    # Schema
+│       └── client.ts     # PG client
+├── workspace/             # Agent SDK workspace volume
+└── docker-compose.yml    # Docker services
 ```
 
 ## Configuration Options
@@ -224,12 +259,13 @@ docker-compose up -d
 - **claude-3-5-haiku-20241022**: Fastest, great for simple tasks
 - **claude-3-opus-20240229**: Previous generation, very capable
 
-### Available Tools
+### Available Tools (18 Built-in)
 
 - **File Operations**: Read, Write, Edit, Glob, Grep
 - **Execution**: Bash, BashOutput, KillShell
 - **Web**: WebFetch, WebSearch
 - **Task Management**: TodoWrite, Task
+- **Agent System**: AskUserQuestion, ExitPlanMode, Skill, SlashCommand
 
 ### System Prompt Templates
 
@@ -262,10 +298,14 @@ docker-compose up -d
 
 ## Notes
 
-- The application uses the Agent SDK's built-in tool system
+- The application uses the Agent SDK's built-in tool system with 18 available tools
 - Cost calculation is automatic via SDK metrics
 - The workspace directory is mounted for agent file operations
 - PostgreSQL database persists conversations and usage logs
+- Supports 30+ Agent SDK configuration parameters
+- MCP server integration allows extending with custom tools
+- Custom agents (subagents) enable specialized task handling
+- Hooks provide event-driven integrations with external services
 
 ## License
 

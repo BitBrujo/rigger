@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Claude Agent SDK testing application built with Next.js 15 and Express.js. It provides a three-panel interface for testing the Claude Agent SDK with real-time streaming, debugging metrics, and persistence.
+This is a Claude Agent SDK testing application built with Next.js 16 and Express.js. It provides a comprehensive interface for testing the Claude Agent SDK with real-time streaming, debugging metrics, and persistence.
 
 **Features:**
 - **Agent SDK** (`@anthropic-ai/claude-agent-sdk`): Full agent capabilities with built-in tools, containerization, automatic cost calculation, and multi-turn conversations
@@ -51,13 +51,19 @@ docker-compose down -v && docker-compose up -d
 
 ## Architecture
 
-### Four-Panel Layout Architecture
+### Two-Panel Layout Architecture
 
-The application uses a resizable four-panel layout (`components/agent-tester.tsx`):
-- **Left Panel (ConfigPanel)**: Agent configuration controls (model, temperature, system prompt)
-- **Tools Panel (ToolsPanel)**: Tool selection and configuration
-- **Center Panel (ChatInterface)**: Message history and input
-- **Right Panel (DebugPanel)**: Real-time metrics and raw API responses
+The application uses a resizable two-panel layout (`components/agent-tester.tsx`):
+- **Left Panel (ConfigPanel)**: Comprehensive configuration including:
+  - Agent configuration controls (model, temperature, system prompt)
+  - Tool selection and configuration (ToolSelector component)
+  - MCP server configuration
+  - Custom agent definitions (subagents)
+  - Hook configuration
+  - Advanced settings (30+ Agent SDK parameters)
+- **Right Panel (ChatInterface)**: Combined chat and debug interface with tabs:
+  - Chat tab: Message history and input
+  - Debug tab: Real-time metrics and raw API responses
 
 All panels share state via Zustand store (`lib/store.ts`).
 
@@ -77,13 +83,13 @@ Components consume and update this store directly. No prop drilling.
 **Frontend → Backend flow:**
 
 1. **ChatInterface** collects user input and current config from store
-2. **ToolsPanel** allows selection of enabled tools
+2. **ConfigPanel** provides comprehensive configuration including tool selection, MCP servers, custom agents, and hooks
 3. **ApiClient** (`lib/api-client.ts`) handles HTTP/SSE communication
 4. Backend endpoints use Agent SDK:
-   - **Batch**: `POST /api/agent/message`
-   - **Streaming**: `POST /api/agent/stream`
-5. **ChatInterface** updates store with messages and debug info
-6. **DebugPanel** reactively displays metrics from store
+   - **Streaming**: `POST /api/agent/stream` (primary mode)
+   - **Batch**: `POST /api/agent/message` (fallback)
+5. **ChatInterface** updates store with messages and displays in Chat tab
+6. **Debug tab** in ChatInterface reactively displays metrics from store
 
 ### Backend Architecture
 
@@ -103,24 +109,30 @@ Components consume and update this store directly. No prop drilling.
 
 ### Agent SDK Tools
 
-The application uses the Claude Agent SDK which provides built-in tools:
+The application uses the Claude Agent SDK which provides 18 built-in tools:
 
 **File Operations:** Read, Write, Edit, Glob, Grep
 **Execution:** Bash, BashOutput, KillShell
 **Web:** WebFetch, WebSearch
 **Task Management:** TodoWrite, Task
+**Agent System:** AskUserQuestion, ExitPlanMode, Skill, SlashCommand
 
-Tools can be enabled/disabled via the Tools Panel in the UI. Configuration is stored in `config.allowedTools` array and sent to the Agent SDK.
+Tools can be enabled/disabled via the Tool Selector in the Config Panel. Configuration is stored in `config.allowedTools` array and sent to the Agent SDK.
 
-Default enabled tools are configured in `backend/src/routes/agent.ts` line 39-44.
+The application also supports:
+- **MCP Servers**: Configure external Model Context Protocol servers
+- **Custom Agents (Subagents)**: Define specialized agents with their own system prompts and tool configurations
+- **Hooks**: Configure event-driven behaviors and integrations
 
 ### Type System
 
 **Shared Types** (`lib/types.ts`):
-- `AgentConfig`: Configuration object sent to Anthropic API
-- `Message`: User/assistant message format
-- `AgentResponse`: Anthropic API response structure
-- `DebugInfo`: Aggregated metrics for DebugPanel
+- `AgentSDKConfig`: Complete 30+ parameter configuration for Agent SDK
+- `Message`: User/assistant message format with content blocks
+- `SDKMessage`: Full SDK message types (Assistant, User, ResultSuccess, ResultError, etc.)
+- `AgentDefinition`: Custom agent/subagent configuration
+- `McpServerConfig`: MCP server connection settings
+- `HookConfig`: Event hook configuration
 - Database types: `Conversation`, `Preset`, `UsageLog`, `UsageStats`
 
 Frontend and backend expect these types but backend doesn't import from `lib/types.ts` (Docker isolation). Keep types in sync manually.
@@ -255,13 +267,17 @@ Existing components: button, input, textarea, select, slider, switch, badge, car
 
 ## Important Files
 
-- `lib/store.ts`: Global state management
-- `lib/types.ts`: Shared TypeScript interfaces
+- `lib/store.ts`: Global state management (Zustand)
+- `lib/types.ts`: Shared TypeScript interfaces (30+ Agent SDK parameters)
 - `lib/api-client.ts`: Backend API wrapper
+- `lib/hook-templates.ts`: Pre-built hook configurations for various integrations
 - `backend/src/routes/agent.ts`: Agent SDK integration and tool configuration
 - `backend/db/schema.sql`: Database schema
-- `components/agent-tester.tsx`: Main layout container
-- `components/chat-interface.tsx`: Streaming and batch message handling
+- `components/agent-tester.tsx`: Main two-panel layout container
+- `components/config-panel.tsx`: Comprehensive configuration UI with collapsible sections
+- `components/tool-selector.tsx`: Tool selection component
+- `components/chat-interface.tsx`: Tabbed interface with Chat and Debug views
+- `components/debug-panel.tsx`: Debug metrics display (embedded in ChatInterface)
 - `docker-compose.yml`: Service orchestration
 
 ## Testing the Application

@@ -59,14 +59,15 @@ npm run dev
 
 ## Step 5: Open the App
 
-Visit [http://localhost:3000](http://localhost:3000)
+Visit [http://localhost:3334](http://localhost:3334)
 
 ## First Steps
 
 1. **Select a Model** (left panel) - Choose Claude 3.5 Sonnet to start
-2. **Adjust Temperature** - Try 0.7 for balanced responses
-3. **Type a Message** - Ask Claude anything in the center panel
-4. **View Debug Info** - Check the right panel for metrics and API details
+2. **Configure Tools** (left panel) - Enable/disable tools via Tool Selector
+3. **Type a Message** - Ask Claude anything in the chat tab
+4. **View Debug Info** - Click the Debug tab to see metrics and API details
+5. **Monitor Tools** - Check the Tools tab (in right panel) to see tool executions
 
 ## Testing Different Configurations
 
@@ -76,25 +77,28 @@ Visit [http://localhost:3000](http://localhost:3000)
 - **Haiku**: Fastest, great for simple tasks
 - **Opus**: Most capable, best for complex reasoning
 
-### Experiment with Temperature
+### Enable Extended Thinking
 
-- **0.0-0.3**: Deterministic, consistent responses
-- **0.4-0.7**: Balanced creativity
-- **0.8-1.0**: Highly creative and varied
+- **Max Thinking Tokens**: Set to 1000+ to enable Claude's extended thinking mode
+- Available in Advanced Settings section
 
 ### Use System Prompts
 
-Click "Templates" in the System Prompt section to try:
+Try the Claude Code Preset or manual templates:
+- Full Agent
 - Code Assistant
-- Creative Writer
+- Research Agent
+- DevOps Agent
 - Data Analyst
-- Technical Documenter
 
-### Toggle Streaming
+### Configure Tools
 
-Use the switch at the top of the chat panel to compare:
-- **Streaming**: See responses token-by-token in real-time
-- **Batch**: Wait for complete response
+Use the Tool Selector to enable/disable tools:
+- **File Operations**: Read, Write, Edit, Glob, Grep
+- **Execution**: Bash, BashOutput, KillShell
+- **Web**: WebFetch, WebSearch
+- **Task Management**: TodoWrite, Task
+- **Agent System**: AskUserQuestion, ExitPlanMode, Skill, SlashCommand
 
 ### Save Presets
 
@@ -125,12 +129,12 @@ docker-compose up -d
 
 ### Port already in use
 
-If port 3000 or 3001 is taken:
+If port 3334 or 3001 is taken:
 
 ```bash
 # Stop conflicting services or change ports in:
-# - docker-compose.yml (backend port)
-# - Next.js will auto-detect and suggest alternative
+# - docker-compose.yml (backend port: 3001)
+# - package.json (frontend port: 3334 in "dev" script)
 ```
 
 ## Next Steps
