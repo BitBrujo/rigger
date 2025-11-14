@@ -223,7 +223,7 @@ export default function ConfigPanel() {
             </Card>
 
             {/* Agent SDK Configuration */}
-            <Card className="p-4 bg-muted/50">
+            <Card className="p-4 border-2 bg-muted/50">
               <div className="space-y-3">
                 <div>
                   <Label className="text-base font-medium">Agent SDK Configuration</Label>
@@ -232,40 +232,48 @@ export default function ConfigPanel() {
                   </p>
                 </div>
 
-                {/* Max Turns */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="max-turns" className="text-sm">Max Turns</Label>
-                    <Input
-                      id="max-turns"
-                      type="number"
-                      value={config.maxTurns || 20}
-                      onChange={(e) => setConfig({ maxTurns: parseInt(e.target.value) || 20 })}
-                      className="w-20 h-7 text-xs"
-                      min={1}
-                      max={100}
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">Maximum conversation turns</p>
-                </div>
+                <Card className="p-3 bg-muted/50">
+                  <div className="space-y-3">
+                    {/* Max Turns */}
+                    <div className="space-y-1">
+                      <div className="flex items-end justify-between">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="max-turns" className="text-sm">Max Turns</Label>
+                          <p className="text-xs text-muted-foreground">Maximum conversation turns</p>
+                        </div>
+                        <Input
+                          id="max-turns"
+                          type="number"
+                          value={config.maxTurns || 20}
+                          onChange={(e) => setConfig({ maxTurns: parseInt(e.target.value) || 20 })}
+                          className="w-20 h-8 text-xs"
+                          min={1}
+                          max={100}
+                        />
+                      </div>
+                    </div>
 
-                {/* Max Budget USD */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="max-budget" className="text-sm">Max Budget (USD)</Label>
-                    <Input
-                      id="max-budget"
-                      type="number"
-                      value={config.maxBudgetUsd || ''}
-                      onChange={(e) => setConfig({ maxBudgetUsd: e.target.value ? parseFloat(e.target.value) : undefined })}
-                      className="w-20 h-7 text-xs"
-                      placeholder="No limit"
-                      step="0.01"
-                      min={0}
-                    />
+                    {/* Max Budget USD */}
+                    <div className="space-y-1">
+                      <div className="flex items-end justify-between">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="max-budget" className="text-sm">Max Budget (USD)</Label>
+                          <p className="text-xs text-muted-foreground">Stop when cost exceeds this amount</p>
+                        </div>
+                        <Input
+                          id="max-budget"
+                          type="number"
+                          value={config.maxBudgetUsd || ''}
+                          onChange={(e) => setConfig({ maxBudgetUsd: e.target.value ? parseFloat(e.target.value) : undefined })}
+                          className="w-20 h-8 text-xs"
+                          placeholder="No limit"
+                          step="0.01"
+                          min={0}
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">Stop when cost exceeds this amount</p>
-                </div>
+                </Card>
               </div>
             </Card>
 
