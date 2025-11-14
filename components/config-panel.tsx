@@ -321,123 +321,11 @@ export default function ConfigPanel() {
               </div>
             </Card>
 
-            {/* Hook Configuration */}
-            <Card className="p-4 border-2">
-              <div className="space-y-3">
-                <div>
-                  <Label className="text-base font-medium">Hooks</Label>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Intercept and modify agent behavior at specific lifecycle events
-                  </p>
-                </div>
-
-                {/* Hook Templates */}
-                <Card className="p-3 bg-muted/30">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Wand2 className="h-4 w-4 text-muted-foreground" />
-                        <Label className="text-sm font-medium">Quick Templates</Label>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setConfig({ hooks: {} })}
-                        className="text-xs h-7"
-                      >
-                        Clear All
-                      </Button>
-                    </div>
-
-                    {/* Category Filter */}
-                    <Select value={hookCategory} onValueChange={setHookCategory}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {HOOK_CATEGORIES.map((cat) => (
-                          <SelectItem key={cat.value} value={cat.value}>
-                            {cat.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    {/* Template Grid */}
-                    <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
-                      {filteredHookTemplates.map((template) => (
-                        <div
-                          key={template.name}
-                          className="p-2 border rounded-md bg-background hover:bg-accent/50 transition-colors"
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <h4 className="text-xs font-medium truncate">{template.name}</h4>
-                                <Badge variant="outline" className="text-[10px] px-1 py-0">
-                                  {template.category}
-                                </Badge>
-                              </div>
-                              <p className="text-[10px] text-muted-foreground mt-0.5">
-                                {template.description}
-                              </p>
-                            </div>
-                            <div className="flex gap-1">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-6 w-6 p-0"
-                                onClick={() => handleApplyHookTemplate(template)}
-                                title="Merge with current hooks"
-                              >
-                                <Plus className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-6 px-2 text-[10px]"
-                                onClick={() => handleReplaceWithHookTemplate(template)}
-                                title="Replace all hooks"
-                              >
-                                Use
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </Card>
-
-                {/* Manual JSON Editor */}
-                <div className="space-y-2">
-                  <Label className="text-sm text-muted-foreground">Custom Hooks (JSON)</Label>
-                  <JsonEditor
-                    value={config.hooks || {}}
-                    onChange={(value) => setConfig({ hooks: value })}
-                    placeholder={`{
-  "pre_tool_use": {
-    "pattern": "^Bash$",
-    "action": "warn"
-  },
-  "on_budget_exceeded": {
-    "action": "stop"
-  }
-}`}
-                    rows={10}
-                  />
-                </div>
-              </div>
-            </Card>
-
             {/* Subagent Configuration */}
             <Card className="p-4 border-2">
               <div className="space-y-3">
                 <div>
-                  <Label className="text-base font-medium flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Subagents
-                  </Label>
+                  <Label className="text-base font-medium">Subagents</Label>
                   <p className="text-xs text-muted-foreground mt-1">
                     Define specialized agents for specific tasks (used with Task tool)
                   </p>
@@ -604,6 +492,116 @@ export default function ConfigPanel() {
                 )}
               </div>
             </Card>
+
+            {/* Hook Configuration */}
+            <Card className="p-4 border-2">
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-base font-medium">Hooks</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Intercept and modify agent behavior at specific lifecycle events
+                  </p>
+                </div>
+
+                {/* Hook Templates */}
+                <Card className="p-3 bg-muted/30">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Wand2 className="h-4 w-4 text-muted-foreground" />
+                        <Label className="text-sm font-medium">Quick Templates</Label>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setConfig({ hooks: {} })}
+                        className="text-xs h-7"
+                      >
+                        Clear All
+                      </Button>
+                    </div>
+
+                    {/* Category Filter */}
+                    <Select value={hookCategory} onValueChange={setHookCategory}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {HOOK_CATEGORIES.map((cat) => (
+                          <SelectItem key={cat.value} value={cat.value}>
+                            {cat.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Template Grid */}
+                    <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
+                      {filteredHookTemplates.map((template) => (
+                        <div
+                          key={template.name}
+                          className="p-2 border rounded-md bg-background hover:bg-accent/50 transition-colors"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <h4 className="text-xs font-medium truncate">{template.name}</h4>
+                                <Badge variant="outline" className="text-[10px] px-1 py-0">
+                                  {template.category}
+                                </Badge>
+                              </div>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">
+                                {template.description}
+                              </p>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0"
+                                onClick={() => handleApplyHookTemplate(template)}
+                                title="Merge with current hooks"
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 px-2 text-[10px]"
+                                onClick={() => handleReplaceWithHookTemplate(template)}
+                                title="Replace all hooks"
+                              >
+                                Use
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Manual JSON Editor */}
+                <div className="space-y-2">
+                  <Label className="text-sm text-muted-foreground">Custom Hooks (JSON)</Label>
+                  <JsonEditor
+                    value={config.hooks || {}}
+                    onChange={(value) => setConfig({ hooks: value })}
+                    placeholder={`{
+  "pre_tool_use": {
+    "pattern": "^Bash$",
+    "action": "warn"
+  },
+  "on_budget_exceeded": {
+    "action": "stop"
+  }
+}`}
+                    rows={10}
+                  />
+                </div>
+              </div>
+            </Card>
+
           </div>
           {/* END LEFT COLUMN */}
 
