@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useAgentStore } from '@/lib/store';
 import { toast } from 'sonner';
-import { MODEL_OPTIONS, ALL_SDK_TOOLS, SYSTEM_PROMPT_TEMPLATES, CLAUDE_CODE_PRESET_PROMPT, SUBAGENT_TEMPLATES, AgentDefinition } from '@/lib/types';
+import { MODEL_OPTIONS, ALL_SDK_TOOLS, CLAUDE_CODE_PRESET_PROMPT, AgentDefinition } from '@/lib/types';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
@@ -38,7 +38,7 @@ export default function ConfigPanel() {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [hookCategory, setHookCategory] = useState<string>('all');
   const [useClaudeCodePreset, setUseClaudeCodePreset] = useState(false);
-  const [additionalInstructions, setAdditionalInstructions] = useState('');
+  const [systemPromptText, setSystemPromptText] = useState('');
   const [editingSubagent, setEditingSubagent] = useState<string | null>(null);
   const [newSubagentName, setNewSubagentName] = useState('');
   const [newSubagentDefinition, setNewSubagentDefinition] = useState<AgentDefinition>({
@@ -63,34 +63,32 @@ export default function ConfigPanel() {
     });
   };
 
-  const handleApplySystemPromptTemplate = (templatePrompt: string) => {
-    setConfig({ system: templatePrompt });
-    toast.success('System prompt template applied');
-  };
-
   const handleClaudeCodePresetToggle = (checked: boolean) => {
     setUseClaudeCodePreset(checked);
     if (checked) {
-      // Combine Claude Code preset with additional instructions
-      const finalPrompt = additionalInstructions
-        ? `${CLAUDE_CODE_PRESET_PROMPT}\n\n**Additional Instructions:**\n${additionalInstructions}`
+      // Combine Claude Code preset with system prompt
+      const finalPrompt = systemPromptText
+        ? `${CLAUDE_CODE_PRESET_PROMPT}\n\n**Additional Instructions:**\n${systemPromptText}`
         : CLAUDE_CODE_PRESET_PROMPT;
-      setConfig({ system: finalPrompt });
+      setConfig({ systemPrompt: finalPrompt });
       toast.success('Claude Code preset enabled');
     } else {
       // Clear to manual mode
-      setConfig({ system: additionalInstructions || '' });
+      setConfig({ systemPrompt: systemPromptText || '' });
     }
   };
 
-  const handleAdditionalInstructionsChange = (value: string) => {
-    setAdditionalInstructions(value);
+  const handleSystemPromptChange = (value: string) => {
+    setSystemPromptText(value);
     if (useClaudeCodePreset) {
       // Update system prompt with preset + additional instructions
       const finalPrompt = value
         ? `${CLAUDE_CODE_PRESET_PROMPT}\n\n**Additional Instructions:**\n${value}`
         : CLAUDE_CODE_PRESET_PROMPT;
-      setConfig({ system: finalPrompt });
+      setConfig({ systemPrompt: finalPrompt });
+    } else {
+      // Direct system prompt
+      setConfig({ systemPrompt: value });
     }
   };
 
@@ -98,15 +96,6 @@ export default function ConfigPanel() {
     ? HOOK_TEMPLATES
     : HOOK_TEMPLATES.filter(t => t.category === hookCategory);
 
-  // Subagent handlers
-  const handleApplySubagentTemplate = (template: typeof SUBAGENT_TEMPLATES[0]) => {
-    const currentAgents = config.customAgents || {};
-    const updatedAgents = { ...currentAgents, [template.name]: template.definition };
-    setConfig({ customAgents: updatedAgents });
-    toast.success('Subagent template applied', {
-      description: `Added: ${template.name}`,
-    });
-  };
 
   const handleDeleteSubagent = (name: string) => {
     const currentAgents = config.customAgents || {};
@@ -307,63 +296,28 @@ export default function ConfigPanel() {
                 </p>
               </Card>
 
-              {/* Template Selector */}
-              {!useClaudeCodePreset && (
-                <Card className="p-3 bg-muted/30">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Wand2 className="h-4 w-4 text-muted-foreground" />
-                      <Label className="text-sm font-medium">Quick Templates</Label>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      {SYSTEM_PROMPT_TEMPLATES.map((template) => (
-                        <Button
-                          key={template.name}
-                          size="sm"
-                          variant="outline"
-                          className="text-xs h-8 justify-start"
-                          onClick={() => handleApplySystemPromptTemplate(template.prompt)}
-                        >
-                          {template.name}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                </Card>
-              )}
-
-              {/* Additional Instructions (shown when Claude Code preset is enabled) */}
-              {useClaudeCodePreset && (
-                <div className="space-y-2">
-                  <Label htmlFor="additional-instructions" className="text-sm">
-                    Additional Instructions (Optional)
-                  </Label>
-                  <Textarea
-                    id="additional-instructions"
-                    value={additionalInstructions}
-                    onChange={(e) => handleAdditionalInstructionsChange(e.target.value)}
-                    placeholder="Add project-specific instructions, coding standards, or custom guidelines..."
-                    className="min-h-[80px] text-sm"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    These instructions will be appended to the Claude Code preset
-                  </p>
-                </div>
-              )}
-
-              {/* Manual System Prompt Editor (shown when preset is off) */}
-              {!useClaudeCodePreset && (
-                <div className="space-y-2">
-                  <Label htmlFor="system-prompt">Custom System Prompt</Label>
-                  <Textarea
-                    id="system-prompt"
-                    value={config.system || ''}
-                    onChange={(e) => setConfig({ system: e.target.value })}
-                    placeholder="Enter custom system prompt..."
-                    className="min-h-[150px] font-mono text-sm"
-                  />
-                </div>
-              )}
+              {/* System Prompt Field */}
+              <div className="space-y-2">
+                <Label htmlFor="system-prompt" className="text-sm">
+                  System Prompt {useClaudeCodePreset && '(Additional Instructions)'}
+                </Label>
+                <Textarea
+                  id="system-prompt"
+                  value={systemPromptText}
+                  onChange={(e) => handleSystemPromptChange(e.target.value)}
+                  placeholder={
+                    useClaudeCodePreset
+                      ? "Add project-specific instructions, coding standards, or custom guidelines..."
+                      : "Enter your system prompt..."
+                  }
+                  className={`min-h-[150px] text-sm ${useClaudeCodePreset ? '' : 'font-mono'}`}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {useClaudeCodePreset
+                    ? "These instructions will be appended to the Claude Code preset"
+                    : "Define the agent's persona, capabilities, and behavioral guidelines"}
+                </p>
+              </div>
             </div>
 
             {/* Hook Configuration */}
@@ -484,41 +438,6 @@ export default function ConfigPanel() {
                   Define specialized agents for specific tasks (used with Task tool)
                 </p>
               </div>
-
-              {/* Template Library */}
-              <Card className="p-3 bg-muted/30">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Wand2 className="h-4 w-4 text-muted-foreground" />
-                    <Label className="text-sm font-medium">Template Library</Label>
-                  </div>
-                  <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
-                    {SUBAGENT_TEMPLATES.map((template) => (
-                      <div
-                        key={template.name}
-                        className="p-2 border rounded-md bg-background hover:bg-accent/50 transition-colors"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-xs font-medium">{template.name}</h4>
-                            <p className="text-[10px] text-muted-foreground mt-0.5">
-                              {template.description}
-                            </p>
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-6 px-2 text-[10px]"
-                            onClick={() => handleApplySubagentTemplate(template)}
-                          >
-                            Add
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </Card>
 
               {/* Current Subagents List */}
               {Object.keys(config.customAgents || {}).length > 0 && (
