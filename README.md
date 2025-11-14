@@ -2,6 +2,8 @@
 
 A testing and debugging interface for the Claude Agent SDK. Configure agents, select tools, stream responses in real-time, and track costs—all through a clean two-panel interface.
 
+<img width="4134" height="2672" alt="rigger1" src="https://github.com/user-attachments/assets/042bc530-6248-4514-ba2d-bb21161feee6" />
+
 ## What It Does
 
 Rigger lets you experiment with Claude's Agent SDK without writing code. Configure your agent's behavior, enable specific tools, test prompts, and see detailed debug metrics including token usage and costs.
