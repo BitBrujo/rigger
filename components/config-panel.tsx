@@ -47,6 +47,13 @@ export default function ConfigPanel() {
     disallowedTools: [],
   });
 
+  // Collapsible state for expandable cards
+  const [agentSdkOpen, setAgentSdkOpen] = useState(true);
+  const [systemPromptOpen, setSystemPromptOpen] = useState(true);
+  const [hooksOpen, setHooksOpen] = useState(true);
+  const [sdkToolsOpen, setSdkToolsOpen] = useState(true);
+  const [mcpServersOpen, setMcpServersOpen] = useState(true);
+
   const handleApplyHookTemplate = (template: HookTemplate) => {
     const currentHooks = config.hooks || {};
     const mergedHooks = { ...currentHooks, ...template.hooks };
@@ -150,8 +157,10 @@ export default function ConfigPanel() {
   return (
     <ScrollArea className="h-full">
       <div className="p-6 space-y-6">
-        {/* Configuration sections */}
-        <div className="space-y-6">
+        {/* Two-column layout for configuration sections */}
+        <div className="grid grid-cols-2 gap-6">
+          {/* LEFT COLUMN - Core Settings */}
+          <div className="space-y-6">
             {/* Model Selection */}
             <Card className="p-4 border-2 bg-muted/50">
               <div className="space-y-2">
@@ -221,16 +230,23 @@ export default function ConfigPanel() {
             </Card>
 
             {/* Agent SDK Configuration */}
-            <Card className="p-4 border-2 bg-muted/50">
-              <div className="space-y-3">
-                <div>
-                  <Label className="text-base font-medium">Agent SDK Configuration</Label>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    File operations, Bash execution, Web access, Multi-turn conversations, Automatic cost calculation
-                  </p>
-                </div>
+            <Collapsible open={agentSdkOpen} onOpenChange={setAgentSdkOpen}>
+              <Card className="p-4 border-2 bg-muted/50">
+                <CollapsibleTrigger asChild>
+                  <div className="flex items-start gap-2 cursor-pointer">
+                    <ChevronDown className={`h-5 w-5 transition-transform flex-shrink-0 mt-0.5 ${agentSdkOpen ? 'rotate-180' : ''}`} />
+                    <div className="flex-1">
+                      <Label className="text-base font-medium cursor-pointer">Agent SDK Configuration</Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        File operations, Bash execution, Web access, Multi-turn conversations, Automatic cost calculation
+                      </p>
+                    </div>
+                  </div>
+                </CollapsibleTrigger>
 
-                <Card className="p-3 bg-muted/50">
+                <CollapsibleContent>
+                  <div className="mt-3">
+                    <Card className="p-3 bg-muted/50">
                   <div className="space-y-3">
                     {/* Max Turns */}
                     <div className="space-y-1">
@@ -272,20 +288,29 @@ export default function ConfigPanel() {
                     </div>
                   </div>
                 </Card>
-              </div>
-            </Card>
+                  </div>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
 
             {/* System Prompt */}
-            <Card className="p-4 border-2">
-              <div className="space-y-3">
-                <div>
-                  <Label className="text-base font-medium">System Prompt</Label>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Define the agent's persona, capabilities, and behavioral guidelines
-                  </p>
-                </div>
+            <Collapsible open={systemPromptOpen} onOpenChange={setSystemPromptOpen}>
+              <Card className="p-4 border-2">
+                <CollapsibleTrigger asChild>
+                  <div className="flex items-start gap-2 cursor-pointer">
+                    <ChevronDown className={`h-5 w-5 transition-transform flex-shrink-0 mt-0.5 ${systemPromptOpen ? 'rotate-180' : ''}`} />
+                    <div className="flex-1">
+                      <Label className="text-base font-medium cursor-pointer">System Prompt</Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Define the agent's persona, capabilities, and behavioral guidelines
+                      </p>
+                    </div>
+                  </div>
+                </CollapsibleTrigger>
 
-                {/* Claude Code Preset Toggle */}
+                <CollapsibleContent>
+                  <div className="mt-3 space-y-3">
+                    {/* Claude Code Preset Toggle */}
                 <Card className="p-3 bg-muted/30">
                   <div className="flex items-center gap-2">
                     <Switch
@@ -324,8 +349,10 @@ export default function ConfigPanel() {
                       : "Define the agent's persona, capabilities, and behavioral guidelines"}
                   </p>
                 </div>
-              </div>
-            </Card>
+                  </div>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
 
             {/* Subagent Configuration */}
             <Card className="p-4 border-2">
@@ -500,16 +527,23 @@ export default function ConfigPanel() {
             </Card>
 
             {/* Hook Configuration */}
-            <Card className="p-4 border-2">
-              <div className="space-y-3">
-                <div>
-                  <Label className="text-base font-medium">Hooks</Label>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Intercept and modify agent behavior at specific lifecycle events
-                  </p>
-                </div>
+            <Collapsible open={hooksOpen} onOpenChange={setHooksOpen}>
+              <Card className="p-4 border-2">
+                <CollapsibleTrigger asChild>
+                  <div className="flex items-start gap-2 cursor-pointer">
+                    <ChevronDown className={`h-5 w-5 transition-transform flex-shrink-0 mt-0.5 ${hooksOpen ? 'rotate-180' : ''}`} />
+                    <div className="flex-1">
+                      <Label className="text-base font-medium cursor-pointer">Hooks</Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Intercept and modify agent behavior at specific lifecycle events
+                      </p>
+                    </div>
+                  </div>
+                </CollapsibleTrigger>
 
-                {/* Hook Templates */}
+                <CollapsibleContent>
+                  <div className="mt-3 space-y-3">
+                    {/* Hook Templates */}
                 <Card className="p-3 bg-muted/30">
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
@@ -605,35 +639,60 @@ export default function ConfigPanel() {
                     rows={10}
                   />
                 </div>
-              </div>
-            </Card>
+                  </div>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
 
+          </div>
+          {/* END LEFT COLUMN */}
+
+          {/* RIGHT COLUMN - Advanced/Tools/Integrations */}
+          <div className="space-y-6">
             {/* Agent SDK Tools Section */}
-            <Card className="p-4 border-2">
-              <div className="space-y-3">
-                <div>
-                  <Label className="text-base font-medium">Agent SDK Tools</Label>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Select which built-in tools the agent can use during execution
-                  </p>
-                </div>
-                <ToolSelector
-                  selectedTools={config.allowedTools || [...ALL_SDK_TOOLS]}
-                  onChange={(tools) => setConfig({ allowedTools: tools })}
-                  disabled={false}
-                />
-              </div>
-            </Card>
+            <Collapsible open={sdkToolsOpen} onOpenChange={setSdkToolsOpen}>
+              <Card className="p-4 border-2">
+                <CollapsibleTrigger asChild>
+                  <div className="flex items-start gap-2 cursor-pointer">
+                    <ChevronDown className={`h-5 w-5 transition-transform flex-shrink-0 mt-0.5 ${sdkToolsOpen ? 'rotate-180' : ''}`} />
+                    <div className="flex-1">
+                      <Label className="text-base font-medium cursor-pointer">Agent SDK Tools</Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Select which built-in tools the agent can use during execution
+                      </p>
+                    </div>
+                  </div>
+                </CollapsibleTrigger>
+
+                <CollapsibleContent>
+                  <div className="mt-3">
+                    <ToolSelector
+                      selectedTools={config.allowedTools || [...ALL_SDK_TOOLS]}
+                      onChange={(tools) => setConfig({ allowedTools: tools })}
+                      disabled={false}
+                    />
+                  </div>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
 
             {/* MCP Server Configuration */}
-            <Card className="p-4 border-2">
-              <div className="space-y-3">
-                <div>
-                  <Label className="text-base font-medium">MCP Servers</Label>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Configure Model Context Protocol servers for external tool integration
-                  </p>
-                </div>
+            <Collapsible open={mcpServersOpen} onOpenChange={setMcpServersOpen}>
+              <Card className="p-4 border-2">
+                <CollapsibleTrigger asChild>
+                  <div className="flex items-start gap-2 cursor-pointer">
+                    <ChevronDown className={`h-5 w-5 transition-transform flex-shrink-0 mt-0.5 ${mcpServersOpen ? 'rotate-180' : ''}`} />
+                    <div className="flex-1">
+                      <Label className="text-base font-medium cursor-pointer">MCP Servers</Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Configure Model Context Protocol servers for external tool integration
+                      </p>
+                    </div>
+                  </div>
+                </CollapsibleTrigger>
+
+                <CollapsibleContent>
+                  <div className="mt-3 space-y-3">
 
                 <JsonEditor
                   value={config.mcpServers || {}}
@@ -673,8 +732,10 @@ export default function ConfigPanel() {
                     </code>
                   </AlertDescription>
                 </Alert>
-              </div>
-            </Card>
+                  </div>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
 
             {/* Stop Sequences */}
             <div className="space-y-2">
