@@ -57,9 +57,9 @@ export default function AgentTester() {
   };
 
   return (
-    <div className="h-full w-full bg-background">
+    <div className="h-full w-full bg-background flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="border-b px-6 py-4 flex items-center justify-between">
+      <div className="border-b px-6 py-4 flex items-center justify-between flex-shrink-0">
         <div>
           <h1 className="text-2xl font-bold text-primary">Rigger</h1>
           <p className="text-sm text-muted-foreground">
@@ -96,7 +96,7 @@ export default function AgentTester() {
       </div>
 
       {/* Two-panel layout */}
-      <ResizablePanelGroup direction="horizontal" className="h-[calc(100vh-80px)]">
+      <ResizablePanelGroup direction="horizontal" className="flex-1 min-h-0">
         {/* Left Panel - Configuration (doubled size) */}
         <ResizablePanel defaultSize={50} minSize={40} maxSize={70}>
           <ConfigPanel />

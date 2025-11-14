@@ -292,9 +292,9 @@ export default function ChatInterface() {
   };
 
   return (
-    <Tabs defaultValue="messages" className="flex flex-col h-full">
+    <Tabs defaultValue="messages" className="flex flex-col h-full overflow-hidden">
       {/* Tabs Header */}
-      <div className="border-b">
+      <div className="border-b flex-shrink-0">
         <TabsList className="w-full justify-start rounded-none h-12 bg-transparent px-6">
           <TabsTrigger value="messages" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
             Messages
@@ -310,8 +310,8 @@ export default function ChatInterface() {
       </div>
 
       {/* Messages Tab */}
-      <TabsContent value="messages" className="flex-1 flex flex-col m-0 data-[state=inactive]:hidden">
-        <div className="border-b px-6 py-3 flex items-center justify-between">
+      <TabsContent value="messages" className="flex-1 flex flex-col m-0 data-[state=inactive]:hidden overflow-hidden">
+        <div className="border-b px-6 py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Switch
@@ -400,7 +400,7 @@ export default function ChatInterface() {
       </ScrollArea>
 
       {/* Input */}
-      <div className="border-t p-4">
+      <div className="border-t p-4 flex-shrink-0">
         <div className="max-w-4xl mx-auto flex gap-2">
           <Textarea
             value={input}
@@ -418,12 +418,12 @@ export default function ChatInterface() {
       </TabsContent>
 
       {/* Tools Tab */}
-      <TabsContent value="tools" className="flex-1 m-0 data-[state=inactive]:hidden">
+      <TabsContent value="tools" className="flex-1 m-0 data-[state=inactive]:hidden overflow-hidden">
         <ToolsPanel />
       </TabsContent>
 
       {/* Debug Tab */}
-      <TabsContent value="debug" className="flex-1 m-0 data-[state=inactive]:hidden">
+      <TabsContent value="debug" className="flex-1 m-0 data-[state=inactive]:hidden overflow-hidden">
         <DebugPanel />
       </TabsContent>
     </Tabs>
