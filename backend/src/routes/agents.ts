@@ -73,11 +73,11 @@ router.get('/templates/:name', (req: Request, res: Response) => {
     const { name } = req.params;
     const templates = getAgentTemplates();
 
-    if (!templates[name]) {
+    if (!(name in templates)) {
       return res.status(404).json({ error: `Template '${name}' not found` });
     }
 
-    res.json({ name, ...templates[name] });
+    res.json({ name, ...(templates as any)[name] });
   } catch (error) {
     console.error('Error fetching agent template:', error);
     res.status(500).json({ error: 'Failed to fetch agent template' });
@@ -144,8 +144,8 @@ router.get('/:name', async (req: Request, res: Response) => {
 
     // Check templates first
     const templates = getAgentTemplates();
-    if (templates[name]) {
-      return res.json({ name, ...templates[name] });
+    if (name in templates) {
+      return res.json({ name, ...(templates as any)[name] });
     }
 
     // Check user-created agents
@@ -200,13 +200,13 @@ router.post('/from-template/:templateName', (req: Request, res: Response) => {
     }
 
     const templates = getAgentTemplates();
-    if (!templates[templateName]) {
+    if (!(templateName in templates)) {
       return res.status(404).json({ error: `Template '${templateName}' not found` });
     }
 
     // Create agent from template with customizations
     const agent = {
-      ...templates[templateName],
+      ...(templates as any)[templateName],
       ...customizations,
       isTemplate: false,
       createdAt: new Date().toISOString(),
@@ -290,7 +290,7 @@ router.delete('/:name', (req: Request, res: Response) => {
 
     // Check if it's a template (can't delete templates)
     const templates = getAgentTemplates();
-    if (templates[name]) {
+    if (name in templates) {
       return res.status(400).json({ error: 'Cannot delete built-in templates' });
     }
 

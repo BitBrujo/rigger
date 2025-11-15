@@ -55,6 +55,13 @@ interface AgentStore {
   removeSkill: (name: string) => void;
   updateSkill: (name: string, updates: Partial<SkillMetadata>) => void;
 
+  // Agents Management
+  availableAgents: AgentDefinition[];
+  setAvailableAgents: (agents: AgentDefinition[]) => void;
+  addAgent: (agent: AgentDefinition) => void;
+  removeAgent: (name: string) => void;
+  updateAgent: (name: string, updates: Partial<AgentDefinition>) => void;
+
   // Todo Lists Management
   todoLists: TodoList[];
   setTodoLists: (lists: TodoList[]) => void;
@@ -200,6 +207,24 @@ export const useAgentStore = create<AgentStore>((set) => ({
     set((state) => ({
       availableSkills: state.availableSkills.map((skill) =>
         skill.name === name ? { ...skill, ...updates } : skill
+      ),
+    })),
+
+  // Agents Management
+  availableAgents: [],
+  setAvailableAgents: (agents) => set({ availableAgents: agents }),
+  addAgent: (agent) =>
+    set((state) => ({
+      availableAgents: [...state.availableAgents, agent],
+    })),
+  removeAgent: (name) =>
+    set((state) => ({
+      availableAgents: state.availableAgents.filter((agent) => agent.name !== name),
+    })),
+  updateAgent: (name, updates) =>
+    set((state) => ({
+      availableAgents: state.availableAgents.map((agent) =>
+        agent.name === name ? { ...agent, ...updates } : agent
       ),
     })),
 

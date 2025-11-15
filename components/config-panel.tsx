@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/collapsible';
 import { ToolSelector } from './tool-selector';
 import { SkillsManager } from './skills-manager';
+import { AgentsManager } from './agents-manager';
 import { JsonEditor } from './ui/json-editor';
 import { ChevronDown, AlertCircle, Plus, Wand2, Trash2, Edit2, Users } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -40,13 +41,6 @@ export default function ConfigPanel() {
   const [hookCategory, setHookCategory] = useState<string>('all');
   const [useClaudeCodePreset, setUseClaudeCodePreset] = useState(false);
   const [systemPromptText, setSystemPromptText] = useState('');
-  const [editingSubagent, setEditingSubagent] = useState<string | null>(null);
-  const [newSubagentName, setNewSubagentName] = useState('');
-  const [newSubagentDefinition, setNewSubagentDefinition] = useState<AgentDefinition>({
-    systemPrompt: '',
-    allowedTools: [],
-    disallowedTools: [],
-  });
 
   // Collapsible state for expandable cards
   const [agentSdkOpen, setAgentSdkOpen] = useState(false);
@@ -56,7 +50,7 @@ export default function ConfigPanel() {
   const [skillsOpen, setSkillsOpen] = useState(false);
   const [mcpServersOpen, setMcpServersOpen] = useState(false);
   const [stopSequencesOpen, setStopSequencesOpen] = useState(false);
-  const [subagentsOpen, setSubagentsOpen] = useState(false);
+  const [agentsOpen, setAgentsOpen] = useState(false);
   const [advancedSdkOpen, setAdvancedSdkOpen] = useState(false);
 
   const handleApplyHookTemplate = (template: HookTemplate) => {
@@ -107,57 +101,6 @@ export default function ConfigPanel() {
   const filteredHookTemplates = hookCategory === 'all'
     ? HOOK_TEMPLATES
     : HOOK_TEMPLATES.filter(t => t.category === hookCategory);
-
-
-  const handleDeleteSubagent = (name: string) => {
-    const currentAgents = config.customAgents || {};
-    const { [name]: removed, ...remaining } = currentAgents;
-    setConfig({ customAgents: remaining });
-    toast.success('Subagent deleted', {
-      description: `Removed: ${name}`,
-    });
-  };
-
-  const handleSaveSubagent = () => {
-    if (!newSubagentName.trim()) {
-      toast.error('Please enter a subagent name');
-      return;
-    }
-    const currentAgents = config.customAgents || {};
-    const updatedAgents = { ...currentAgents, [newSubagentName]: newSubagentDefinition };
-    setConfig({ customAgents: updatedAgents });
-    toast.success('Subagent saved', {
-      description: `Saved: ${newSubagentName}`,
-    });
-    // Reset form
-    setNewSubagentName('');
-    setNewSubagentDefinition({
-      systemPrompt: '',
-      allowedTools: [],
-      disallowedTools: [],
-    });
-    setEditingSubagent(null);
-  };
-
-  const handleEditSubagent = (name: string) => {
-    const currentAgents = config.customAgents || {};
-    const agentDef = currentAgents[name];
-    if (agentDef) {
-      setNewSubagentName(name);
-      setNewSubagentDefinition(agentDef);
-      setEditingSubagent(name);
-    }
-  };
-
-  const handleCancelEdit = () => {
-    setNewSubagentName('');
-    setNewSubagentDefinition({
-      systemPrompt: '',
-      allowedTools: [],
-      disallowedTools: [],
-    });
-    setEditingSubagent(null);
-  };
 
   return (
     <ScrollArea className="h-full">
@@ -359,182 +302,24 @@ export default function ConfigPanel() {
               </Card>
             </Collapsible>
 
-            {/* Subagent Configuration */}
-            <Collapsible open={subagentsOpen} onOpenChange={setSubagentsOpen}>
+            {/* Agents Configuration */}
+            <Collapsible open={agentsOpen} onOpenChange={setAgentsOpen}>
               <Card className="p-4 border-2 bg-muted/50">
                 <CollapsibleTrigger asChild>
                   <div className="flex items-start gap-2 cursor-pointer">
-                    <ChevronDown className={`h-5 w-5 transition-transform flex-shrink-0 mt-0.5 ${subagentsOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`h-5 w-5 transition-transform flex-shrink-0 mt-0.5 ${agentsOpen ? 'rotate-180' : ''}`} />
                     <div className="flex-1">
-                      <Label className="text-base font-medium cursor-pointer">Subagents</Label>
+                      <Label className="text-base font-medium cursor-pointer">Custom Agents</Label>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Define specialized agents for specific tasks (used with Task tool)
+                        Create specialized agents with templates or from scratch
                       </p>
                     </div>
                   </div>
                 </CollapsibleTrigger>
 
                 <CollapsibleContent>
-                  <div className="mt-3 space-y-3">
-                    {/* Current Subagents List */}
-                {Object.keys(config.customAgents || {}).length > 0 && (
-                  <Card className="p-3 bg-background">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Your Subagents</Label>
-                      <div className="space-y-2 max-h-48 overflow-y-auto">
-                        {Object.entries(config.customAgents || {}).map(([name, definition]) => (
-                          <div
-                            key={name}
-                            className="p-2 border rounded-md bg-background flex items-center justify-between"
-                          >
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium truncate">{name}</p>
-                              <p className="text-[10px] text-muted-foreground">
-                                {definition.allowedTools?.length || 0} tools allowed
-                              </p>
-                            </div>
-                            <div className="flex gap-1">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-6 w-6 p-0"
-                                onClick={() => handleEditSubagent(name)}
-                                title="Edit"
-                              >
-                                <Edit2 className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-                                onClick={() => handleDeleteSubagent(name)}
-                                title="Delete"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </Card>
-                )}
-
-                {/* Add/Edit Form */}
-                <Collapsible open={editingSubagent !== null}>
-                  <CollapsibleContent>
-                    <Card className="p-3 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-sm font-medium">
-                          {editingSubagent ? 'Edit Subagent' : 'New Subagent'}
-                        </Label>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 text-xs"
-                          onClick={handleCancelEdit}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-
-                      {/* Name */}
-                      <div className="space-y-1">
-                        <Label htmlFor="subagent-name" className="text-xs">Name</Label>
-                        <Input
-                          id="subagent-name"
-                          value={newSubagentName}
-                          onChange={(e) => setNewSubagentName(e.target.value)}
-                          placeholder="e.g., code-reviewer"
-                          className="h-8 text-sm"
-                          disabled={editingSubagent !== null && editingSubagent !== 'new'}
-                        />
-                      </div>
-
-                      {/* System Prompt */}
-                      <div className="space-y-1">
-                        <Label htmlFor="subagent-prompt" className="text-xs">System Prompt</Label>
-                        <Textarea
-                          id="subagent-prompt"
-                          value={newSubagentDefinition.systemPrompt || ''}
-                          onChange={(e) =>
-                            setNewSubagentDefinition({
-                              ...newSubagentDefinition,
-                              systemPrompt: e.target.value,
-                            })
-                          }
-                          placeholder="Define the subagent's purpose and instructions..."
-                          className="min-h-[80px] text-xs"
-                        />
-                      </div>
-
-                      {/* Allowed Tools */}
-                      <div className="space-y-1">
-                        <Label htmlFor="subagent-allowed-tools" className="text-xs">
-                          Allowed Tools (comma-separated)
-                        </Label>
-                        <Input
-                          id="subagent-allowed-tools"
-                          value={newSubagentDefinition.allowedTools?.join(', ') || ''}
-                          onChange={(e) =>
-                            setNewSubagentDefinition({
-                              ...newSubagentDefinition,
-                              allowedTools: e.target.value
-                                .split(',')
-                                .map((s) => s.trim())
-                                .filter(Boolean),
-                            })
-                          }
-                          placeholder="Read, Write, Grep, Glob..."
-                          className="h-8 text-xs font-mono"
-                        />
-                      </div>
-
-                      {/* Disallowed Tools */}
-                      <div className="space-y-1">
-                        <Label htmlFor="subagent-disallowed-tools" className="text-xs">
-                          Disallowed Tools (comma-separated)
-                        </Label>
-                        <Input
-                          id="subagent-disallowed-tools"
-                          value={newSubagentDefinition.disallowedTools?.join(', ') || ''}
-                          onChange={(e) =>
-                            setNewSubagentDefinition({
-                              ...newSubagentDefinition,
-                              disallowedTools: e.target.value
-                                .split(',')
-                                .map((s) => s.trim())
-                                .filter(Boolean),
-                            })
-                          }
-                          placeholder="Bash, Edit..."
-                          className="h-8 text-xs font-mono"
-                        />
-                      </div>
-
-                      <Button
-                        size="sm"
-                        onClick={handleSaveSubagent}
-                        className="w-full h-8 text-xs"
-                      >
-                        Save Subagent
-                      </Button>
-                    </Card>
-                  </CollapsibleContent>
-                </Collapsible>
-
-                    {/* Add New Button */}
-                    {editingSubagent === null && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full"
-                        onClick={() => setEditingSubagent('new')}
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Create Custom Subagent
-                      </Button>
-                    )}
+                  <div className="mt-3">
+                    <AgentsManager />
                   </div>
                 </CollapsibleContent>
               </Card>
