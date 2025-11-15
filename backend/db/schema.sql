@@ -174,6 +174,46 @@ CREATE TABLE IF NOT EXISTS todo_items (
     CONSTRAINT todo_items_status_check CHECK (status IN ('pending', 'in_progress', 'completed'))
 );
 
+-- Agent Sessions table for hosting patterns
+CREATE TABLE IF NOT EXISTS agent_sessions (
+    id VARCHAR(255) PRIMARY KEY,
+    session_id VARCHAR(255),  -- SDK session ID
+    pattern VARCHAR(50) NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'initializing',
+    conversation_id INTEGER REFERENCES conversations(id) ON DELETE SET NULL,
+
+    -- Configuration
+    config JSONB NOT NULL,
+
+    -- Lifecycle timestamps
+    created_at TIMESTAMP NOT NULL,
+    started_at TIMESTAMP,
+    last_activity_at TIMESTAMP,
+    completed_at TIMESTAMP,
+    terminated_at TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    -- Resource tracking
+    total_cost DECIMAL(10, 6) DEFAULT 0,
+    total_tokens INTEGER DEFAULT 0,
+    num_turns INTEGER DEFAULT 0,
+    tools_used TEXT[] DEFAULT ARRAY[]::TEXT[],
+
+    -- Session limits
+    max_idle_time_ms BIGINT,
+    max_lifetime_ms BIGINT,
+    max_budget_usd DECIMAL(10, 4),
+    max_turns INTEGER,
+
+    -- Metadata
+    tags JSONB,
+    description TEXT,
+    user_id VARCHAR(255),
+
+    CONSTRAINT agent_sessions_pattern_check CHECK (pattern IN ('ephemeral', 'long-running', 'hybrid', 'single-container')),
+    CONSTRAINT agent_sessions_status_check CHECK (status IN ('initializing', 'active', 'idle', 'completed', 'error', 'terminated'))
+);
+
 -- Indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_conversations_created_at ON conversations(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_conversations_model ON conversations(model);
@@ -189,6 +229,11 @@ CREATE INDEX IF NOT EXISTS idx_todos_created_at ON todos(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_todos_tool_use_id ON todos(tool_use_id);
 CREATE INDEX IF NOT EXISTS idx_todo_items_todo_id ON todo_items(todo_id);
 CREATE INDEX IF NOT EXISTS idx_todo_items_status ON todo_items(status);
+CREATE INDEX IF NOT EXISTS idx_agent_sessions_pattern ON agent_sessions(pattern);
+CREATE INDEX IF NOT EXISTS idx_agent_sessions_status ON agent_sessions(status);
+CREATE INDEX IF NOT EXISTS idx_agent_sessions_user_id ON agent_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_agent_sessions_created_at ON agent_sessions(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_sessions_session_id ON agent_sessions(session_id);
 
 -- Insert default Agent SDK presets
 INSERT INTO presets (name, description, model, system_prompt, max_turns, allowed_tools, permission_mode) VALUES

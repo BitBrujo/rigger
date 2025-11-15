@@ -24,11 +24,41 @@ export interface McpServerConfig {
   env?: Record<string, string>;
 }
 
-// Custom Agent Definition
+// Custom Agent Definition (Subagent Configuration)
 export interface AgentDefinition {
-  systemPrompt?: string;
-  allowedTools?: string[];
-  disallowedTools?: string[];
+  // Core Configuration
+  description?: string;      // Natural language description of when to use this agent
+  systemPrompt?: string;     // The agent's system prompt (alternative: use 'prompt' field)
+  prompt?: string;           // Alternative to systemPrompt (SDK accepts both)
+
+  // Tool Restrictions
+  allowedTools?: string[];   // Array of allowed tool names (whitelist)
+  disallowedTools?: string[]; // Array of disallowed tool names (blacklist)
+  tools?: string[];          // Alternative to allowedTools (SDK accepts both)
+
+  // Behavior Configuration
+  model?: string;            // Override model: 'sonnet', 'haiku', 'opus', or specific version
+  maxTurns?: number;         // Maximum number of turns for this agent
+  maxBudgetUsd?: number;     // Budget limit in USD for this agent
+  permissionMode?: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan'; // Override permission mode
+
+  // Workspace Configuration
+  workingDirectory?: string;  // Override working directory for this agent
+
+  // Metadata (for UI/UX)
+  category?: 'code' | 'testing' | 'documentation' | 'research' | 'custom'; // Template category
+  isTemplate?: boolean;       // Whether this is a pre-built template
+  createdAt?: string;         // Timestamp when agent was created
+  updatedAt?: string;         // Timestamp when agent was last updated
+}
+
+// Agent Template (for pre-built templates)
+export interface AgentTemplate extends AgentDefinition {
+  name: string;
+  description: string;
+  systemPrompt: string;
+  category: 'code' | 'testing' | 'documentation' | 'research';
+  allowedTools: string[];
 }
 
 // Hook Configuration
@@ -610,6 +640,89 @@ export interface SessionHistory {
   totalTokens: number;
   toolsUsed: string[];
   status: 'active' | 'completed' | 'error';
+}
+
+// Hosting Patterns
+export type SessionPattern = 'ephemeral' | 'long-running' | 'hybrid' | 'single-container';
+
+export interface SessionMetadata {
+  id: string;
+  sessionId: string; // SDK session ID
+  pattern: SessionPattern;
+  status: 'initializing' | 'active' | 'idle' | 'completed' | 'error' | 'terminated';
+  conversationId?: number;
+  config: AgentSDKConfig;
+
+  // Lifecycle timestamps
+  createdAt: string;
+  startedAt?: string;
+  lastActivityAt?: string;
+  completedAt?: string;
+  terminatedAt?: string;
+
+  // Resource tracking
+  totalCost: number;
+  totalTokens: number;
+  numTurns: number;
+  toolsUsed: string[];
+
+  // Session limits
+  maxIdleTimeMs?: number; // Auto-terminate after idle period
+  maxLifetimeMs?: number; // Absolute lifetime limit
+  maxBudgetUsd?: number; // Cost limit
+  maxTurns?: number; // Turn limit
+
+  // Metadata
+  tags?: string[]; // For categorization (e.g., 'bug-fix', 'feature', 'research')
+  description?: string;
+  userId?: string; // For multi-tenant scenarios
+}
+
+export interface SessionCreateRequest {
+  pattern: SessionPattern;
+  config: AgentSDKConfig;
+  conversationId?: number;
+  maxIdleTimeMs?: number;
+  maxLifetimeMs?: number;
+  maxBudgetUsd?: number;
+  maxTurns?: number;
+  tags?: string[];
+  description?: string;
+  userId?: string;
+}
+
+export interface SessionResumeRequest {
+  sessionId: string;
+  resumeAtMessageId?: string;
+  forkSession?: boolean;
+}
+
+export interface SessionTerminateRequest {
+  sessionId: string;
+  reason?: 'user_requested' | 'idle_timeout' | 'budget_exceeded' | 'max_turns' | 'error';
+}
+
+export interface SessionListResponse {
+  sessions: SessionMetadata[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface SessionStatsResponse {
+  totalSessions: number;
+  activeSessions: number;
+  completedSessions: number;
+  errorSessions: number;
+  totalCost: number;
+  totalTokens: number;
+  avgSessionDuration: number;
+  byPattern: Record<SessionPattern, {
+    count: number;
+    avgCost: number;
+    avgTokens: number;
+    avgDuration: number;
+  }>;
 }
 
 // Default configuration for Agent SDK

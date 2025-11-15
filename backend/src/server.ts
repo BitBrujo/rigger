@@ -7,6 +7,8 @@ import presetsRouter from './routes/presets';
 import analyticsRouter from './routes/analytics';
 import skillsRouter from './routes/skills';
 import todosRouter from './routes/todos';
+import agentsRouter from './routes/agents';
+import sessionsRouter from './routes/sessions';
 
 dotenv.config();
 
@@ -38,6 +40,8 @@ app.use('/api/presets', presetsRouter);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api/skills', skillsRouter);
 app.use('/api/todos', todosRouter);
+app.use('/api/agents', agentsRouter);
+app.use('/api/sessions', sessionsRouter);
 
 // Error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

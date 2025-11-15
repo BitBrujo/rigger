@@ -311,6 +311,109 @@ export class ApiClient {
     if (!response.ok) throw new Error('Failed to delete todo');
   }
 
+  // Agents API endpoints
+  static async getAgents(): Promise<Record<string, import('./types').AgentDefinition>> {
+    const response = await fetch(`${API_BASE_URL}/agents`);
+    if (!response.ok) throw new Error('Failed to fetch agents');
+    return response.json();
+  }
+
+  static async getAgent(name: string): Promise<import('./types').AgentDefinition & { name: string }> {
+    const response = await fetch(`${API_BASE_URL}/agents/${name}`);
+    if (!response.ok) throw new Error('Failed to fetch agent');
+    return response.json();
+  }
+
+  static async getAgentTemplates(): Promise<Record<string, import('./types').AgentDefinition>> {
+    const response = await fetch(`${API_BASE_URL}/agents/templates`);
+    if (!response.ok) throw new Error('Failed to fetch agent templates');
+    return response.json();
+  }
+
+  static async getAgentTemplate(name: string): Promise<import('./types').AgentDefinition & { name: string }> {
+    const response = await fetch(`${API_BASE_URL}/agents/templates/${name}`);
+    if (!response.ok) throw new Error('Failed to fetch agent template');
+    return response.json();
+  }
+
+  static async createAgent(data: {
+    name: string;
+    definition: import('./types').AgentDefinition;
+  }): Promise<import('./types').AgentDefinition & { name: string }> {
+    const response = await fetch(`${API_BASE_URL}/agents`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create agent');
+    }
+    return response.json();
+  }
+
+  static async createAgentFromTemplate(
+    templateName: string,
+    name: string,
+    customizations?: Partial<import('./types').AgentDefinition>
+  ): Promise<import('./types').AgentDefinition & { name: string }> {
+    const response = await fetch(`${API_BASE_URL}/agents/from-template/${templateName}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, customizations }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create agent from template');
+    }
+    return response.json();
+  }
+
+  static async updateAgent(
+    name: string,
+    definition: import('./types').AgentDefinition
+  ): Promise<import('./types').AgentDefinition & { name: string }> {
+    const response = await fetch(`${API_BASE_URL}/agents/${name}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ definition }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update agent');
+    }
+    return response.json();
+  }
+
+  static async deleteAgent(name: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/agents/${name}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete agent');
+    }
+  }
+
+  static async validateAgent(data: {
+    name: string;
+    definition: import('./types').AgentDefinition;
+  }): Promise<{ valid: boolean; errors: string[] }> {
+    const response = await fetch(`${API_BASE_URL}/agents/validate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      if (error.valid === false) {
+        return error;
+      }
+      throw new Error('Failed to validate agent');
+    }
+    return response.json();
+  }
+
   // Skills API endpoints
   static async listSkills() {
     const response = await fetch(`${API_BASE_URL}/skills`);
