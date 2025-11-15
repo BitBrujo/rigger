@@ -523,3 +523,6 @@ export class ApiClient {
     window.URL.revokeObjectURL(url);
   }
 }
+
+// Export singleton instance for convenience
+export const apiClient = ApiClient;

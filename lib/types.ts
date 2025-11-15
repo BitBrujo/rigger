@@ -79,7 +79,7 @@ export interface SkillMetadata {
 // Agent SDK Configuration (30+ parameters)
 export interface AgentSDKConfig {
   // Core Settings
-  model: 'claude-3-5-sonnet-20241022' | 'claude-3-5-haiku-20241022' | 'claude-3-opus-20240229' | string;
+  model: 'claude-sonnet-4-5-20250929' | 'claude-opus-4-1-20250805' | 'claude-haiku-4-5-20251001' | string;
   systemPrompt?: string;
 
   // Agent Behavior
@@ -727,7 +727,7 @@ export interface SessionStatsResponse {
 
 // Default configuration for Agent SDK
 export const DEFAULT_SDK_CONFIG: AgentSDKConfig = {
-  model: 'claude-3-5-sonnet-20241022',
+  model: 'claude-sonnet-4-5-20250929',
   systemPrompt: 'You are a helpful AI assistant with access to file operations, web browsing, and code execution.',
   maxTurns: 20,
   permissionMode: 'acceptEdits',
@@ -842,19 +842,19 @@ export const TOOL_DESCRIPTIONS: Record<string, string> = {
 
 export const MODEL_OPTIONS = [
   {
-    value: 'claude-3-5-sonnet-20241022',
-    label: 'Claude 3.5 Sonnet',
-    description: 'Most capable model, best for complex tasks',
+    value: 'claude-sonnet-4-5-20250929',
+    label: 'Claude Sonnet 4.5',
+    description: 'Most capable model for complex reasoning and coding',
   },
   {
-    value: 'claude-3-5-haiku-20241022',
-    label: 'Claude 3.5 Haiku',
-    description: 'Fastest model, great for simple tasks',
+    value: 'claude-opus-4-1-20250805',
+    label: 'Claude Opus 4.1',
+    description: 'Highly capable model for advanced tasks',
   },
   {
-    value: 'claude-3-opus-20240229',
-    label: 'Claude 3 Opus',
-    description: 'Previous generation, very capable',
+    value: 'claude-haiku-4-5-20251001',
+    label: 'Claude Haiku 4.5',
+    description: 'Fast and efficient for most tasks',
   },
 ] as const;
 

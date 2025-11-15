@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { apiClient } from '@/lib/api-client';
 import { AgentDefinition } from '@/lib/types';
-import { agentTemplates } from '@/lib/agent-templates';
+import { AGENT_TEMPLATES, getTemplate } from '@/lib/agent-templates';
 
 export function AgentsManager() {
   const [agents, setAgents] = useState<AgentDefinition[]>([]);
@@ -37,7 +37,7 @@ export function AgentsManager() {
   };
 
   const handleCreateFromTemplate = (templateName: string) => {
-    const template = agentTemplates.find(t => t.name === templateName);
+    const template = getTemplate(templateName);
     if (!template) return;
 
     setEditingAgent({
@@ -106,19 +106,19 @@ export function AgentsManager() {
       {/* Create from Template */}
       {!editingAgent && !isCreating && (
         <div>
-          <h3 className="text-sm font-medium mb-2">Create from Template</h3>
-          <div className="grid grid-cols-2 gap-2">
-            {agentTemplates.map((template) => (
+          <h3 className="text-sm font-medium mb-2">Create Subagent from Template</h3>
+          <div className="grid grid-cols-1 gap-2">
+            {Object.values(AGENT_TEMPLATES).map((template) => (
               <Button
                 key={template.name}
                 variant="outline"
                 size="sm"
                 onClick={() => handleCreateFromTemplate(template.name)}
-                className="justify-start h-auto py-2 px-3"
+                className="justify-start h-auto py-2 px-3 text-left"
               >
-                <div className="text-left">
-                  <div className="font-medium">{template.name}</div>
-                  <div className="text-xs text-muted-foreground line-clamp-1">
+                <div className="w-full overflow-hidden">
+                  <div className="font-medium truncate">{template.name}</div>
+                  <div className="text-xs text-muted-foreground line-clamp-2 break-words">
                     {template.description}
                   </div>
                 </div>
@@ -133,7 +133,7 @@ export function AgentsManager() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
-              {isCreating ? 'Create Agent' : 'Edit Agent'}
+              {isCreating ? 'Create Subagent' : 'Edit Subagent'}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -191,7 +191,7 @@ export function AgentsManager() {
       {!editingAgent && !isCreating && (
         <div>
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium">Saved Agents</h3>
+            <h3 className="text-sm font-medium">Saved Subagents</h3>
             <Button
               size="sm"
               variant="outline"

@@ -309,9 +309,9 @@ export default function ConfigPanel() {
                   <div className="flex items-start gap-2 cursor-pointer">
                     <ChevronDown className={`h-5 w-5 transition-transform flex-shrink-0 mt-0.5 ${agentsOpen ? 'rotate-180' : ''}`} />
                     <div className="flex-1">
-                      <Label className="text-base font-medium cursor-pointer">Custom Agents</Label>
+                      <Label className="text-base font-medium cursor-pointer">Subagents</Label>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Create specialized agents with templates or from scratch
+                        Define specialized subagents that can be invoked via the Task tool
                       </p>
                     </div>
                   </div>
