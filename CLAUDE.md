@@ -109,7 +109,7 @@ Components consume and update this store directly. No prop drilling.
 
 ### Agent SDK Tools
 
-The application uses the Claude Agent SDK which provides 18 built-in tools:
+The application uses the Claude Agent SDK which provides 19 built-in tools:
 
 **File Operations:** Read, Write, Edit, Glob, Grep
 **Execution:** Bash, BashOutput, KillShell
@@ -123,16 +123,96 @@ The application also supports:
 - **MCP Servers**: Configure external Model Context Protocol servers
 - **Custom Agents (Subagents)**: Define specialized agents with their own system prompts and tool configurations
 - **Hooks**: Configure event-driven behaviors and integrations
+- **Skills**: Specialized agent workflows from `.claude/skills/` directory
+
+### Agent Skills
+
+**Skills** are packaged instructions that extend Claude with specialized capabilities. Each skill is a directory in `.claude/skills/` containing a `SKILL.md` file with YAML frontmatter and markdown instructions.
+
+**How Skills Work:**
+1. Skills are loaded from `.claude/skills/` via `settingSources: ['project']` configuration
+2. Claude automatically discovers skills at startup based on YAML descriptions
+3. When a user request matches a skill's description, Claude invokes it
+4. The skill provides step-by-step instructions for completing the task
+
+**Built-in Example Skills:**
+- **example-pdf-processing**: Extract text and metadata from PDF documents
+- **example-code-review**: Comprehensive code review with security and best practices
+- **example-data-transform**: Convert data between JSON, CSV, XML, YAML formats
+
+**Managing Skills:**
+1. **Config Panel** → **Skills Configuration** section
+2. **Skills Manager** UI provides:
+   - List all discovered skills
+   - View skill descriptions and content
+   - Create new skills with wizard
+   - Edit existing SKILL.md files
+   - Delete skills
+3. **Tool Selector** → Enable "Skill" tool in Planning & Interaction category
+
+**Creating Custom Skills:**
+```bash
+# Option 1: Use Skills Manager UI in Config Panel
+# Option 2: Create manually
+mkdir -p .claude/skills/my-skill
+cat > .claude/skills/my-skill/SKILL.md << 'EOF'
+---
+description: Brief description of when to use this skill
+---
+
+# My Skill
+
+## When to Use
+- Trigger phrase 1
+- Trigger phrase 2
+
+## Workflow
+1. Step one
+2. Step two
+3. ...
+
+## Tools Used
+- Read
+- Write
+- Bash
+EOF
+```
+
+**Skill File Structure:**
+```
+.claude/skills/
+├── my-skill/
+│   └── SKILL.md           # Required: frontmatter + instructions
+├── example-pdf-processing/
+│   └── SKILL.md
+└── README.md              # Documentation
+```
+
+**API Endpoints:**
+- `GET /api/skills` - List all skills
+- `GET /api/skills/:name` - Get specific skill
+- `POST /api/skills` - Create new skill
+- `PUT /api/skills/:name` - Update skill
+- `DELETE /api/skills/:name` - Delete skill
+
+**Configuration:**
+- `settingSources`: Array of skill sources (default: `['project']`)
+- Automatically loads skills from project's `.claude/skills/`
+- Skills Manager component in Config Panel for full CRUD
+- Stored in Zustand state: `availableSkills: SkillMetadata[]`
+
+See `.claude/skills/README.md` for comprehensive Skills documentation and examples.
 
 ### Type System
 
 **Shared Types** (`lib/types.ts`):
-- `AgentSDKConfig`: Complete 30+ parameter configuration for Agent SDK
+- `AgentSDKConfig`: Complete 30+ parameter configuration for Agent SDK (includes `settingSources`)
 - `Message`: User/assistant message format with content blocks
 - `SDKMessage`: Full SDK message types (Assistant, User, ResultSuccess, ResultError, etc.)
 - `AgentDefinition`: Custom agent/subagent configuration
 - `McpServerConfig`: MCP server connection settings
 - `HookConfig`: Event hook configuration
+- `SkillMetadata`: Skill definition with name, description, content, and path
 - Database types: `Conversation`, `Preset`, `UsageLog`, `UsageStats`
 
 Frontend and backend expect these types but backend doesn't import from `lib/types.ts` (Docker isolation). Keep types in sync manually.
@@ -267,17 +347,21 @@ Existing components: button, input, textarea, select, slider, switch, badge, car
 
 ## Important Files
 
-- `lib/store.ts`: Global state management (Zustand)
-- `lib/types.ts`: Shared TypeScript interfaces (30+ Agent SDK parameters)
-- `lib/api-client.ts`: Backend API wrapper
+- `lib/store.ts`: Global state management (Zustand) including Skills state
+- `lib/types.ts`: Shared TypeScript interfaces (30+ Agent SDK parameters, SkillMetadata)
+- `lib/api-client.ts`: Backend API wrapper (includes Skills API methods)
 - `lib/hook-templates.ts`: Pre-built hook configurations for various integrations
-- `backend/src/routes/agent.ts`: Agent SDK integration and tool configuration
+- `backend/src/routes/agent.ts`: Agent SDK integration and tool configuration (handles settingSources)
+- `backend/src/routes/skills.ts`: Skills CRUD API (list, get, create, update, delete)
 - `backend/db/schema.sql`: Database schema
 - `components/agent-tester.tsx`: Main two-panel layout container
-- `components/config-panel.tsx`: Comprehensive configuration UI with collapsible sections
-- `components/tool-selector.tsx`: Tool selection component
+- `components/config-panel.tsx`: Comprehensive configuration UI with collapsible sections (includes Skills Manager)
+- `components/tool-selector.tsx`: Tool selection component (includes Skill tool)
+- `components/skills-manager.tsx`: Skills management UI (discovery, creation, editing)
 - `components/chat-interface.tsx`: Tabbed interface with Chat and Debug views
 - `components/debug-panel.tsx`: Debug metrics display (embedded in ChatInterface)
+- `.claude/skills/README.md`: Comprehensive Skills documentation
+- `.claude/skills/example-*/SKILL.md`: Example skill definitions
 - `docker-compose.yml`: Service orchestration
 
 ## Testing the Application

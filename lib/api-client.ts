@@ -269,4 +269,66 @@ export class ApiClient {
     if (!response.ok) throw new Error('Failed to check API key status');
     return response.json();
   }
+
+  // Skills API endpoints
+  static async listSkills() {
+    const response = await fetch(`${API_BASE_URL}/skills`);
+    if (!response.ok) throw new Error('Failed to list skills');
+    return response.json();
+  }
+
+  static async getSkill(name: string) {
+    const response = await fetch(`${API_BASE_URL}/skills/${name}`);
+    if (!response.ok) throw new Error('Failed to fetch skill');
+    return response.json();
+  }
+
+  static async createSkill(data: {
+    name: string;
+    description: string;
+    content?: string;
+    allowedTools?: string[];
+  }) {
+    const response = await fetch(`${API_BASE_URL}/skills`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create skill');
+    }
+    return response.json();
+  }
+
+  static async updateSkill(
+    name: string,
+    data: {
+      description?: string;
+      content?: string;
+      allowedTools?: string[];
+    }
+  ) {
+    const response = await fetch(`${API_BASE_URL}/skills/${name}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update skill');
+    }
+    return response.json();
+  }
+
+  static async deleteSkill(name: string) {
+    const response = await fetch(`${API_BASE_URL}/skills/${name}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete skill');
+    }
+    return response.json();
+  }
 }

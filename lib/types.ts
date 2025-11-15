@@ -37,6 +37,15 @@ export interface HookConfig {
   pattern: string | Record<string, any>;
 }
 
+// Skill Metadata (from SKILL.md frontmatter)
+export interface SkillMetadata {
+  name: string; // Directory name (unique identifier)
+  description: string; // When to use this skill
+  allowedTools?: string[]; // Optional tool restrictions (SDK apps use main allowedTools instead)
+  content?: string; // Full SKILL.md content (loaded on demand)
+  path?: string; // Filesystem path to skill directory
+}
+
 // Agent SDK Configuration (30+ parameters)
 export interface AgentSDKConfig {
   // Core Settings
@@ -76,6 +85,9 @@ export interface AgentSDKConfig {
   customAgents?: Record<string, AgentDefinition>;
   hooks?: Record<string, any>;
   plugins?: any[];
+
+  // Skills Configuration
+  settingSources?: string[]; // Directories to load Skills from (e.g., ['project', 'user'] or custom paths)
 }
 
 // Complete SDK Message Types (from TypeScript SDK Reference)
@@ -536,9 +548,10 @@ export const DEFAULT_SDK_CONFIG: AgentSDKConfig = {
   customAgents: {},
   hooks: {},
   plugins: [],
+  settingSources: ['project'], // Load Skills from project's .claude directory
 };
 
-// All 18 built-in Agent SDK tools
+// All 19 built-in Agent SDK tools (including Skill)
 export const ALL_SDK_TOOLS = [
   // File Operations
   'Read',
@@ -569,6 +582,7 @@ export const ALL_SDK_TOOLS = [
   'ExitPlanMode',
   'TimeMachine',
   'MultipleChoiceQuestion',
+  'Skill', // Execute predefined skill workflows
 ] as const;
 
 // Tool categories for grouped UI
@@ -578,7 +592,7 @@ export const TOOL_CATEGORIES = {
   'Web': ['WebFetch', 'WebSearch'],
   'Task Management': ['TodoWrite', 'Task'],
   'MCP Integration': ['ListMcpResources', 'ReadMcpResource'],
-  'Planning & Interaction': ['ExitPlanMode', 'TimeMachine', 'MultipleChoiceQuestion'],
+  'Planning & Interaction': ['ExitPlanMode', 'TimeMachine', 'MultipleChoiceQuestion', 'Skill'],
 } as const;
 
 // Tool descriptions for tooltips
@@ -612,6 +626,7 @@ export const TOOL_DESCRIPTIONS: Record<string, string> = {
   'ExitPlanMode': 'Exit planning mode and present plan to user',
   'TimeMachine': 'View and restore previous file states',
   'MultipleChoiceQuestion': 'Ask user multiple choice questions',
+  'Skill': 'Execute specialized skill workflows from .claude/skills/',
 };
 
 export const MODEL_OPTIONS = [

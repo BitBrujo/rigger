@@ -27,6 +27,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { ToolSelector } from './tool-selector';
+import { SkillsManager } from './skills-manager';
 import { JsonEditor } from './ui/json-editor';
 import { ChevronDown, AlertCircle, Plus, Wand2, Trash2, Edit2, Users } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -52,6 +53,7 @@ export default function ConfigPanel() {
   const [systemPromptOpen, setSystemPromptOpen] = useState(false);
   const [hooksOpen, setHooksOpen] = useState(false);
   const [sdkToolsOpen, setSdkToolsOpen] = useState(false);
+  const [skillsOpen, setSkillsOpen] = useState(false);
   const [mcpServersOpen, setMcpServersOpen] = useState(false);
   const [stopSequencesOpen, setStopSequencesOpen] = useState(false);
   const [subagentsOpen, setSubagentsOpen] = useState(false);
@@ -683,6 +685,29 @@ export default function ConfigPanel() {
                       onChange={(tools) => setConfig({ allowedTools: tools })}
                       disabled={false}
                     />
+                  </div>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+
+            {/* Skills Configuration */}
+            <Collapsible open={skillsOpen} onOpenChange={setSkillsOpen}>
+              <Card className="p-4 border-2 bg-muted/50">
+                <CollapsibleTrigger asChild>
+                  <div className="flex items-start gap-2 cursor-pointer">
+                    <ChevronDown className={`h-5 w-5 transition-transform flex-shrink-0 mt-0.5 ${skillsOpen ? 'rotate-180' : ''}`} />
+                    <div className="flex-1">
+                      <Label className="text-base font-medium cursor-pointer">Skills Configuration</Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Manage specialized agent skills from .claude/skills/
+                      </p>
+                    </div>
+                  </div>
+                </CollapsibleTrigger>
+
+                <CollapsibleContent>
+                  <div className="mt-3">
+                    <SkillsManager />
                   </div>
                 </CollapsibleContent>
               </Card>

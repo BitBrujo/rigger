@@ -109,6 +109,11 @@ function buildSdkOptions(config: any) {
     options.plugins = config.plugins;
   }
 
+  // Skills Configuration
+  if (config.settingSources && config.settingSources.length > 0) {
+    options.settingSources = config.settingSources;
+  }
+
   return options;
 }
 

@@ -10,7 +10,8 @@ import {
   SystemInfo,
   PermissionRequest,
   McpServerStatus,
-  SessionHistory
+  SessionHistory,
+  SkillMetadata
 } from './types';
 
 interface AgentStore {
@@ -44,6 +45,14 @@ interface AgentStore {
   setCustomAgents: (agents: Record<string, AgentDefinition>) => void;
   setHooks: (hooks: Record<string, any>) => void;
   setPlugins: (plugins: any[]) => void;
+  setSettingSources: (sources: string[]) => void;
+
+  // Skills Management
+  availableSkills: SkillMetadata[];
+  setAvailableSkills: (skills: SkillMetadata[]) => void;
+  addSkill: (skill: SkillMetadata) => void;
+  removeSkill: (name: string) => void;
+  updateSkill: (name: string, updates: Partial<SkillMetadata>) => void;
 
   // Messages
   messages: Message[];
@@ -160,6 +169,25 @@ export const useAgentStore = create<AgentStore>((set) => ({
   setCustomAgents: (customAgents) => set((state) => ({ config: { ...state.config, customAgents } })),
   setHooks: (hooks) => set((state) => ({ config: { ...state.config, hooks } })),
   setPlugins: (plugins) => set((state) => ({ config: { ...state.config, plugins } })),
+  setSettingSources: (settingSources) => set((state) => ({ config: { ...state.config, settingSources } })),
+
+  // Skills Management
+  availableSkills: [],
+  setAvailableSkills: (skills) => set({ availableSkills: skills }),
+  addSkill: (skill) =>
+    set((state) => ({
+      availableSkills: [...state.availableSkills, skill],
+    })),
+  removeSkill: (name) =>
+    set((state) => ({
+      availableSkills: state.availableSkills.filter((skill) => skill.name !== name),
+    })),
+  updateSkill: (name, updates) =>
+    set((state) => ({
+      availableSkills: state.availableSkills.map((skill) =>
+        skill.name === name ? { ...skill, ...updates } : skill
+      ),
+    })),
 
   // Messages
   messages: [],
