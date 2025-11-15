@@ -253,7 +253,7 @@ Schema auto-initializes via Docker volume mount in `docker-compose.yml`.
 
 **Frontend (`.env.local`):**
 ```
-NEXT_PUBLIC_API_URL=http://localhost:3001/api
+NEXT_PUBLIC_API_URL=http://localhost:3333/api
 ```
 
 **Backend (`backend/.env`):**
@@ -261,8 +261,13 @@ NEXT_PUBLIC_API_URL=http://localhost:3001/api
 DATABASE_URL=postgresql://agent_user:agent_pass@postgres:5432/agent_db
 ANTHROPIC_API_KEY=your_key_here
 NODE_ENV=development
-PORT=3001
+PORT=3001  # Internal container port (mapped to 3333 externally via docker-compose.yml)
 ```
+
+**Port Mapping:**
+- Frontend: Port 3334 (Next.js)
+- Backend: Port 3333 external → 3001 internal container (Express)
+- Database: Port 5335 external → 5432 internal container (PostgreSQL)
 
 **Note:** `ANTHROPIC_API_KEY` must be set in `backend/.env` or docker-compose will fail to start backend service.
 
@@ -331,7 +336,7 @@ Existing components: button, input, textarea, select, slider, switch, badge, car
 - Check backend logs: `docker-compose logs backend`
 
 ### Frontend shows "Failed to fetch"
-- Ensure backend is running: `curl http://localhost:3001/health`
+- Ensure backend is running: `curl http://localhost:3333/health`
 - Check `NEXT_PUBLIC_API_URL` in `.env.local`
 - CORS is enabled in backend for all origins (development mode)
 
@@ -344,6 +349,279 @@ Existing components: button, input, textarea, select, slider, switch, badge, car
 - Streaming requires SSE support (not all proxies support it)
 - Check browser console for EventSource errors
 - Fallback to batch mode if issues persist
+
+## Advanced Features
+
+### MCP (Model Context Protocol) Servers
+
+MCP servers extend Claude's capabilities by connecting external tools and data sources.
+
+**What are MCP Servers?**
+MCP is an open protocol that allows Claude to interact with external systems. Think of it as plugins for AI agents.
+
+**Built-in MCP Support:**
+The application includes preconfigured MCP servers for common use cases:
+- **Playwright**: Browser automation
+- **Fetch**: Web content retrieval
+- **Filesystem**: Advanced file operations
+- **GitHub**: Repository management
+- **Git**: Version control operations
+- **Notion**: Workspace integration
+- **Time**: Timezone and date operations
+- **Memory**: Persistent knowledge graphs
+- **Sequential Thinking**: Chain-of-thought reasoning
+
+**Configuration:**
+```typescript
+// In Config Panel → MCP Servers section
+{
+  mcpServers: {
+    "playwright": {
+      command: "npx",
+      args: ["-y", "@modelcontextprotocol/server-playwright"]
+    },
+    "github": {
+      command: "npx",
+      args: ["-y", "@modelcontextprotocol/server-github"],
+      env: {
+        GITHUB_PERSONAL_ACCESS_TOKEN: "ghp_..."
+      }
+    }
+  }
+}
+```
+
+**Adding Custom MCP Servers:**
+1. Open Config Panel → MCP Servers section
+2. Click "Add MCP Server"
+3. Configure server name, command, args, and environment variables
+4. Save configuration
+5. Agent can now use tools provided by that server
+
+**MCP Server State:**
+- Stored in Zustand: `config.mcpServers`
+- Persisted in database with conversation
+- Passed to Agent SDK via `buildSdkOptions()`
+
+**Finding MCP Servers:**
+- Official servers: https://github.com/modelcontextprotocol/servers
+- Community servers: Search npm for `@modelcontextprotocol/server-*`
+- Build your own: https://modelcontextprotocol.io/
+
+### Hooks System
+
+Hooks enable event-driven behaviors and integrations. Configure the agent to automatically perform actions based on events.
+
+**Hook Architecture:**
+```typescript
+interface HookConfig {
+  name: string;
+  trigger: 'on-prompt-submit' | 'on-response-complete' | 'on-tool-use' | 'on-error';
+  action: {
+    type: 'bash' | 'api-call' | 'notification' | 'custom';
+    config: Record<string, any>;
+  };
+  enabled: boolean;
+}
+```
+
+**Pre-built Hook Templates** (`lib/hook-templates.ts`):
+
+1. **Git Auto-Commit**
+   - Trigger: `on-tool-use` (when Write/Edit tools used)
+   - Action: Automatically commit file changes with AI-generated message
+
+2. **Slack Notifications**
+   - Trigger: `on-response-complete`
+   - Action: Send response summary to Slack channel
+
+3. **Error Logging**
+   - Trigger: `on-error`
+   - Action: Log errors to external monitoring service
+
+4. **Code Formatting**
+   - Trigger: `on-tool-use` (after Write tool)
+   - Action: Run prettier/eslint on created files
+
+5. **Backup Creation**
+   - Trigger: `on-prompt-submit`
+   - Action: Create timestamped backup before AI makes changes
+
+6. **API Webhooks**
+   - Trigger: Any event
+   - Action: POST event data to webhook URL
+
+**Configuring Hooks:**
+1. Config Panel → Hooks section
+2. Select a template or create custom hook
+3. Configure trigger and action parameters
+4. Enable/disable individual hooks
+5. Test hook execution
+
+**Hook Execution Flow:**
+```
+User action → Event emitted → Hooks filter by trigger
+  → Execute enabled hooks → Continue normal flow
+```
+
+**Custom Hook Example:**
+```typescript
+{
+  name: "Notify on completion",
+  trigger: "on-response-complete",
+  action: {
+    type: "api-call",
+    config: {
+      url: "https://hooks.slack.com/...",
+      method: "POST",
+      body: {
+        text: "Agent completed: {{summary}}"
+      }
+    }
+  },
+  enabled: true
+}
+```
+
+**Hook State:**
+- Stored in: `config.hooks` (Zustand)
+- Persisted: Database with conversation
+- Executed: Backend `backend/src/hooks/executor.ts`
+
+### Custom Agents (Subagents)
+
+Define specialized agents with specific prompts, tools, and behaviors.
+
+**What are Custom Agents?**
+Custom agents are pre-configured agent definitions that can be invoked via the Task tool. They act as specialized assistants for specific domains.
+
+**Agent Definition Structure:**
+```typescript
+interface AgentDefinition {
+  systemPrompt: string;
+  allowedTools: string[];
+  model?: string;
+  temperature?: number;
+  maxTurns?: number;
+  description?: string;
+}
+```
+
+**Built-in Agent Templates:**
+- **Code Reviewer**: Specialized in code analysis and best practices
+- **Documentation Writer**: Focused on clear technical writing
+- **Bug Hunter**: Optimized for finding and fixing bugs
+- **Refactorer**: Expert at code restructuring
+- **Test Generator**: Creates comprehensive test suites
+
+**Creating Custom Agents:**
+1. Config Panel → Custom Agents section
+2. Click "Create Agent" or "Use Template"
+3. Configure:
+   - Name (used to invoke the agent)
+   - System prompt (agent's expertise)
+   - Allowed tools (subset of main agent's tools)
+   - Model and parameters
+4. Save to `.claude/agents/` directory
+
+**Invoking Custom Agents:**
+```typescript
+// Agent can use Task tool to delegate to custom agent
+"Use the code-reviewer agent to analyze this file"
+```
+
+**Agent File Location:**
+```
+.claude/agents/
+├── code-reviewer.json
+├── bug-hunter.json
+└── custom-agent.json
+```
+
+**Custom Agent State:**
+- Configuration: `config.customAgents` (Zustand)
+- Storage: `.claude/agents/*.json` files
+- API: `/api/agents` endpoints
+- Agent SDK: Passed via `customAgents` parameter
+
+### Agent SDK Deep Dive
+
+**30+ Configuration Parameters:**
+
+**Core Settings:**
+- `model`: Claude model (sonnet, opus, haiku)
+- `temperature`: 0.0-1.0 (creativity vs consistency)
+- `maxTurns`: Maximum conversation turns
+- `maxTokens`: Max tokens per response
+
+**Tool Configuration:**
+- `allowedTools`: Array of tool names to enable
+- `customAgents`: Subagent definitions
+- `settingSources`: Where to load skills from
+
+**Workspace & Permissions:**
+- `workingDirectory`: Agent's working directory
+- `allowedDirectories`: Paths agent can access
+- `dangerouslyDisableSandbox`: Disable safety restrictions
+
+**MCP Integration:**
+- `mcpServers`: External server configurations
+- Tool discovery happens automatically
+
+**Hooks & Events:**
+- `hooks`: Event-driven behaviors
+- Executed by backend hook system
+
+**Advanced Options:**
+- `resumeSessionId`: Continue previous conversation
+- `thinkingBudget`: Tokens allocated for reasoning
+- `cacheControl`: Enable prompt caching
+- `metadata`: Custom request metadata
+
+**Full Configuration Flow:**
+```
+User configures in UI (ConfigPanel)
+  ↓
+Stored in Zustand (lib/store.ts)
+  ↓
+Sent to backend (/api/agent/stream)
+  ↓
+Transformed by buildSdkOptions() (backend/src/routes/agent.ts)
+  ↓
+Passed to Agent SDK query()
+  ↓
+Agent executes with configuration
+```
+
+### Performance Optimization
+
+**Prompt Caching:**
+```typescript
+config: {
+  cacheControl: true,  // Enable caching
+  systemPrompt: "Your long system prompt..."
+}
+```
+- First request: Full cost
+- Subsequent requests: ~90% cheaper on cached portions
+- Cache TTL: 5 minutes
+
+**Token Optimization:**
+- Use Haiku for simple tasks (faster, cheaper)
+- Use Sonnet for complex reasoning
+- Limit `maxTokens` to prevent runaway responses
+- Enable streaming for faster perceived performance
+
+**Database Performance:**
+- JSONB indexing on frequently queried fields
+- Connection pooling in `backend/db/client.ts`
+- Batch inserts for analytics data
+
+**Frontend Optimization:**
+- Zustand for efficient re-renders
+- React 19 concurrent features
+- Code splitting for route-based chunks
+- Tailwind CSS JIT compilation
 
 ## Important Files
 

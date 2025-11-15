@@ -4,7 +4,7 @@
  * Demonstrates the four hosting patterns for Claude Agent SDK
  */
 
-const API_BASE = 'http://localhost:3001/api';
+const API_BASE = 'http://localhost:3333/api';
 
 // ============================================================================
 // Pattern 1: Ephemeral Sessions

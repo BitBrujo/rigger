@@ -99,7 +99,7 @@ docker-compose up -d
 
 ```javascript
 // Ephemeral session for a quick task
-const session = await fetch('http://localhost:3001/api/sessions', {
+const session = await fetch('http://localhost:3333/api/sessions', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -122,7 +122,7 @@ const { id } = await session.json();
 
 ```javascript
 // Execute task in session
-const response = await fetch(`http://localhost:3001/api/sessions/${id}/message`, {
+const response = await fetch(`http://localhost:3333/api/sessions/${id}/message`, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -140,7 +140,7 @@ console.log('Turns:', result.session.numTurns);
 
 ```javascript
 // Get statistics
-const stats = await fetch('http://localhost:3001/api/sessions/stats/summary');
+const stats = await fetch('http://localhost:3333/api/sessions/stats/summary');
 const data = await stats.json();
 
 console.log('Active sessions:', data.activeSessions);
@@ -255,7 +255,7 @@ node session-patterns.js cleanup
 
 ```bash
 # Create ephemeral session
-curl -X POST http://localhost:3001/api/sessions \
+curl -X POST http://localhost:3333/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "pattern": "ephemeral",
@@ -269,13 +269,13 @@ curl -X POST http://localhost:3001/api/sessions \
   }'
 
 # List all sessions
-curl http://localhost:3001/api/sessions
+curl http://localhost:3333/api/sessions
 
 # Get session stats
-curl http://localhost:3001/api/sessions/stats/summary
+curl http://localhost:3333/api/sessions/stats/summary
 
 # Execute message in session
-curl -X POST http://localhost:3001/api/sessions/SESSION_ID/message \
+curl -X POST http://localhost:3333/api/sessions/SESSION_ID/message \
   -H "Content-Type: application/json" \
   -d '{
     "prompt": "Hello, how are you?",
@@ -381,7 +381,7 @@ SELECT id, pattern, status FROM agent_sessions WHERE id = 'sess_abc123';
 
 Verify SessionManager has the session:
 ```bash
-curl http://localhost:3001/api/sessions/sess_abc123
+curl http://localhost:3333/api/sessions/sess_abc123
 ```
 
 ## Documentation

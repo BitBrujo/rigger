@@ -652,10 +652,10 @@ Monitor active sessions:
 
 ```bash
 # Check active session count
-curl http://localhost:3001/api/sessions/stats/summary | jq '.activeSessions'
+curl http://localhost:3333/api/sessions/stats/summary | jq '.activeSessions'
 
 # List long-running sessions
-curl http://localhost:3001/api/sessions?pattern=long-running&status=active
+curl http://localhost:3333/api/sessions?pattern=long-running&status=active
 ```
 
 ## Future Enhancements

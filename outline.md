@@ -211,7 +211,7 @@ const { config, setConfig, messages, addMessage } = useAgentStore();
 3. **ApiClient Request** (`lib/api-client.ts`)
    - Streaming: `ApiClient.streamAgentMessage(messages, config, conversationId, callback)`
    - Batch: `ApiClient.sendAgentMessage(messages, config, conversationId)`
-   - Makes HTTP POST to `http://localhost:3001/api/agent/stream` or `/message`
+   - Makes HTTP POST to `http://localhost:3333/api/agent/stream` or `/message`
    - Sends: messages array + full config object + conversation ID
 
 4. **Backend Receives** (`backend/src/routes/agent.ts`)
@@ -861,7 +861,7 @@ User can switch modes via checkbox in ChatInterface:
    ```bash
    docker-compose up -d
    # Starts PostgreSQL on :5432
-   # Starts Express backend on :3001
+   # Starts Express backend on :3333 (external) / :3001 (internal container)
    ```
 
 2. **Frontend (Next.js)**:
@@ -872,13 +872,13 @@ User can switch modes via checkbox in ChatInterface:
 
 3. **Open Browser**:
    - Navigate to `http://localhost:3334`
-   - Backend API at `http://localhost:3001/api`
+   - Backend API at `http://localhost:3333/api`
 
 ### Environment Configuration
 
 **Frontend** (`.env.local`):
 ```bash
-NEXT_PUBLIC_API_URL=http://localhost:3001/api
+NEXT_PUBLIC_API_URL=http://localhost:3333/api
 ```
 
 **Backend** (`backend/.env`):
