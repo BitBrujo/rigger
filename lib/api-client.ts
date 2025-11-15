@@ -331,4 +331,51 @@ export class ApiClient {
     }
     return response.json();
   }
+
+  // Step-level cost breakdown
+  static async getStepBreakdown(conversationId: number): Promise<import('./types').StepCostBreakdown[]> {
+    const response = await fetch(`${API_BASE_URL}/analytics/steps/${conversationId}`);
+    if (!response.ok) throw new Error('Failed to fetch step breakdown');
+    return response.json();
+  }
+
+  // Per-tool cost breakdown
+  static async getToolBreakdown(filters?: {
+    conversationId?: number;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<import('./types').ToolCostBreakdown[]> {
+    const params = new URLSearchParams();
+    if (filters?.conversationId) params.append('conversationId', filters.conversationId.toString());
+    if (filters?.startDate) params.append('startDate', filters.startDate);
+    if (filters?.endDate) params.append('endDate', filters.endDate);
+
+    const response = await fetch(`${API_BASE_URL}/analytics/tools?${params}`);
+    if (!response.ok) throw new Error('Failed to fetch tool breakdown');
+    return response.json();
+  }
+
+  // Export cost report
+  static async exportCostReport(conversationId: number, format: 'json' | 'csv' = 'json'): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/analytics/export/${conversationId}?format=${format}`);
+    if (!response.ok) throw new Error('Failed to export cost report');
+
+    if (format === 'csv') {
+      return response.text();
+    }
+    return response.json();
+  }
+
+  // Download CSV helper
+  static downloadCSV(csvContent: string, filename: string) {
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  }
 }

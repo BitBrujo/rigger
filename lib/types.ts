@@ -449,6 +449,9 @@ export interface Preset {
 export interface UsageLog {
   id: number;
   conversation_id: number | null;
+  message_id: string | null; // UUID from SDK for deduplication
+  step_number: number; // Step/turn number in multi-step conversations
+  parent_message_id: string | null; // For tracking step relationships
   model: string;
   input_tokens: number;
   output_tokens: number;
@@ -476,6 +479,64 @@ export interface UsageStats {
   error_count: number;
 }
 
+export interface ToolUsageLog {
+  id: number;
+  usage_log_id: number;
+  message_id: string;
+  tool_name: string;
+  tool_use_id: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  duration_ms: number | null;
+  estimated_input_tokens: number | null;
+  estimated_output_tokens: number | null;
+  estimated_cost_usd: number | null;
+  input_data: any;
+  output_data: any;
+  error: string | null;
+  created_at: string;
+}
+
+export interface StepCostBreakdown {
+  step_number: number;
+  message_id: string;
+  cost_usd: number;
+  input_tokens: number;
+  output_tokens: number;
+  cache_creation_tokens: number;
+  cache_read_tokens: number;
+  num_tools: number;
+  tools_used: string[];
+  latency_ms: number;
+  timestamp: string;
+}
+
+export interface ToolCostBreakdown {
+  tool_name: string;
+  usage_count: number;
+  total_duration_ms: number;
+  avg_duration_ms: number;
+  total_estimated_cost_usd: number;
+  avg_estimated_cost_usd: number;
+  total_estimated_tokens: number;
+}
+
+export interface CostExport {
+  conversation_id: number | null;
+  export_date: string;
+  total_cost: number;
+  total_tokens: number;
+  steps: StepCostBreakdown[];
+  tools: ToolCostBreakdown[];
+  summary: {
+    start_time: string;
+    end_time: string;
+    duration_minutes: number;
+    num_steps: number;
+    num_tool_uses: number;
+  };
+}
+
 // UI State types
 export interface DebugInfo {
   latency: number;
@@ -487,6 +548,7 @@ export interface DebugInfo {
     cacheRead?: number;
   };
   cost: number;
+  messageId?: string; // SDK message UUID for deduplication tracking
   stopReason: string;
   timestamp: string;
   errors: string[];

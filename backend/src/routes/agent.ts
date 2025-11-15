@@ -280,36 +280,87 @@ router.post('/stream', async (req: Request, res: Response) => {
         cacheCreationTokens = msg.usage.cache_creation_input_tokens || 0;
         cacheReadTokens = msg.usage.cache_read_input_tokens || 0;
 
-        // Log to database
-        if (conversationId) {
-          await pool.query(
-            `INSERT INTO usage_logs (
-              conversation_id, model, input_tokens, output_tokens,
-              latency_ms, cost_usd, stop_reason,
-              num_turns, api_latency_ms,
-              cache_creation_tokens, cache_read_tokens, permission_denials,
-              tools_used
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-            [
-              conversationId,
-              config.model || 'claude-3-5-sonnet-20241022',
-              inputTokens,
-              outputTokens,
-              latency,
-              msg.total_cost_usd,
-              msg.is_error ? 'error' : 'end_turn',
-              msg.num_turns || 1,
-              null, // SDK doesn't expose API-only latency separately
-              cacheCreationTokens,
-              cacheReadTokens,
-              msg.permission_denials ? JSON.stringify(msg.permission_denials) : JSON.stringify([]),
-              toolsUsed
-            ]
-          );
+        // Log to database with message ID deduplication
+        if (conversationId && msg.uuid) {
+          try {
+            // Check if this message_id already exists to prevent duplicate charges
+            const existingLog = await pool.query(
+              'SELECT id FROM usage_logs WHERE message_id = $1',
+              [msg.uuid]
+            );
+
+            if (existingLog.rows.length === 0) {
+              // Only insert if we haven't seen this message ID before
+              const usageLogResult = await pool.query(
+                `INSERT INTO usage_logs (
+                  conversation_id, message_id, step_number, model, input_tokens, output_tokens,
+                  latency_ms, cost_usd, stop_reason,
+                  num_turns, api_latency_ms,
+                  cache_creation_tokens, cache_read_tokens, permission_denials,
+                  tools_used
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                RETURNING id`,
+                [
+                  conversationId,
+                  msg.uuid,
+                  msg.num_turns || 1, // Use num_turns as step_number
+                  config.model || 'claude-3-5-sonnet-20241022',
+                  inputTokens,
+                  outputTokens,
+                  latency,
+                  msg.total_cost_usd,
+                  msg.is_error ? 'error' : 'end_turn',
+                  msg.num_turns || 1,
+                  null, // SDK doesn't expose API-only latency separately
+                  cacheCreationTokens,
+                  cacheReadTokens,
+                  msg.permission_denials ? JSON.stringify(msg.permission_denials) : JSON.stringify([]),
+                  toolsUsed
+                ]
+              );
+
+              const usageLogId = usageLogResult.rows[0].id;
+              console.log(`[Cost Tracking] Logged message ${msg.uuid} with cost $${msg.total_cost_usd}`);
+
+              // Log individual tool usage with proportional cost estimates
+              if (toolsUsed.length > 0 && msg.total_cost_usd) {
+                const estimatedCostPerTool = msg.total_cost_usd / toolsUsed.length;
+                const estimatedTokensPerTool = Math.floor((inputTokens + outputTokens) / toolsUsed.length);
+
+                for (const toolName of toolsUsed) {
+                  try {
+                    await pool.query(
+                      `INSERT INTO tool_usage_logs (
+                        usage_log_id, message_id, tool_name,
+                        estimated_input_tokens, estimated_output_tokens, estimated_cost_usd
+                      ) VALUES ($1, $2, $3, $4, $5, $6)`,
+                      [
+                        usageLogId,
+                        msg.uuid,
+                        toolName,
+                        Math.floor(estimatedTokensPerTool / 2), // Rough estimate: half input, half output
+                        Math.floor(estimatedTokensPerTool / 2),
+                        estimatedCostPerTool
+                      ]
+                    );
+                  } catch (toolLogError: any) {
+                    console.error(`[Cost Tracking] Error logging tool ${toolName}:`, toolLogError.message);
+                  }
+                }
+                console.log(`[Cost Tracking] Logged ${toolsUsed.length} tool uses`);
+              }
+            } else {
+              console.log(`[Cost Tracking] Skipping duplicate message ${msg.uuid}`);
+            }
+          } catch (dbError: any) {
+            console.error('[Cost Tracking] Database error:', dbError.message);
+            // Continue execution even if logging fails
+          }
         }
 
         res.write(`data: ${JSON.stringify({
           type: 'done',
+          message_id: msg.uuid, // Include message ID for frontend deduplication
           latency,
           usage: {
             input_tokens: inputTokens,
@@ -389,36 +440,88 @@ router.post('/message', async (req: Request, res: Response) => {
 
     const latency = Date.now() - startTime;
 
-    // Log usage
-    if (conversationId && finalResult) {
-      await pool.query(
-        `INSERT INTO usage_logs (
-          conversation_id, model, input_tokens, output_tokens,
-          latency_ms, cost_usd, stop_reason,
-          num_turns, api_latency_ms,
-          cache_creation_tokens, cache_read_tokens, permission_denials,
-          tools_used
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-        [
-          conversationId,
-          config.model || 'claude-3-5-sonnet-20241022',
-          finalResult.usage.input_tokens,
-          finalResult.usage.output_tokens,
-          latency,
-          finalResult.total_cost_usd,
-          finalResult.is_error ? 'error' : 'end_turn',
-          finalResult.num_turns || 1,
-          null,
-          finalResult.usage.cache_creation_input_tokens || 0,
-          finalResult.usage.cache_read_input_tokens || 0,
-          finalResult.permission_denials ? JSON.stringify(finalResult.permission_denials) : JSON.stringify([]),
-          toolsUsed
-        ]
-      );
+    // Log usage with message ID deduplication
+    if (conversationId && finalResult && finalResult.uuid) {
+      try {
+        // Check if this message_id already exists to prevent duplicate charges
+        const existingLog = await pool.query(
+          'SELECT id FROM usage_logs WHERE message_id = $1',
+          [finalResult.uuid]
+        );
+
+        if (existingLog.rows.length === 0) {
+          // Only insert if we haven't seen this message ID before
+          const usageLogResult = await pool.query(
+            `INSERT INTO usage_logs (
+              conversation_id, message_id, step_number, model, input_tokens, output_tokens,
+              latency_ms, cost_usd, stop_reason,
+              num_turns, api_latency_ms,
+              cache_creation_tokens, cache_read_tokens, permission_denials,
+              tools_used
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+            RETURNING id`,
+            [
+              conversationId,
+              finalResult.uuid,
+              finalResult.num_turns || 1, // Use num_turns as step_number
+              config.model || 'claude-3-5-sonnet-20241022',
+              finalResult.usage.input_tokens,
+              finalResult.usage.output_tokens,
+              latency,
+              finalResult.total_cost_usd,
+              finalResult.is_error ? 'error' : 'end_turn',
+              finalResult.num_turns || 1,
+              null,
+              finalResult.usage.cache_creation_input_tokens || 0,
+              finalResult.usage.cache_read_input_tokens || 0,
+              finalResult.permission_denials ? JSON.stringify(finalResult.permission_denials) : JSON.stringify([]),
+              toolsUsed
+            ]
+          );
+
+          const usageLogId = usageLogResult.rows[0].id;
+          console.log(`[Cost Tracking] Logged message ${finalResult.uuid} with cost $${finalResult.total_cost_usd}`);
+
+          // Log individual tool usage with proportional cost estimates
+          if (toolsUsed.length > 0 && finalResult.total_cost_usd) {
+            const estimatedCostPerTool = finalResult.total_cost_usd / toolsUsed.length;
+            const totalTokens = finalResult.usage.input_tokens + finalResult.usage.output_tokens;
+            const estimatedTokensPerTool = Math.floor(totalTokens / toolsUsed.length);
+
+            for (const toolName of toolsUsed) {
+              try {
+                await pool.query(
+                  `INSERT INTO tool_usage_logs (
+                    usage_log_id, message_id, tool_name,
+                    estimated_input_tokens, estimated_output_tokens, estimated_cost_usd
+                  ) VALUES ($1, $2, $3, $4, $5, $6)`,
+                  [
+                    usageLogId,
+                    finalResult.uuid,
+                    toolName,
+                    Math.floor(estimatedTokensPerTool / 2),
+                    Math.floor(estimatedTokensPerTool / 2),
+                    estimatedCostPerTool
+                  ]
+                );
+              } catch (toolLogError: any) {
+                console.error(`[Cost Tracking] Error logging tool ${toolName}:`, toolLogError.message);
+              }
+            }
+            console.log(`[Cost Tracking] Logged ${toolsUsed.length} tool uses`);
+          }
+        } else {
+          console.log(`[Cost Tracking] Skipping duplicate message ${finalResult.uuid}`);
+        }
+      } catch (dbError: any) {
+        console.error('[Cost Tracking] Database error:', dbError.message);
+        // Continue execution even if logging fails
+      }
     }
 
     res.json({
       response: assistantMessage?.message || null,
+      message_id: finalResult?.uuid, // Include message ID for frontend deduplication
       latency,
       usage: finalResult?.usage || null,
       cost: finalResult?.total_cost_usd || 0,

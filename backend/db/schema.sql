@@ -98,6 +98,11 @@ CREATE TABLE IF NOT EXISTS usage_logs (
     id SERIAL PRIMARY KEY,
     conversation_id INTEGER REFERENCES conversations(id) ON DELETE CASCADE,
 
+    -- Message tracking for deduplication
+    message_id VARCHAR(255) UNIQUE,
+    step_number INTEGER DEFAULT 1,
+    parent_message_id VARCHAR(255),
+
     -- Agent SDK metrics
     model VARCHAR(100) NOT NULL,
     input_tokens INTEGER NOT NULL,
@@ -122,13 +127,43 @@ CREATE TABLE IF NOT EXISTS usage_logs (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Per-tool usage tracking for cost attribution
+CREATE TABLE IF NOT EXISTS tool_usage_logs (
+    id SERIAL PRIMARY KEY,
+    usage_log_id INTEGER REFERENCES usage_logs(id) ON DELETE CASCADE,
+    message_id VARCHAR(255),
+    tool_name VARCHAR(100) NOT NULL,
+    tool_use_id VARCHAR(255),
+
+    -- Execution metrics
+    start_time TIMESTAMP,
+    end_time TIMESTAMP,
+    duration_ms INTEGER,
+
+    -- Cost estimation (proportional to step cost)
+    estimated_input_tokens INTEGER,
+    estimated_output_tokens INTEGER,
+    estimated_cost_usd DECIMAL(10, 6),
+
+    -- Tool-specific data
+    input_data JSONB,
+    output_data JSONB,
+    error TEXT,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_conversations_created_at ON conversations(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_conversations_model ON conversations(model);
 CREATE INDEX IF NOT EXISTS idx_usage_logs_conversation_id ON usage_logs(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_usage_logs_created_at ON usage_logs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_usage_logs_model ON usage_logs(model);
+CREATE INDEX IF NOT EXISTS idx_usage_logs_message_id ON usage_logs(message_id);
 CREATE INDEX IF NOT EXISTS idx_presets_name ON presets(name);
+CREATE INDEX IF NOT EXISTS idx_tool_usage_logs_usage_log_id ON tool_usage_logs(usage_log_id);
+CREATE INDEX IF NOT EXISTS idx_tool_usage_logs_tool_name ON tool_usage_logs(tool_name);
+CREATE INDEX IF NOT EXISTS idx_tool_usage_logs_message_id ON tool_usage_logs(message_id);
 
 -- Insert default Agent SDK presets
 INSERT INTO presets (name, description, model, system_prompt, max_turns, allowed_tools, permission_mode) VALUES

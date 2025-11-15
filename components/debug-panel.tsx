@@ -780,6 +780,28 @@ export default function DebugPanel() {
                         <p className="text-xs font-medium">Session ID</p>
                         <code className="text-xs text-muted-foreground break-all">{debugInfo.sessionId}</code>
                       </div>
+                      {debugInfo.messageId && (
+                        <div>
+                          <p className="text-xs font-medium">Message ID</p>
+                          <div className="flex items-center gap-2">
+                            <code className="text-xs text-muted-foreground break-all flex-1">{debugInfo.messageId}</code>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0"
+                              onClick={() => {
+                                navigator.clipboard.writeText(debugInfo.messageId || '');
+                                toast.success('Message ID copied');
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-1">
+                            Used for cost deduplication tracking
+                          </p>
+                        </div>
+                      )}
                       {debugInfo.numTurns && (
                         <div>
                           <p className="text-xs font-medium">Turns Completed</p>

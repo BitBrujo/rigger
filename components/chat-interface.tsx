@@ -170,13 +170,27 @@ export default function ChatInterface() {
           content: fullText,
         });
 
-        // Handle Agent SDK response (with automatic cost calculation)
+        // Handle Agent SDK response with message ID deduplication
         const cost = event.cost || 0;
-        addCost(cost);
+        const messageId = event.message_id;
+
+        // Only add cost if we haven't processed this message ID before
+        const { processedMessageIds, addProcessedMessageId } = useAgentStore.getState();
+        if (messageId && !processedMessageIds.has(messageId)) {
+          addCost(cost);
+          addProcessedMessageId(messageId);
+          console.log(`[Cost Tracking] Added cost $${cost} for message ${messageId}`);
+        } else if (messageId) {
+          console.log(`[Cost Tracking] Skipping duplicate message ${messageId}`);
+        } else {
+          // Fallback: if no message_id, add cost anyway (shouldn't happen with SDK)
+          addCost(cost);
+          console.warn('[Cost Tracking] No message_id provided, adding cost without deduplication');
+        }
 
         // Budget warning
         const { config: currentConfig, accumulatedCost: currentAccumulated } = useAgentStore.getState();
-        const totalCost = currentAccumulated + cost;
+        const totalCost = currentAccumulated;
         if (currentConfig.maxBudgetUsd && totalCost > currentConfig.maxBudgetUsd * 0.8) {
           if (totalCost >= currentConfig.maxBudgetUsd) {
             toast.error('Budget exceeded!', {
@@ -199,6 +213,7 @@ export default function ChatInterface() {
             cacheRead: event.usage?.cache_read_tokens,
           },
           cost,
+          messageId: event.message_id, // Include message ID for display
           stopReason: event.is_error ? 'error' : 'end_turn',
           timestamp: event.timestamp || new Date().toISOString(),
           errors: event.is_error ? ['Error during execution'] : [],

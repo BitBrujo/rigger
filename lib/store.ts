@@ -77,6 +77,12 @@ interface AgentStore {
   addCost: (cost: number) => void;
   resetAccumulatedCost: () => void;
 
+  // Message ID tracking for cost deduplication
+  processedMessageIds: Set<string>;
+  addProcessedMessageId: (messageId: string) => void;
+  clearProcessedMessageIds: () => void;
+  hasProcessedMessageId: (messageId: string) => boolean;
+
   // Tool execution tracking
   toolExecutions: ToolExecution[];
   addToolExecution: (execution: ToolExecution) => void;
@@ -214,6 +220,18 @@ export const useAgentStore = create<AgentStore>((set) => ({
   accumulatedCost: 0,
   addCost: (cost) => set((state) => ({ accumulatedCost: state.accumulatedCost + cost })),
   resetAccumulatedCost: () => set({ accumulatedCost: 0 }),
+
+  // Message ID tracking for cost deduplication
+  processedMessageIds: new Set(),
+  addProcessedMessageId: (messageId) =>
+    set((state) => ({
+      processedMessageIds: new Set([...state.processedMessageIds, messageId]),
+    })),
+  clearProcessedMessageIds: () => set({ processedMessageIds: new Set() }),
+  hasProcessedMessageId: (messageId) => {
+    const state = useAgentStore.getState();
+    return state.processedMessageIds.has(messageId);
+  },
 
   // Tool execution tracking
   toolExecutions: [],
