@@ -280,6 +280,42 @@ export interface ToolExecution {
   parentToolUseId: string | null;
 }
 
+// Todo List Tracking
+export interface TodoItem {
+  id: number;
+  content: string;
+  activeForm?: string;
+  status: 'pending' | 'in_progress' | 'completed';
+  createdAt: string;
+}
+
+export interface TodoList {
+  id: number;
+  title?: string;
+  items: TodoItem[];
+  toolUseId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Database Todo Types
+export interface DBTodo {
+  id: number;
+  title: string | null;
+  tool_use_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DBTodoItem {
+  id: number;
+  todo_id: number;
+  content: string;
+  active_form: string | null;
+  status: 'pending' | 'in_progress' | 'completed';
+  created_at: string;
+}
+
 // Permission System
 export interface PermissionRequest {
   id: string; // tool_use_id

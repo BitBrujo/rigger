@@ -153,6 +153,27 @@ CREATE TABLE IF NOT EXISTS tool_usage_logs (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Todo lists table (global, not conversation-scoped)
+CREATE TABLE IF NOT EXISTS todos (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(500),
+    tool_use_id VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Individual todo items
+CREATE TABLE IF NOT EXISTS todo_items (
+    id SERIAL PRIMARY KEY,
+    todo_id INTEGER REFERENCES todos(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    active_form TEXT,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT todo_items_status_check CHECK (status IN ('pending', 'in_progress', 'completed'))
+);
+
 -- Indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_conversations_created_at ON conversations(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_conversations_model ON conversations(model);
@@ -164,6 +185,10 @@ CREATE INDEX IF NOT EXISTS idx_presets_name ON presets(name);
 CREATE INDEX IF NOT EXISTS idx_tool_usage_logs_usage_log_id ON tool_usage_logs(usage_log_id);
 CREATE INDEX IF NOT EXISTS idx_tool_usage_logs_tool_name ON tool_usage_logs(tool_name);
 CREATE INDEX IF NOT EXISTS idx_tool_usage_logs_message_id ON tool_usage_logs(message_id);
+CREATE INDEX IF NOT EXISTS idx_todos_created_at ON todos(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_todos_tool_use_id ON todos(tool_use_id);
+CREATE INDEX IF NOT EXISTS idx_todo_items_todo_id ON todo_items(todo_id);
+CREATE INDEX IF NOT EXISTS idx_todo_items_status ON todo_items(status);
 
 -- Insert default Agent SDK presets
 INSERT INTO presets (name, description, model, system_prompt, max_turns, allowed_tools, permission_mode) VALUES

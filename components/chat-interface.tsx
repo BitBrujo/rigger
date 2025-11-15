@@ -12,10 +12,11 @@ import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Send, Download, Wrench } from 'lucide-react';
+import { Loader2, Send, Download, Wrench, ListTodo } from 'lucide-react';
 import { toast } from 'sonner';
 import DebugPanel from './debug-panel';
 import { ToolsPanel } from './tools-panel';
+import { TodoPanel } from './todo-panel';
 
 export default function ChatInterface() {
   const {
@@ -40,6 +41,9 @@ export default function ChatInterface() {
     setSystemInfo,
     // Hook logs
     addHookLog,
+    // Todos
+    todoLists,
+    addTodoList,
   } = useAgentStore();
 
   const [input, setInput] = useState('');
@@ -122,6 +126,24 @@ export default function ChatInterface() {
         };
         addToolExecution(toolExecution);
         addActiveTool(event.tool_use_id);
+
+        // Reload todos when TodoWrite is executed
+        if (event.tool_name === 'TodoWrite') {
+          setTimeout(async () => {
+            try {
+              const lists = await ApiClient.getTodos();
+              lists.forEach(list => {
+                // Only add if not already in the store
+                const exists = todoLists.some(existing => existing.id === list.id);
+                if (!exists) {
+                  addTodoList(list);
+                }
+              });
+            } catch (error) {
+              console.error('Failed to reload todos:', error);
+            }
+          }, 500); // Small delay to ensure database write completes
+        }
       } else if (event.type === 'tool_progress') {
         // Tool progress update
         updateToolExecution(event.tool_use_id, {
@@ -318,6 +340,15 @@ export default function ChatInterface() {
             <Wrench className="h-4 w-4" />
             Tools
           </TabsTrigger>
+          <TabsTrigger value="todos" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none flex items-center gap-1">
+            <ListTodo className="h-4 w-4" />
+            Todos
+            {todoLists.length > 0 && (
+              <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1">
+                {todoLists.length}
+              </Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="debug" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
             Debug
           </TabsTrigger>
@@ -435,6 +466,11 @@ export default function ChatInterface() {
       {/* Tools Tab */}
       <TabsContent value="tools" className="flex-1 m-0 data-[state=inactive]:hidden overflow-hidden">
         <ToolsPanel />
+      </TabsContent>
+
+      {/* Todos Tab */}
+      <TabsContent value="todos" className="flex-1 m-0 data-[state=inactive]:hidden overflow-hidden">
+        <TodoPanel />
       </TabsContent>
 
       {/* Debug Tab */}

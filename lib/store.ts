@@ -11,7 +11,8 @@ import {
   PermissionRequest,
   McpServerStatus,
   SessionHistory,
-  SkillMetadata
+  SkillMetadata,
+  TodoList
 } from './types';
 
 interface AgentStore {
@@ -53,6 +54,13 @@ interface AgentStore {
   addSkill: (skill: SkillMetadata) => void;
   removeSkill: (name: string) => void;
   updateSkill: (name: string, updates: Partial<SkillMetadata>) => void;
+
+  // Todo Lists Management
+  todoLists: TodoList[];
+  setTodoLists: (lists: TodoList[]) => void;
+  addTodoList: (list: TodoList) => void;
+  removeTodoList: (id: number) => void;
+  clearTodoLists: () => void;
 
   // Messages
   messages: Message[];
@@ -194,6 +202,19 @@ export const useAgentStore = create<AgentStore>((set) => ({
         skill.name === name ? { ...skill, ...updates } : skill
       ),
     })),
+
+  // Todo Lists
+  todoLists: [],
+  setTodoLists: (lists) => set({ todoLists: lists }),
+  addTodoList: (list) =>
+    set((state) => ({
+      todoLists: [...state.todoLists, list],
+    })),
+  removeTodoList: (id) =>
+    set((state) => ({
+      todoLists: state.todoLists.filter((list) => list.id !== id),
+    })),
+  clearTodoLists: () => set({ todoLists: [] }),
 
   // Messages
   messages: [],

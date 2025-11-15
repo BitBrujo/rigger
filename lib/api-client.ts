@@ -270,6 +270,47 @@ export class ApiClient {
     return response.json();
   }
 
+  // Todos API endpoints
+  static async getTodos(): Promise<import('./types').TodoList[]> {
+    const response = await fetch(`${API_BASE_URL}/todos`);
+    if (!response.ok) throw new Error('Failed to fetch todos');
+    return response.json();
+  }
+
+  static async getTodoById(id: number): Promise<import('./types').TodoList> {
+    const response = await fetch(`${API_BASE_URL}/todos/${id}`);
+    if (!response.ok) throw new Error('Failed to fetch todo');
+    return response.json();
+  }
+
+  static async createTodo(data: {
+    title?: string;
+    toolUseId?: string;
+    items: Array<{
+      content: string;
+      activeForm?: string;
+      status?: 'pending' | 'in_progress' | 'completed';
+    }>;
+  }): Promise<import('./types').TodoList> {
+    const response = await fetch(`${API_BASE_URL}/todos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create todo');
+    }
+    return response.json();
+  }
+
+  static async deleteTodo(id: number): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/todos/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) throw new Error('Failed to delete todo');
+  }
+
   // Skills API endpoints
   static async listSkills() {
     const response = await fetch(`${API_BASE_URL}/skills`);

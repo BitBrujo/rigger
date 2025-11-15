@@ -6,6 +6,7 @@ import conversationsRouter from './routes/conversations';
 import presetsRouter from './routes/presets';
 import analyticsRouter from './routes/analytics';
 import skillsRouter from './routes/skills';
+import todosRouter from './routes/todos';
 
 dotenv.config();
 
@@ -36,6 +37,7 @@ app.use('/api/conversations', conversationsRouter);
 app.use('/api/presets', presetsRouter);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api/skills', skillsRouter);
+app.use('/api/todos', todosRouter);
 
 // Error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

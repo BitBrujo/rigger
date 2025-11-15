@@ -170,6 +170,36 @@ router.post('/stream', async (req: Request, res: Response) => {
             input: msg.event.content_block.input,
             timestamp: new Date().toISOString()
           })}\n\n`);
+
+          // Auto-save todos when TodoWrite is detected
+          if (toolName === 'TodoWrite' && (msg.event.content_block.input as any)?.todos) {
+            try {
+              const toolInput = msg.event.content_block.input as any;
+              const todos = toolInput.todos as any[];
+
+              // Insert todo list
+              const todoResult = await pool.query(
+                'INSERT INTO todos (tool_use_id) VALUES ($1) RETURNING id',
+                [msg.event.content_block.id]
+              );
+
+              const todoId = todoResult.rows[0].id;
+
+              // Insert todo items
+              const itemPromises = todos.map((item: any) =>
+                pool.query(
+                  'INSERT INTO todo_items (todo_id, content, active_form, status) VALUES ($1, $2, $3, $4)',
+                  [todoId, item.content, item.activeForm || null, item.status || 'pending']
+                )
+              );
+
+              await Promise.all(itemPromises);
+
+              console.log(`Saved todo list ${todoId} with ${todos.length} items`);
+            } catch (error) {
+              console.error('Error saving todo:', error);
+            }
+          }
         }
 
         // Tool result detected (completion or error)
