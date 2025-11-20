@@ -1,39 +1,44 @@
 # Rigger
 
-A visual testing interface for Claude Agent SDK. Configure AI agents, test tools, watch real-time execution, and track costs through a clean web interface.
+**A visual playground for testing Claude's Agent SDK.** No code required—just configure, chat, and watch your AI agent work.
 
 <img width="4134" height="2672" alt="rigger1" src="https://github.com/user-attachments/assets/042bc530-6248-4514-ba2d-bb21161feee6" />
 
-## What It Does
+## What's This For?
 
-Rigger lets you test Claude's Agent SDK without writing code. Pick tools, configure settings, send messages, and see detailed metrics—all in your browser.
+Ever wondered what it's like to give an AI agent real tools and watch it work? Rigger lets you do exactly that.
 
-Think of it as a visual debugger for AI agents. You see exactly what tools the agent uses, how much each action costs, and what's happening in real-time.
+You configure which tools Claude can use (file operations, bash commands, web search, etc.), send it a message, and watch in real-time as it decides what to do. See every token used, every tool called, and exactly how much it costs.
 
-## Key Features
+Think of it as **mission control for AI agents**—you see everything happening under the hood.
 
-- **19 Built-in Tools**: File operations, bash commands, web search, task management, and more
-- **Real-Time Streaming**: Watch agent responses generate character by character
-- **Debug Metrics**: Token usage, costs, cache performance, API timing
-- **Tool Configuration**: Select which tools your agent can use
-- **MCP Servers**: Connect to external Model Context Protocol servers
-- **Custom Agents**: Define specialized sub-agents with specific prompts and tools
-- **Skills System**: Package reusable agent workflows
-- **Hooks**: Configure event-driven behaviors and integrations
-- **Presets**: Save and load complete configurations
-- **Full Persistence**: All conversations stored in PostgreSQL
+## What You Get
 
-## Quick Start
+**Core Features:**
+- **19 built-in tools** the agent can use (files, bash, web, more)
+- **Real-time debug view** showing tokens, costs, and API calls
+- **Live streaming** so you watch responses generate
+- **Full persistence** with PostgreSQL for all conversations
 
-### What You Need
+**Advanced Stuff:**
+- **MCP servers** to connect external tools (GitHub, Notion, browsers, etc.)
+- **Custom sub-agents** for specialized tasks
+- **Skills system** for reusable agent workflows
+- **Hooks** for event-driven automation
+- **Presets** to save and share configurations
 
-- Node.js 20 or higher
-- Docker and Docker Compose
-- An Anthropic API key ([get one here](https://console.anthropic.com))
+## Getting Started
 
-### Installation
+### Prerequisites
 
-**1. Clone and install dependencies**
+You'll need:
+- Node.js 20+
+- Docker & Docker Compose
+- An Anthropic API key ([grab one here](https://console.anthropic.com))
+
+### 5-Minute Setup
+
+**1. Clone and install:**
 ```bash
 git clone <repository-url>
 cd rigger
@@ -41,266 +46,196 @@ npm install
 cd backend && npm install && cd ..
 ```
 
-**2. Set up environment files**
+**2. Add your API key:**
 ```bash
-# Frontend environment
+# Copy the environment templates
 cp .env.local.example .env.local
-
-# Backend environment (IMPORTANT: Add your API key here)
 cp backend/.env.example backend/.env
+
+# Edit backend/.env and add your key
+ANTHROPIC_API_KEY=sk-ant-your-actual-key-here
 ```
 
-Edit `backend/.env` and add your Anthropic API key:
+**3. Start everything:**
 ```bash
-ANTHROPIC_API_KEY=sk-ant-your-key-here
-```
-
-**3. Start the services**
-```bash
-# Start PostgreSQL and backend (runs in Docker)
+# Terminal 1: Start database & backend (Docker)
 docker-compose up -d
 
-# Start frontend (separate terminal)
+# Terminal 2: Start frontend
 npm run dev
 ```
 
-**4. Open your browser**
+**4. Open http://localhost:3334**
 
-Go to [http://localhost:3334](http://localhost:3334)
+You should see a split-panel interface. Configure on the left, chat on the right. You're ready!
 
-You should see the two-panel interface ready to go.
+## How It Works
 
-## How to Use
+The interface has two main panels:
 
-### Left Panel: Agent Configuration
+### Left Side: Configure Your Agent
 
-This is where you set up your agent's behavior.
+**Basic setup:**
+- Pick a Claude model (Sonnet for smart, Haiku for fast)
+- Adjust temperature (higher = more creative)
+- Write a system prompt to guide behavior
 
-**Basic Settings**
-- Choose your Claude model (Sonnet, Haiku, etc.)
-- Set temperature and max turns
-- Write or select a system prompt
+**Choose tools:**
+- Select which tools the agent can access
+- Categories: File Ops, Bash, Web, Planning, etc.
+- The agent can only use what you enable here
 
-**Tool Selection**
-- Enable/disable specific tools the agent can use
-- Tools are grouped by category (File Operations, Execution, Web, etc.)
-- The agent can only use tools you enable
+**Advanced options** (click to expand):
+- **MCP Servers** → Connect external services (GitHub, Notion, browsers)
+- **Custom Agents** → Define specialized sub-agents for specific tasks
+- **Skills** → Load reusable workflows from `.claude/skills/`
+- **Hooks** → Set up event triggers (auto-commit, notifications, etc.)
+- **Workspace** → Control which directories the agent can access
 
-**Advanced Features**
-- **MCP Servers**: Connect external tools and data sources
-- **Custom Agents**: Define sub-agents for specialized tasks
-- **Skills**: Load packaged agent workflows from `.claude/skills/`
-- **Hooks**: Configure event-driven behaviors
-- **Workspace**: Set working directory and permissions
+**Save configurations:**
+- Hit "Save Preset" to store your setup
+- Load it later or share with teammates
 
-**Presets**
-- Save your configuration for reuse
-- Load previously saved setups
-- Share configurations across projects
+### Right Side: Chat & Debug
 
-### Right Panel: Chat & Debug
+**Chat tab** → Your conversation with the agent:
+- Type messages and get streaming responses
+- See tool calls happen in real-time
+- Full conversation history
 
-**Chat Tab**
-- Type messages to your agent
-- See streaming responses in real-time
-- View conversation history
-- Watch tool execution as it happens
-
-**Debug Tab**
-- Token usage (input, output, cached)
-- Cost breakdown per message
-- API latency and cache stats
-- Raw API responses for debugging
+**Debug tab** → See what's happening under the hood:
+- Tokens used (input, output, cached)
+- Cost per message
+- API latency
+- Raw JSON responses
 - Tool execution timeline
 
-## Ports and Services
+## Try This First
 
-The application runs on three ports:
+Here's a quick workflow to test everything:
 
-- **Frontend**: `http://localhost:3334` (Next.js)
-- **Backend**: `http://localhost:3333` (Express API)
-- **Database**: `localhost:5335` (PostgreSQL, internal)
+**1. Configure:**
+- Model: "Claude 3.5 Sonnet"
+- Enable tools: `Read`, `Write`, `Edit`, `Bash`
+- System prompt: "You are a helpful coding assistant"
 
-Note: The backend container runs on port 3001 internally, but it's mapped to port 3333 on your machine.
-
-## Example Workflow
-
-1. **Configure the agent**
-   - Select "Claude 3.5 Sonnet" model
-   - Enable tools: Read, Write, Edit, Bash
-   - Set system prompt: "You are a helpful coding assistant"
-
-2. **Send a message**
-   - Type: "Create a simple Python script that prints 'Hello World'"
-   - Watch the agent use the Write tool
-   - See the file get created
-
-3. **Check the debug info**
-   - View tokens used
-   - See total cost
-   - Review which tools were called
-
-4. **Save your config**
-   - Click "Save Preset"
-   - Name it "Python Helper"
-   - Load it next time you need it
-
-## Troubleshooting
-
-### Backend won't start
-
-**Check your API key:**
-```bash
-cat backend/.env | grep ANTHROPIC_API_KEY
+**2. Send a message:**
+```
+Create a simple Python script that prints 'Hello World'
 ```
 
-**View backend logs:**
+**3. Watch what happens:**
+- Agent decides to use the `Write` tool
+- File gets created in real-time
+- Debug tab shows tokens and cost
+
+**4. Save it:**
+- Click "Save Preset"
+- Name: "Python Helper"
+- Now you can reload this setup anytime
+
+## Common Issues
+
+**Backend won't start?**
+- Check your API key: `cat backend/.env | grep ANTHROPIC_API_KEY`
+- View logs: `docker-compose logs -f backend`
+- Make sure Docker is running: `docker-compose ps`
+
+**Can't connect to backend?**
+- Test health: `curl http://localhost:3333/health`
+- Check `.env.local` has: `NEXT_PUBLIC_API_URL=http://localhost:3333/api`
+
+**Database acting weird?**
+- Reset it: `docker-compose down -v && docker-compose up -d`
+- Wait ~10 seconds for PostgreSQL to start
+- Connect directly: `docker exec -it rigger-postgres-1 psql -U agent_user -d agent_db`
+
+**Streaming not working?**
+- Some proxies block Server-Sent Events (SSE)
+- The app will auto-fallback to batch mode if streaming fails
+
+## Useful Commands
+
 ```bash
-docker-compose logs -f backend
-```
-
-**Verify services are running:**
-```bash
-docker-compose ps
-```
-
-### Can't connect to backend
-
-**Test the health endpoint:**
-```bash
-curl http://localhost:3333/health
-```
-
-**Check your .env.local file:**
-```bash
-cat .env.local
-# Should show: NEXT_PUBLIC_API_URL=http://localhost:3333/api
-```
-
-### Database errors
-
-**Reset the database:**
-```bash
-docker-compose down -v && docker-compose up -d
-```
-
-Wait about 10 seconds for PostgreSQL to initialize.
-
-**Connect to database directly:**
-```bash
-docker exec -it rigger-postgres-1 psql -U agent_user -d agent_db
-```
-
-### Streaming not working
-
-Some corporate proxies block Server-Sent Events (SSE). If streaming fails, the app will automatically fall back to batch mode.
-
-## Development Commands
-
-**Frontend**
-```bash
-npm run dev          # Dev server on :3334
+# Frontend (Next.js on :3334)
+npm run dev          # Development server
 npm run build        # Production build
-npm run start        # Production server
-npm run lint         # Run ESLint
-```
+npm run lint         # Check for errors
 
-**Backend**
-```bash
+# Backend (Express on :3333)
 cd backend
-npm run dev          # Run with ts-node
 npm run watch        # Auto-reload on changes
 npm run build        # Compile TypeScript
-npm run start        # Run compiled code
+
+# Docker
+docker-compose up -d              # Start services
+docker-compose logs -f backend    # Watch backend logs
+docker-compose down               # Stop everything
+docker-compose down -v            # Stop + delete data
 ```
 
-**Docker**
-```bash
-docker-compose up -d              # Start all services
-docker-compose logs -f backend    # View backend logs
-docker-compose logs -f postgres   # View database logs
-docker-compose down               # Stop services
-docker-compose down -v            # Stop and remove data
-```
+## What's Inside
 
-## Tech Stack
+**Frontend:** Next.js 16 + React 19 + TypeScript + Tailwind 4
+**Backend:** Express + Node.js
+**Database:** PostgreSQL (with JSONB for flexible storage)
+**Agent SDK:** `@anthropic-ai/claude-agent-sdk`
+**State:** Zustand (simpler than Redux)
+**Real-time:** Server-Sent Events for streaming
 
-- **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS 4
-- **UI Components**: shadcn/ui (Radix primitives)
-- **Backend**: Express.js, Node.js
-- **Database**: PostgreSQL with JSONB storage
-- **Agent SDK**: `@anthropic-ai/claude-agent-sdk`
-- **State Management**: Zustand
-- **Real-Time**: Server-Sent Events (SSE)
-
-## Project Structure
-
+**Project structure:**
 ```
 rigger/
-├── app/                    # Next.js pages
-├── components/             # React components
-│   ├── agent-tester.tsx   # Main two-panel layout
-│   ├── config-panel.tsx   # Left panel
-│   └── chat-interface.tsx # Right panel
+├── components/             # UI components
+│   ├── agent-tester.tsx   # Main layout
+│   ├── config-panel.tsx   # Left side
+│   └── chat-interface.tsx # Right side
 ├── lib/
-│   ├── store.ts           # Zustand state
-│   ├── types.ts           # TypeScript types
-│   └── api-client.ts      # Backend API wrapper
+│   ├── store.ts           # Global state
+│   └── api-client.ts      # Backend calls
 ├── backend/
-│   ├── src/
-│   │   ├── routes/        # API endpoints
-│   │   └── server.ts      # Express app
-│   └── db/
-│       ├── schema.sql     # Database schema
-│       └── client.ts      # PostgreSQL client
-├── .claude/
-│   └── skills/            # Agent skills
-└── docker-compose.yml     # Service orchestration
+│   ├── routes/            # API endpoints
+│   └── db/                # Database stuff
+└── .claude/skills/        # Agent workflows
 ```
 
-## API Reference
+## API Endpoints
 
-**Agent Endpoints**
-- `POST /api/agent/stream` - Stream agent responses with SSE
-- `POST /api/agent/message` - Get batch agent responses
+The backend exposes these REST endpoints:
 
-**Data Management**
-- `GET /api/conversations` - List all conversations
-- `POST /api/conversations` - Create new conversation
-- `PUT /api/conversations/:id` - Update conversation
-- `DELETE /api/conversations/:id` - Delete conversation
+**Agent:**
+- `POST /api/agent/stream` → Stream responses (SSE)
+- `POST /api/agent/message` → Batch responses
 
-**Configuration**
-- `GET /api/presets` - List saved presets
-- `POST /api/presets` - Save new preset
-- `PUT /api/presets/:id` - Update preset
-- `DELETE /api/presets/:id` - Delete preset
+**Conversations:**
+- `GET/POST/PUT/DELETE /api/conversations/:id?` → CRUD
 
-**Analytics**
-- `GET /api/analytics` - Usage logs
-- `GET /api/analytics/stats` - Aggregate statistics
-- `GET /api/analytics/timeline` - Time-series data
+**Presets:**
+- `GET/POST/PUT/DELETE /api/presets/:id?` → CRUD
 
-**Skills**
-- `GET /api/skills` - List available skills
-- `GET /api/skills/:name` - Get specific skill
-- `POST /api/skills` - Create new skill
-- `PUT /api/skills/:name` - Update skill
-- `DELETE /api/skills/:name` - Delete skill
+**Skills:**
+- `GET/POST/PUT/DELETE /api/skills/:name?` → CRUD
 
-**Custom Agents**
-- `GET /api/agents` - List custom agents
-- `POST /api/agents` - Create custom agent
-- `PUT /api/agents/:name` - Update agent
-- `DELETE /api/agents/:name` - Delete agent
+**Custom Agents:**
+- `GET/POST/PUT/DELETE /api/agents/:name?` → CRUD
 
-## Learn More
+**Analytics:**
+- `GET /api/analytics` → Usage logs
+- `GET /api/analytics/stats` → Aggregated stats
+- `GET /api/analytics/timeline` → Time-series data
 
+## Want to Learn More?
 
-- **.claude/skills/README.md** - Skills system guide
-- **docs/HOSTING_PATTERNS.md** - Session patterns and hosting
-- **examples/session-patterns.js** - Code examples
+- **`.claude/skills/README.md`** → Deep dive into the skills system
+- **`docs/HOSTING_PATTERNS.md`** → Session patterns and deployment
+- **`examples/session-patterns.js`** → Code examples
+
+## Ports Reference
+
+- **Frontend:** http://localhost:3334
+- **Backend API:** http://localhost:3333
+- **Database:** localhost:5335 (internal only)
 
 ## License
 
-MIT
+MIT — do whatever you want with it.
