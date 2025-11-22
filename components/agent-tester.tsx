@@ -3,13 +3,14 @@
 import { useState, useEffect } from 'react';
 import ConfigPanel from './config-panel';
 import ChatInterface from './chat-interface';
+import { SessionControlBar } from './session-control-bar';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAgentStore } from '@/lib/store';
 import { ApiClient } from '@/lib/api-client';
-import { Preset } from '@/lib/types';
+import { Preset, AgentConfig } from '@/lib/types';
 import { toast } from 'sonner';
 import { AlertCircle } from 'lucide-react';
 
@@ -65,7 +66,35 @@ export default function AgentTester() {
   };
 
   const handleLoadPreset = async (preset: Preset) => {
-    setConfig(preset.config);
+    // Convert flat Preset to AgentConfig structure
+    const loadedConfig: AgentConfig = {
+      model: preset.model,
+      systemPrompt: preset.system_prompt || '',
+      maxTurns: preset.max_turns,
+      maxBudgetUsd: preset.max_budget_usd,
+      maxThinkingTokens: preset.max_thinking_tokens,
+      permissionMode: preset.permission_mode as 'allow' | 'deny' | 'prompt',
+      allowDangerousSkipPermissions: preset.allow_dangerous_skip_permissions,
+      allowedTools: preset.allowed_tools,
+      disallowedTools: preset.disallowed_tools,
+      workingDirectory: preset.working_directory,
+      additionalDirectories: preset.additional_directories,
+      environmentVars: preset.environment_vars,
+      executable: preset.executable,
+      executableArgs: preset.executable_args,
+      continueSession: preset.continue_session,
+      resumeSessionId: preset.resume_session_id,
+      resumeAtMessageId: preset.resume_at_message_id,
+      forkSession: preset.fork_session,
+      fallbackModel: preset.fallback_model,
+      mcpServers: preset.mcp_servers,
+      strictMcpConfig: preset.strict_mcp_config,
+      customAgents: preset.custom_agents,
+      hooks: preset.hooks,
+      plugins: preset.plugins,
+    };
+
+    setConfig(loadedConfig);
     toast.success('Preset loaded', {
       description: `Loaded configuration: ${preset.name}`,
     });
@@ -122,6 +151,9 @@ export default function AgentTester() {
           </Button>
         </div>
       </div>
+
+      {/* Session Control Bar */}
+      <SessionControlBar />
 
       {/* Two-panel layout */}
       <ResizablePanelGroup direction="horizontal" className="flex-1 min-h-0">
