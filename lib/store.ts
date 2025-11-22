@@ -98,6 +98,30 @@ interface AgentStore {
   clearProcessedMessageIds: () => void;
   hasProcessedMessageId: (messageId: string) => boolean;
 
+  // Active session
+  activeSessionId: string | null;
+  setActiveSessionId: (id: string | null) => void;
+  activeSessionStatus: 'initializing' | 'active' | 'idle' | 'stopping' | 'completed' | 'error' | 'terminated' | null;
+  setActiveSessionStatus: (status: 'initializing' | 'active' | 'idle' | 'stopping' | 'completed' | 'error' | 'terminated' | null) => void;
+  activeSessionCost: number;
+  setActiveSessionCost: (cost: number) => void;
+  activeSessionDuration: number; // seconds
+  setActiveSessionDuration: (duration: number) => void;
+  currentTool: string | null;
+  setCurrentTool: (tool: string | null) => void;
+
+  // Available sessions
+  availableSessions: any[]; // SessionMetadata[]
+  setAvailableSessions: (sessions: any[]) => void;
+  addSession: (session: any) => void;
+  removeSession: (id: string) => void;
+
+  // Emergency stop
+  isStopRequested: boolean;
+  setIsStopRequested: (requested: boolean) => void;
+  isForceKillRequested: boolean;
+  setIsForceKillRequested: (requested: boolean) => void;
+
   // Tool execution tracking
   toolExecutions: ToolExecution[];
   addToolExecution: (execution: ToolExecution) => void;
@@ -279,6 +303,36 @@ export const useAgentStore = create<AgentStore>((set) => ({
     return state.processedMessageIds.has(messageId);
   },
 
+  // Active session
+  activeSessionId: null,
+  setActiveSessionId: (id) => set({ activeSessionId: id }),
+  activeSessionStatus: null,
+  setActiveSessionStatus: (status) => set({ activeSessionStatus: status }),
+  activeSessionCost: 0,
+  setActiveSessionCost: (cost) => set({ activeSessionCost: cost }),
+  activeSessionDuration: 0,
+  setActiveSessionDuration: (duration) => set({ activeSessionDuration: duration }),
+  currentTool: null,
+  setCurrentTool: (tool) => set({ currentTool: tool }),
+
+  // Available sessions
+  availableSessions: [],
+  setAvailableSessions: (sessions) => set({ availableSessions: sessions }),
+  addSession: (session) =>
+    set((state) => ({
+      availableSessions: [...state.availableSessions, session],
+    })),
+  removeSession: (id) =>
+    set((state) => ({
+      availableSessions: state.availableSessions.filter((s: any) => s.id !== id),
+    })),
+
+  // Emergency stop
+  isStopRequested: false,
+  setIsStopRequested: (requested) => set({ isStopRequested: requested }),
+  isForceKillRequested: false,
+  setIsForceKillRequested: (requested) => set({ isForceKillRequested: requested }),
+
   // Tool execution tracking
   toolExecutions: [],
   addToolExecution: (execution) =>
@@ -360,3 +414,6 @@ export const useAgentStore = create<AgentStore>((set) => ({
   error: null,
   setError: (error) => set({ error }),
 }));
+
+// Backward compatibility export
+export const useStore = useAgentStore;
