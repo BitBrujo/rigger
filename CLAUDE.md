@@ -27,6 +27,7 @@ This document contains detailed architecture, patterns, and implementation detai
 - Full conversation history and persistence
 
 **Advanced Capabilities:**
+- **Session Management**: Persistent execution contexts with two-tier emergency stop (graceful + force kill)
 - **MCP Servers**: Connect external Model Context Protocol servers (GitHub, Notion, Playwright, etc.)
 - **Skills System**: Packaged agent workflows loaded from `.claude/skills/`
 - **Custom Agents**: Define specialized sub-agents with their own prompts and tools
@@ -163,10 +164,8 @@ interface StoreState {
   // Streaming State
   isStreaming: boolean;
   streamingMode: boolean;           // User preference for streaming
-  streamingText: string;            // Accumulating text during stream
   setIsStreaming: (streaming: boolean) => void;
   setStreamingMode: (mode: boolean) => void;
-  setStreamingText: (text: string) => void;
 
   // Debug Information
   debugInfo: DebugInfo | null;      // Latest API response metrics
@@ -175,6 +174,16 @@ interface StoreState {
   // Persistence
   conversationId: string | null;    // Current conversation ID
   setConversationId: (id: string | null) => void;
+
+  // Session Management
+  activeSessionId: string | null;           // Current session ID
+  activeSessionStatus: SessionStatus | null; // Session status
+  activeSessionCost: number;                 // Session total cost
+  activeSessionDuration: number;             // Seconds since start
+  currentTool: string | null;                // Currently executing tool
+  isStopRequested: boolean;                  // Graceful stop requested
+  isForceKillRequested: boolean;             // Emergency stop requested
+  availableSessions: SessionMetadata[];      // Session registry
 
   // Skills
   availableSkills: SkillMetadata[]; // Discovered skills
@@ -218,36 +227,46 @@ function MyComponent() {
 
 3. **API Request**
    - `ApiClient.streamMessage()` called from `lib/api-client.ts`
-   - Payload constructed: `{ message: userInput, config: storeConfig }`
+   - Payload constructed: `{ message: userInput, config: storeConfig, sessionId?: activeSessionId }`
    - Request sent to backend: `POST /api/agent/stream`
 
-4. **Backend Processing**
+4. **Session Creation/Resumption**
+   - Backend checks for `sessionId` in request
+   - If exists: Resume session, update status to 'active', get AbortSignal
+   - If new: Auto-create session, store in `agent_sessions` table, initialize AbortController
+   - Session ID sent to frontend via `session_created` event
+
+5. **Backend Processing**
    - Express route handler in `backend/src/routes/agent.ts`
    - Config transformed via `buildSdkOptions()`
-   - Agent SDK `query()` function invoked with async iteration
+   - Agent SDK `query()` function invoked with async iteration and AbortSignal
    - Agent SDK executes with configured tools
+   - Abort signal checked on each iteration for emergency stop
 
-5. **Streaming Response**
+6. **Streaming Response**
    - Backend wraps each event in SSE format: `data: {JSON}\n\n`
-   - Events streamed: `text`, `tool_use`, `thinking`, `done`, `error`
+   - Events streamed: `text`, `tool_use`, `thinking`, `done`, `error`, `session_created`
+   - On `tool_use`: SessionManager updates `current_tool`, frontend displays in real-time
    - Frontend `ReadableStream` parses each event
-   - Callback invoked for each chunk
 
-6. **Frontend Update**
-   - Text chunks accumulated in `streamingText` state
-   - Tool use events displayed in real-time
+7. **Frontend Update**
+   - Session ID stored in `activeSessionId` state
+   - Text chunks accumulated in messages
+   - Tool use events tracked with session metrics
    - UI updates reactively as text streams in
 
-7. **Completion**
+8. **Completion**
    - On `done` event, full message committed to store
    - `isStreaming` set to `false`
+   - Session status updated to 'idle' in database
    - `debugInfo` updated with metrics (tokens, cost, timing)
-   - Debug panel reactively displays new metrics
+   - Session metrics (tokens, cost, tools used) updated in `agent_sessions` table
 
-8. **Persistence**
+9. **Persistence**
    - If `conversationId` exists, conversation auto-saved to database
-   - Database stores: config (JSONB), messages (JSONB), metadata
-   - Usage metrics logged to `usage_logs` table
+   - Session linked to conversation via `conversation_id` foreign key
+   - Session remains active for resumption (5-min idle timeout)
+   - Usage metrics logged to both `usage_logs` and `agent_sessions` tables
 
 **Error Handling:**
 - Network errors: Retry logic in `ApiClient`
@@ -312,6 +331,25 @@ The backend is an Express.js application running in Docker with PostgreSQL.
 - CRUD operations for custom agent definitions
 - Stored in `.claude/agents/*.json`
 
+**`sessions.ts`** - Session management:
+- `POST /api/sessions` - Create new session (rarely used; auto-created by `/api/agent/stream`)
+- `GET /api/sessions` - List sessions with filters (status, conversationId, limit)
+- `GET /api/sessions/:id` - Get session details
+- `POST /api/sessions/:id/stop` - Request graceful stop (5-second grace period)
+- `POST /api/sessions/:id/force-kill` - Emergency termination (immediate)
+- `DELETE /api/sessions/:id` - Delete session from database
+- `GET /api/sessions/:id/status` - Lightweight status polling (for UI updates)
+
+**SessionManager** (`backend/src/session-manager.ts`) - Singleton session registry:
+- Maintains map of active sessions with AbortControllers
+- Lifecycle management: create, resume, stop, force-kill, complete
+- Metrics tracking: tokens, cost, turns, tools used, current tool
+- **Two-tier emergency stop**:
+  - `requestStop()`: Sets abort flag, agent checks periodically (graceful)
+  - `requestForceKill()`: Aborts immediately, kills generators, cleans up resources
+- Auto-cleanup job runs every minute (terminates idle sessions >5 minutes)
+- Process management: Registers query generators for force termination
+
 #### Database Layer (`backend/db/`)
 
 **`client.ts`** - PostgreSQL connection:
@@ -334,9 +372,36 @@ export default pool;
 -- Conversations table
 CREATE TABLE conversations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  config JSONB NOT NULL,           -- Full agent configuration
-  messages JSONB NOT NULL,          -- Array of messages
+  config JSONB NOT NULL,
+  messages JSONB NOT NULL,
   created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Sessions table (NEW - for session management)
+CREATE TABLE agent_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  sdk_session_id VARCHAR(255),           -- Agent SDK session ID
+  status VARCHAR(20) NOT NULL,           -- initializing, active, idle, stopping, completed, error, terminated
+  conversation_id UUID REFERENCES conversations(id),
+  config JSONB NOT NULL,                 -- Session configuration snapshot
+  created_at TIMESTAMP DEFAULT NOW(),
+  started_at TIMESTAMP,
+  last_activity_at TIMESTAMP DEFAULT NOW(),
+  completed_at TIMESTAMP,
+  terminated_at TIMESTAMP,
+  termination_reason VARCHAR(50),        -- user_requested, emergency_stop, budget_exceeded, error, idle_timeout, max_turns_reached
+  total_cost DECIMAL(10, 6) DEFAULT 0,
+  total_tokens INTEGER DEFAULT 0,
+  total_input_tokens INTEGER DEFAULT 0,
+  total_output_tokens INTEGER DEFAULT 0,
+  total_cached_tokens INTEGER DEFAULT 0,
+  num_turns INTEGER DEFAULT 0,
+  tools_used TEXT[] DEFAULT '{}',
+  current_tool VARCHAR(255),
+  messages JSONB DEFAULT '[]',
+  abort_requested BOOLEAN DEFAULT FALSE,
+  force_kill_requested BOOLEAN DEFAULT FALSE,
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -345,7 +410,7 @@ CREATE TABLE presets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(255) NOT NULL,
   description TEXT,
-  config JSONB NOT NULL,           -- Saved configuration
+  config JSONB NOT NULL,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -364,6 +429,9 @@ CREATE TABLE usage_logs (
 
 -- Indexes for performance
 CREATE INDEX idx_conversations_updated ON conversations(updated_at DESC);
+CREATE INDEX idx_sessions_status ON agent_sessions(status);
+CREATE INDEX idx_sessions_last_activity ON agent_sessions(last_activity_at DESC);
+CREATE INDEX idx_sessions_conversation ON agent_sessions(conversation_id);
 CREATE INDEX idx_usage_logs_created ON usage_logs(created_at DESC);
 CREATE INDEX idx_usage_logs_conversation ON usage_logs(conversation_id);
 ```
@@ -428,831 +496,322 @@ The UI provides checkboxes in the Tool Selector component for easy management.
 
 ## Advanced Features
 
+### Session Management
+
+**Sessions** are persistent execution contexts that track agent activity across multiple requests. They enable emergency stop controls, resource monitoring, and cost tracking.
+
+#### Session Lifecycle
+
+**States**: `initializing` → `active` → `idle` → (`stopping` | `completed` | `error` | `terminated`)
+
+1. **Creation**: Auto-created on first `/api/agent/stream` request (or explicitly via `POST /api/sessions`)
+2. **Execution**: Session tracks all activity - tokens, cost, tools used, current tool
+3. **Idle**: After response completes, session enters idle state (resumable for 5 minutes)
+4. **Termination**: Either graceful completion, error, or emergency stop
+
+#### Two-Tier Emergency Stop
+
+**Graceful Stop** (`POST /api/sessions/:id/stop`):
+- Sets `abort_requested` flag in database
+- Agent checks flag periodically during execution
+- Allows current operation to finish cleanly
+- Typical delay: 1-5 seconds
+
+**Force Kill** (`POST /api/sessions/:id/force-kill`):
+- Calls `AbortController.abort()` immediately
+- Terminates query generator
+- Kills child processes (bash shells, MCP servers)
+- Cleans up resources
+- Status set to `terminated` with reason `emergency_stop`
+
+#### Architecture
+
+**SessionManager Singleton** (`backend/src/session-manager.ts`):
+```typescript
+class SessionManager {
+  private activeSessions: Map<string, ActiveSession>
+
+  // Lifecycle
+  createSession(config, conversationId?) → SessionMetadata
+  getSession(id) → SessionMetadata | null
+  updateStatus(id, status) → void
+
+  // Emergency Control
+  requestStop(id) → void           // Graceful
+  requestForceKill(id) → void      // Immediate
+  getAbortSignal(id) → AbortSignal
+
+  // Metrics
+  updateMetrics(id, { tokens, cost, turns, toolsUsed })
+  setCurrentTool(id, toolName)
+
+  // Cleanup
+  completeSession(id) → void
+  errorSession(id, message) → void
+  startCleanupJob() // Auto-cleanup idle sessions every minute
+}
+```
+
+#### Session Data Model
+
+```typescript
+interface SessionMetadata {
+  id: string;
+  status: SessionStatus;
+  conversationId: number | null;   // Link to conversation
+  config: AgentSDKConfig;           // Snapshot of configuration
+
+  // Lifecycle timestamps
+  createdAt: Date;
+  startedAt: Date | null;
+  lastActivityAt: Date | null;
+  completedAt: Date | null;
+  terminatedAt: Date | null;
+  terminationReason: TerminationReason | null;
+
+  // Resource tracking
+  totalCost: number;
+  totalTokens: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalCachedTokens: number;
+  numTurns: number;
+  toolsUsed: string[];
+  currentTool: string | null;
+
+  // Emergency control
+  abortRequested: boolean;
+  forceKillRequested: boolean;
+}
+```
+
+#### Frontend Integration
+
+Sessions are automatically managed - no explicit creation needed:
+
+```typescript
+// Zustand store tracks active session
+const {
+  activeSessionId,          // Current session ID
+  activeSessionStatus,      // Session status
+  activeSessionCost,        // Running cost total
+  currentTool,              // Currently executing tool
+  isStopRequested,          // Graceful stop flag
+  isForceKillRequested      // Force kill flag
+} = useStore();
+
+// Sessions auto-created by ApiClient.streamMessage()
+// Passes activeSessionId if resuming, creates new if null
+```
+
+#### Session API
+
+- `POST /api/sessions` - Create session (rarely used)
+- `GET /api/sessions` - List with filters (status, conversationId, limit)
+- `GET /api/sessions/:id` - Get session details
+- `POST /api/sessions/:id/stop` - Graceful stop
+- `POST /api/sessions/:id/force-kill` - Emergency termination
+- `DELETE /api/sessions/:id` - Delete session
+- `GET /api/sessions/:id/status` - Lightweight polling endpoint
+
+#### Auto-Cleanup
+
+SessionManager runs cleanup job every 60 seconds:
+- Finds sessions with `status = 'idle'` and `last_activity_at > 5 minutes ago`
+- Calls `completeSession()` to mark as completed and remove from active registry
+- Prevents resource leaks from abandoned sessions
+
+#### Best Practices
+
+**When to use emergency stop:**
+- Graceful stop: Agent stuck in loop, want to stop cleanly
+- Force kill: Runaway bash process, immediate termination needed
+
+**Session vs Conversation:**
+- **Session**: Execution context (technical, tracks resources)
+- **Conversation**: Chat history (user-facing, stores messages)
+- One conversation can have multiple sessions
+- Sessions are ephemeral, conversations persist
+
 ### Skills System
 
-**Skills** are packaged agent workflows that extend Claude with specialized capabilities. They provide reusable, step-by-step instructions for specific tasks.
+**Skills** are packaged agent workflows from `.claude/skills/` that provide step-by-step instructions for specific tasks (PDF processing, code review, data transformation).
 
-#### How Skills Work
+#### Quick Overview
 
-1. **Discovery**: Skills are automatically discovered from `.claude/skills/` directory
-2. **Configuration**: Loaded via `settingSources: ['project']` in agent config
-3. **Matching**: When a user request matches a skill's description, Claude can invoke it
-4. **Execution**: The skill provides detailed instructions that guide the agent through the task
+- **Discovery**: Auto-loaded from `.claude/skills/*/SKILL.md` files
+- **Usage**: Agent invokes via `Skill` tool when request matches description
+- **Format**: Markdown with frontmatter (description, workflow, prerequisites)
+- **Management**: Create/edit via UI (Config Panel → Skills) or manually
+- **Examples**: `example-pdf-processing`, `example-code-review`, `example-data-transform`
 
-#### Skill File Structure
-
-Each skill is a directory containing a `SKILL.md` file:
-
-```
-.claude/skills/
-├── example-pdf-processing/
-│   └── SKILL.md
-├── example-code-review/
-│   └── SKILL.md
-├── example-data-transform/
-│   └── SKILL.md
-└── README.md
-```
-
-#### SKILL.md Format
+#### SKILL.md Structure
 
 ```markdown
 ---
-description: Brief description of when to use this skill (shown to user)
+description: Brief description shown to user
 ---
-
 # Skill Name
-
-## When to Use
-- Specific trigger phrases or scenarios
-- Use cases this skill handles
-
-## Prerequisites
-- Required tools (e.g., Read, Write, Bash)
-- External dependencies if any
-
-## Workflow
-1. Detailed step one
-2. Detailed step two
-3. ...
-
-## Expected Output
-What the skill produces when complete
-
-## Error Handling
-Common issues and how to resolve them
+## When to Use, Prerequisites, Workflow, Expected Output
 ```
-
-#### Creating Skills
-
-**Option 1: Skills Manager UI**
-1. Open Config Panel → Skills Configuration
-2. Click "Create Skill"
-3. Fill in wizard (name, description, workflow steps)
-4. Save (automatically creates `.claude/skills/skill-name/SKILL.md`)
-
-**Option 2: Manual Creation**
-```bash
-mkdir -p .claude/skills/my-custom-skill
-cat > .claude/skills/my-custom-skill/SKILL.md << 'EOF'
----
-description: Convert CSV files to JSON format with validation
----
-
-# CSV to JSON Converter
-
-## When to Use
-- User asks to convert CSV to JSON
-- Data transformation tasks
-
-## Prerequisites
-- Read tool (to read CSV files)
-- Write tool (to write JSON files)
-
-## Workflow
-1. Use Read tool to load CSV file
-2. Parse CSV headers and data rows
-3. Validate data types
-4. Convert to JSON array of objects
-5. Use Write tool to save JSON file
-6. Confirm conversion with user
-
-## Expected Output
-- Valid JSON file with same data as CSV
-- Confirmation message with row count
-EOF
-```
-
-#### Built-in Example Skills
-
-**example-pdf-processing**:
-- Extracts text and metadata from PDF documents
-- Tools: Read, Bash
-- Use case: PDF analysis and content extraction
-
-**example-code-review**:
-- Comprehensive code review with security checks
-- Tools: Read, Glob, Grep
-- Use case: Pull request reviews, code audits
-
-**example-data-transform**:
-- Convert between JSON, CSV, XML, YAML formats
-- Tools: Read, Write
-- Use case: Data format migrations
 
 #### Skills API
 
-**Backend endpoints** (`backend/src/routes/skills.ts`):
+- `GET /api/skills` - List discovered skills
+- `GET /api/skills/:name` - Get skill content
+- `POST /api/skills` - Create skill
+- `PUT /api/skills/:name` - Update skill
+- `DELETE /api/skills/:name` - Delete skill
 
-```typescript
-// List all discovered skills
-GET /api/skills
-Response: { skills: SkillMetadata[] }
+**State**: `availableSkills: SkillMetadata[]` (Zustand)
+**Config**: `settingSources: ['project']` + `allowedTools: ['Skill']`
 
-// Get specific skill content
-GET /api/skills/:name
-Response: { skill: SkillMetadata }
-
-// Create new skill
-POST /api/skills
-Body: { name: string, description: string, content: string }
-
-// Update existing skill
-PUT /api/skills/:name
-Body: { description?: string, content?: string }
-
-// Delete skill
-DELETE /api/skills/:name
-```
-
-#### Skills in Agent Config
-
-```typescript
-config: {
-  settingSources: ['project'],  // Load from .claude/skills/
-  allowedTools: ['Skill'],       // Enable Skill tool
-  // ... other config
-}
-```
-
-**State management**:
-- Discovered skills stored in: `availableSkills: SkillMetadata[]` (Zustand)
-- Loaded on app startup
-- Refreshed when skills are created/edited/deleted
-- Passed to Agent SDK via `settingSources`
-
-**See `.claude/skills/README.md` for comprehensive documentation.**
+**See `.claude/skills/README.md` for detailed documentation.**
 
 ### MCP (Model Context Protocol) Servers
 
-**MCP servers** extend Claude's capabilities by connecting external tools and data sources. Think of them as plugins for AI agents.
+**MCP servers** are external plugins that extend Claude with additional tools (browser automation, GitHub operations, file systems, etc.). Protocol spec: https://modelcontextprotocol.io/
 
-#### What is MCP?
-
-MCP is an open protocol that allows Claude to interact with external systems through standardized tool interfaces. Each MCP server provides a set of tools that the agent can use.
-
-**Official spec**: https://modelcontextprotocol.io/
-
-#### Preconfigured MCP Servers
-
-The application includes preconfigured servers for common use cases:
-
-**Playwright** (`@modelcontextprotocol/server-playwright`):
-- Browser automation and web testing
-- Tools: navigate, click, type, screenshot, evaluate JavaScript
-- Use case: Automated testing, web scraping, UI interaction
-
-**Fetch** (`@modelcontextprotocol/server-fetch`):
-- HTTP requests and web content retrieval
-- Tools: GET/POST/PUT/DELETE requests, header management
-- Use case: API testing, content fetching
-
-**Filesystem** (`@modelcontextprotocol/server-filesystem`):
-- Advanced file system operations
-- Tools: create, read, update, delete files and directories
-- Use case: File management beyond basic SDK tools
-
-**GitHub** (`@modelcontextprotocol/server-github`):
-- Repository management and operations
-- Tools: create repos, PRs, issues, commits, branches
-- Use case: Git workflow automation
-- **Requires**: `GITHUB_PERSONAL_ACCESS_TOKEN` environment variable
-
-**Git** (`@modelcontextprotocol/server-git`):
-- Version control operations
-- Tools: commit, push, pull, branch, merge
-- Use case: Local git operations
-
-**Notion** (`@modelcontextprotocol/server-notion`):
-- Workspace integration
-- Tools: create/update pages, databases, blocks
-- Use case: Documentation, knowledge management
-- **Requires**: `NOTION_API_KEY` environment variable
-
-**Time** (`@modelcontextprotocol/server-time`):
-- Timezone and date operations
-- Tools: convert times, calculate durations, format dates
-- Use case: Time-sensitive scheduling
-
-**Memory** (`@modelcontextprotocol/server-memory`):
-- Persistent knowledge graphs
-- Tools: store/retrieve/query facts and relationships
-- Use case: Long-term memory, knowledge retention
-
-**Sequential Thinking** (`@modelcontextprotocol/server-sequentialthinking`):
-- Chain-of-thought reasoning
-- Tools: structured problem-solving workflows
-- Use case: Complex reasoning tasks
-
-#### MCP Configuration Format
+#### Configuration
 
 ```typescript
-interface McpServerConfig {
-  command: string;              // Command to execute (e.g., "npx")
-  args: string[];               // Command arguments
-  env?: Record<string, string>; // Environment variables
-}
-
-// In agent config:
 config: {
   mcpServers: {
-    "server-name": {
+    "github": {
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-github"],
-      env: {
-        GITHUB_PERSONAL_ACCESS_TOKEN: "ghp_..."
-      }
+      env: { GITHUB_PERSONAL_ACCESS_TOKEN: "ghp_..." }
     }
   }
 }
 ```
 
-#### Adding Custom MCP Servers
+#### Common Servers
 
-**Via UI** (Config Panel → MCP Servers):
-1. Click "Add MCP Server"
-2. Enter server name (e.g., "slack")
-3. Configure command: `npx`
-4. Add args: `["-y", "@modelcontextprotocol/server-slack"]`
-5. Set environment variables if needed
-6. Save configuration
+Available via UI (Config Panel → MCP Servers) or programmatically:
 
-**Programmatically**:
-```typescript
-const config = useStore((state) => state.config);
-const setConfig = useStore((state) => state.setConfig);
+- **Playwright**: Browser automation (navigate, click, screenshot)
+- **Fetch**: HTTP requests (GET/POST/PUT/DELETE)
+- **GitHub**: Repo management (PRs, issues, commits) - requires token
+- **Filesystem**: Advanced file operations
+- **Git**: Version control (commit, push, pull, merge)
+- **Notion**: Workspace integration - requires API key
+- **Memory**: Persistent knowledge graphs
+- **Time**: Timezone and date operations
 
-setConfig({
-  ...config,
-  mcpServers: {
-    ...config.mcpServers,
-    "custom-server": {
-      command: "node",
-      args: ["/path/to/server.js"],
-      env: {
-        API_KEY: "your-key"
-      }
-    }
-  }
-});
-```
+#### How It Works
 
-#### How MCP Servers Work
+1. Backend spawns MCP server processes on agent start
+2. Agent SDK queries servers for available tools
+3. Tool requests routed to appropriate server
+4. Servers shut down when session ends
 
-1. **Initialization**: When agent starts, backend spawns MCP server processes
-2. **Tool Discovery**: Agent SDK queries each server for available tools
-3. **Execution**: When agent uses a tool, request routed to appropriate MCP server
-4. **Response**: Server executes tool and returns result to agent
-5. **Cleanup**: Servers shut down when agent session ends
-
-#### Finding MCP Servers
-
-**Official servers**: https://github.com/modelcontextprotocol/servers
-- Browse community-maintained servers
-- Each server has README with tool documentation
-
-**npm search**: `npm search @modelcontextprotocol/server-`
-- Discover third-party servers
-
-**Build your own**: https://modelcontextprotocol.io/docs
-- Create custom MCP servers for proprietary tools
-- Publish to npm for sharing
-
-#### MCP State Management
-
-- **Zustand store**: `config.mcpServers`
-- **Persistence**: Saved with conversation in database
-- **Backend**: Passed to Agent SDK via `buildSdkOptions()`
-- **Process management**: Backend handles server lifecycle
+**State**: `config.mcpServers` (Zustand)
+**Find servers**: `npm search @modelcontextprotocol/server-` or https://github.com/modelcontextprotocol/servers
 
 ### Custom Agents (Subagents)
 
-**Custom agents** are specialized AI agents that can be invoked by the main agent via the `Task` tool. They act as domain experts for specific types of work.
+**Custom agents** are specialized AI agents invoked via the `Task` tool. They delegate specific work with custom prompts, tools, and models.
 
-#### Concept
-
-The main agent can delegate work to specialized sub-agents, each configured with:
-- Specific expertise (via system prompt)
-- Limited tool access (for security/focus)
-- Custom model/temperature settings
-- Max turn limits
-
-**Example**: Main agent working on a project might invoke a "code-reviewer" sub-agent to analyze code quality.
-
-#### Agent Definition Structure
+#### Agent Definition
 
 ```typescript
 interface AgentDefinition {
-  name: string;                  // Unique identifier
-  systemPrompt: string;          // Defines agent's expertise
-  allowedTools: string[];        // Subset of main agent's tools
-  model?: string;                // Override model (e.g., "haiku" for speed)
-  temperature?: number;          // Override temperature
-  maxTurns?: number;             // Limit conversation length
-  description?: string;          // User-facing description
+  name: string;
+  systemPrompt: string;          // Defines expertise
+  allowedTools: string[];        // Limited tool access
+  model?: string;                // Override (e.g., "haiku" for speed)
+  temperature?: number;          // Adjust creativity
+  maxTurns?: number;
+  description?: string;
 }
 ```
 
-#### Built-in Agent Templates
+#### Built-in Templates
 
-**Code Reviewer**:
-```typescript
-{
-  name: "code-reviewer",
-  systemPrompt: "You are an expert code reviewer. Analyze code for:\n- Best practices\n- Security vulnerabilities\n- Performance issues\n- Code style consistency\n- Potential bugs\nProvide actionable, specific feedback.",
-  allowedTools: ["Read", "Glob", "Grep"],
-  temperature: 0.3,  // Lower for consistent analysis
-  description: "Reviews code for quality, security, and best practices"
-}
+Available via UI (Config Panel → Custom Agents):
+
+- **Code Reviewer**: Analyze code quality, security, performance (temp: 0.3)
+- **Bug Hunter**: Find bugs, trace errors, suggest fixes (temp: 0.2)
+- **Doc Writer**: Create technical documentation (temp: 0.7)
+- **Refactorer**: Improve code structure, reduce duplication (temp: 0.4)
+- **Test Generator**: Create unit/integration tests (temp: 0.5)
+
+#### Usage
+
+Main agent delegates via `Task` tool:
+```
+User: "Review authentication code"
+Main Agent: [Invokes code-reviewer subagent]
+Code Reviewer: [Analyzes, returns review]
 ```
 
-**Documentation Writer**:
-```typescript
-{
-  name: "doc-writer",
-  systemPrompt: "You are a technical documentation expert. Write clear, comprehensive documentation that:\n- Explains concepts simply\n- Provides code examples\n- Includes usage instructions\n- Follows documentation best practices",
-  allowedTools: ["Read", "Write", "Glob"],
-  temperature: 0.7,  // Higher for creative writing
-  description: "Creates clear, comprehensive technical documentation"
-}
-```
-
-**Bug Hunter**:
-```typescript
-{
-  name: "bug-hunter",
-  systemPrompt: "You are a debugging specialist. Analyze code to:\n- Identify bugs and edge cases\n- Trace error sources\n- Suggest fixes\n- Explain root causes",
-  allowedTools: ["Read", "Grep", "Bash"],
-  temperature: 0.2,  // Very focused analysis
-  description: "Finds and diagnoses bugs in code"
-}
-```
-
-**Refactorer**:
-```typescript
-{
-  name: "refactorer",
-  systemPrompt: "You are a code refactoring expert. Improve code by:\n- Reducing duplication\n- Improving readability\n- Optimizing performance\n- Modernizing patterns\nMaintain functionality while improving structure.",
-  allowedTools: ["Read", "Edit", "Glob"],
-  temperature: 0.4,
-  description: "Refactors code for better structure and maintainability"
-}
-```
-
-**Test Generator**:
-```typescript
-{
-  name: "test-generator",
-  systemPrompt: "You are a testing specialist. Create comprehensive test suites:\n- Unit tests\n- Integration tests\n- Edge cases\n- Mocking strategies\nFollow testing best practices for the language/framework.",
-  allowedTools: ["Read", "Write", "Bash"],
-  temperature: 0.5,
-  description: "Generates comprehensive test suites"
-}
-```
-
-#### Creating Custom Agents
-
-**Via UI** (Config Panel → Custom Agents):
-1. Click "Create Agent" or "Use Template"
-2. Fill in form:
-   - **Name**: Unique identifier (e.g., "api-designer")
-   - **System Prompt**: Define agent's expertise and behavior
-   - **Allowed Tools**: Select from available tools
-   - **Model**: Override if needed (e.g., Haiku for speed)
-   - **Temperature**: Adjust creativity level
-   - **Description**: User-facing summary
-3. Save (stores to `.claude/agents/agent-name.json`)
-
-**Via API**:
-```typescript
-POST /api/agents
-{
-  "name": "api-designer",
-  "systemPrompt": "You are an API design expert...",
-  "allowedTools": ["Read", "Write"],
-  "model": "sonnet",
-  "temperature": 0.6,
-  "description": "Designs RESTful APIs with best practices"
-}
-```
-
-#### Invoking Custom Agents
-
-The main agent uses the `Task` tool to delegate to custom agents:
-
-```
-User: "Review the authentication code in src/auth/"
-
-Main Agent: I'll use the code-reviewer agent to analyze this.
-[Uses Task tool with subagent: "code-reviewer"]
-
-Code Reviewer Agent:
-[Reads files in src/auth/]
-[Analyzes code]
-[Returns detailed review]
-
-Main Agent: [Presents code review results to user]
-```
-
-**Programmatic invocation**:
-```typescript
-// In agent SDK config
-config: {
-  customAgents: {
-    "code-reviewer": {
-      systemPrompt: "...",
-      allowedTools: ["Read", "Glob", "Grep"]
-    }
-  }
-}
-
-// Agent uses Task tool
-"Use the code-reviewer agent to analyze src/auth/"
-```
-
-#### Agent File Storage
-
-```
-.claude/agents/
-├── code-reviewer.json
-├── bug-hunter.json
-├── doc-writer.json
-├── refactorer.json
-├── test-generator.json
-└── custom-agent.json
-```
-
-#### Custom Agent State
-
-- **Zustand**: `config.customAgents`
-- **File system**: `.claude/agents/*.json`
-- **Backend API**: `/api/agents` (CRUD operations)
-- **Agent SDK**: Passed via `customAgents` parameter
+**State**: `config.customAgents` (Zustand)
+**Storage**: `.claude/agents/*.json`
+**API**: `/api/agents` (CRUD - planned)
 
 #### Best Practices
 
-**When to create custom agents:**
-- Specialized domain expertise needed
-- Want to limit tool access for security
-- Need different model/temperature for specific tasks
-- Delegation simplifies complex workflows
-
-**Tips:**
-- Keep system prompts focused and specific
-- Limit tools to what's needed (principle of least privilege)
-- Use lower temperature for analytical tasks (code review, debugging)
-- Use higher temperature for creative tasks (documentation, ideation)
-- Test agents thoroughly before relying on them
+- Use lower temp for analytical tasks (review, debug)
+- Use higher temp for creative tasks (docs, design)
+- Limit tools to minimum needed (security)
+- Keep prompts focused and specific
 
 ### Hooks System
 
-**Hooks** enable event-driven automation. Configure the agent to automatically perform actions in response to specific events during execution.
+**Hooks** enable event-driven automation - execute actions in response to events during agent execution.
 
-#### Hook Architecture
+#### Hook Configuration
 
 ```typescript
 interface HookConfig {
-  name: string;                // Human-readable name
-  trigger: TriggerType;        // When to execute
-  action: HookAction;          // What to do
-  enabled: boolean;            // Enable/disable without deleting
-  conditions?: Condition[];    // Optional: only run if conditions met
-}
-
-type TriggerType =
-  | 'on-prompt-submit'        // Before sending message to agent
-  | 'on-response-complete'    // After agent finishes responding
-  | 'on-tool-use'             // When agent uses a tool
-  | 'on-error';               // When an error occurs
-
-interface HookAction {
-  type: 'bash' | 'api-call' | 'notification' | 'custom';
-  config: Record<string, any>;  // Action-specific configuration
+  name: string;
+  trigger: 'on-prompt-submit' | 'on-response-complete' | 'on-tool-use' | 'on-error';
+  action: { type: 'bash' | 'api-call' | 'notification'; config: Record<string, any> };
+  enabled: boolean;
+  conditions?: Condition[];
 }
 ```
 
-#### Trigger Events
+#### Triggers
 
-**on-prompt-submit**:
-- Fires: Before user message sent to agent
-- Use cases: Pre-processing, backups, logging
-- Example: Create timestamped backup before AI makes changes
+- **on-prompt-submit**: Before message sent (backups, pre-processing)
+- **on-response-complete**: After response (notifications, post-processing)
+- **on-tool-use**: When specific tools used (auto-commit, formatting)
+- **on-error**: On errors (monitoring, alerting)
 
-**on-response-complete**:
-- Fires: After agent completes response
-- Use cases: Post-processing, notifications, summaries
-- Example: Send Slack notification with response summary
+#### Pre-built Templates
 
-**on-tool-use**:
-- Fires: When agent uses any tool (or specific tools)
-- Use cases: Automation based on tool usage
-- Example: Auto-commit when Write or Edit tools used
-- Available data: Tool name, tool arguments, tool result
+Located in `lib/hook-templates.ts`, available via UI:
 
-**on-error**:
-- Fires: When errors occur (network, API, tool execution)
-- Use cases: Error monitoring, alerting, recovery
-- Example: Log errors to external monitoring service
-
-#### Pre-built Hook Templates
-
-Located in `lib/hook-templates.ts`:
-
-**1. Git Auto-Commit**:
-```typescript
-{
-  name: "Git Auto-Commit",
-  trigger: "on-tool-use",
-  action: {
-    type: "bash",
-    config: {
-      command: "git add {{file}} && git commit -m 'AI: {{description}}'",
-      toolFilter: ["Write", "Edit"]  // Only for these tools
-    }
-  },
-  enabled: true
-}
-```
-- Automatically commits file changes
-- AI generates commit message based on changes
-- Only triggers for Write/Edit tools
-
-**2. Slack Notifications**:
-```typescript
-{
-  name: "Slack Notifications",
-  trigger: "on-response-complete",
-  action: {
-    type: "api-call",
-    config: {
-      url: "https://hooks.slack.com/services/YOUR/WEBHOOK/URL",
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: {
-        text: "Agent completed task: {{summary}}",
-        username: "Rigger Bot",
-        icon_emoji: ":robot_face:"
-      }
-    }
-  },
-  enabled: true
-}
-```
-- Sends notification when agent completes
-- Includes response summary
-- Customizable message format
-
-**3. Error Logging**:
-```typescript
-{
-  name: "Error Logging",
-  trigger: "on-error",
-  action: {
-    type: "api-call",
-    config: {
-      url: "https://api.sentry.io/YOUR/PROJECT/ID",
-      method: "POST",
-      headers: {
-        "Authorization": "Bearer {{SENTRY_TOKEN}}",
-        "Content-Type": "application/json"
-      },
-      body: {
-        message: "{{error.message}}",
-        level: "error",
-        tags: {
-          source: "rigger",
-          conversation_id: "{{conversation_id}}"
-        },
-        extra: {
-          stack: "{{error.stack}}",
-          context: "{{error.context}}"
-        }
-      }
-    }
-  },
-  enabled: true
-}
-```
-- Logs errors to external monitoring
-- Includes full error context
-- Helps track issues in production
-
-**4. Code Formatting**:
-```typescript
-{
-  name: "Auto-Format Code",
-  trigger: "on-tool-use",
-  action: {
-    type: "bash",
-    config: {
-      command: "prettier --write {{file}} || eslint --fix {{file}}",
-      toolFilter: ["Write"],
-      fileFilter: "\\.(js|ts|jsx|tsx)$"  // Only for JS/TS files
-    }
-  },
-  enabled: true
-}
-```
-- Automatically formats created files
-- Runs prettier/eslint on write
-- Only for JavaScript/TypeScript files
-
-**5. Backup Creation**:
-```typescript
-{
-  name: "Create Backup",
-  trigger: "on-prompt-submit",
-  action: {
-    type: "bash",
-    config: {
-      command: "tar -czf backups/backup-$(date +%Y%m%d-%H%M%S).tar.gz .",
-      workingDirectory: "{{project_root}}"
-    }
-  },
-  enabled: true
-}
-```
-- Creates timestamped backup before each request
-- Stores in backups/ directory
-- Useful for experiments with AI changes
-
-**6. API Webhooks**:
-```typescript
-{
-  name: "Custom Webhook",
-  trigger: "on-response-complete",
-  action: {
-    type: "api-call",
-    config: {
-      url: "https://your-api.com/webhooks/agent",
-      method: "POST",
-      body: {
-        event: "response_complete",
-        data: {
-          tokens: "{{debug.tokens}}",
-          cost: "{{debug.cost}}",
-          duration: "{{debug.latency}}",
-          summary: "{{summary}}"
-        }
-      }
-    }
-  },
-  enabled: true
-}
-```
-- POST event data to your API
-- Include metrics and summaries
-- Integrate with existing systems
-
-#### Creating Custom Hooks
-
-**Via UI** (Config Panel → Hooks):
-1. Click "Add Hook" or "Use Template"
-2. Configure:
-   - **Name**: Descriptive name
-   - **Trigger**: Select event type
-   - **Action Type**: bash, api-call, notification, or custom
-   - **Action Config**: Specific to action type
-   - **Conditions**: Optional filters
-3. Test hook execution
-4. Enable and save
-
-**Programmatically**:
-```typescript
-const config = useStore((state) => state.config);
-const setConfig = useStore((state) => state.setConfig);
-
-setConfig({
-  ...config,
-  hooks: [
-    ...config.hooks,
-    {
-      name: "Log to File",
-      trigger: "on-tool-use",
-      action: {
-        type: "bash",
-        config: {
-          command: "echo '$(date): {{tool}} used' >> tool-usage.log",
-          toolFilter: ["Write", "Edit", "Bash"]
-        }
-      },
-      enabled: true
-    }
-  ]
-});
-```
+1. **Git Auto-Commit**: Auto-commit on Write/Edit with AI-generated message
+2. **Slack Notifications**: Send summary on response complete
+3. **Error Logging**: Log to Sentry/monitoring on errors
+4. **Code Formatting**: Run prettier/eslint on file writes
+5. **Backup Creation**: Timestamped backup before each request
+6. **API Webhooks**: POST metrics to your API
 
 #### Variable Interpolation
 
-Hooks support template variables that are replaced at execution time:
+Templates support runtime variables:
+- All: `{{conversation_id}}`, `{{timestamp}}`, `{{user_message}}`
+- Tool use: `{{tool}}`, `{{file}}`, `{{description}}`
+- Response: `{{summary}}`, `{{debug.tokens}}`, `{{debug.cost}}`
+- Error: `{{error.message}}`, `{{error.stack}}`
 
-```typescript
-// Available in all hooks:
-{{conversation_id}}   // Current conversation ID
-{{timestamp}}         // ISO timestamp
-{{user_message}}      // Latest user message
+#### Execution
 
-// on-tool-use specific:
-{{tool}}              // Tool name (e.g., "Write")
-{{file}}              // File path (for file operations)
-{{description}}       // AI-generated description of action
+Hooks run asynchronously in parallel, don't block agent execution. Errors logged but don't fail requests.
 
-// on-response-complete specific:
-{{summary}}           // Response summary
-{{debug.tokens}}      // Token count
-{{debug.cost}}        // Request cost
-{{debug.latency}}     // Response time
-
-// on-error specific:
-{{error.message}}     // Error message
-{{error.stack}}       // Stack trace
-{{error.context}}     // Additional context
-```
-
-#### Hook Execution Flow
-
-```
-Event occurs (e.g., tool use)
-  ↓
-Filter hooks by trigger type
-  ↓
-Check conditions (if any)
-  ↓
-Execute enabled hooks in parallel
-  ↓
-Interpolate variables
-  ↓
-Execute action (bash, API call, etc.)
-  ↓
-Log results
-  ↓
-Continue normal flow (hooks don't block)
-```
-
-**Error handling:**
-- Hook failures don't stop agent execution
-- Errors logged to backend logs
-- Failed hooks can be debugged via logs
-
-#### Hook State Management
-
-- **Zustand**: `config.hooks` array
-- **Persistence**: Saved with conversation
-- **Execution**: Backend `backend/src/hooks/executor.ts`
-- **Logging**: Hook execution results logged
-
-#### Backend Implementation
-
-Hooks are executed by `backend/src/hooks/executor.ts`:
-
-```typescript
-export async function executeHooks(
-  trigger: TriggerType,
-  context: HookContext
-) {
-  const matchingHooks = hooks.filter(
-    h => h.enabled && h.trigger === trigger
-  );
-
-  await Promise.all(
-    matchingHooks.map(hook => executeHook(hook, context))
-  );
-}
-
-async function executeHook(hook: HookConfig, context: HookContext) {
-  // Interpolate variables
-  const config = interpolateVariables(hook.action.config, context);
-
-  switch (hook.action.type) {
-    case 'bash':
-      return execBashCommand(config.command);
-    case 'api-call':
-      return makeHttpRequest(config);
-    case 'notification':
-      return sendNotification(config);
-    // ...
-  }
-}
-```
+**State**: `config.hooks` (Zustand)
+**Execution**: `backend/src/hooks/executor.ts`
+**Management**: Config Panel → Hooks
 
 #### Best Practices
 
-**Security:**
-- Be careful with bash hooks - validate inputs
-- Don't include secrets in hook configs (use environment variables)
-- Limit hook permissions to what's needed
-
-**Performance:**
-- Hooks execute asynchronously (don't block agent)
+- Use environment variables for secrets (not hook configs)
+- Test individually before enabling
 - Use conditions to avoid unnecessary executions
-- Be mindful of external API rate limits
-
-**Debugging:**
-- Check backend logs for hook execution results
-- Test hooks individually before enabling
-- Use descriptive names for easier troubleshooting
 
 ## Technical Details
 
@@ -1282,8 +841,9 @@ Important interfaces:
 
 ### Database
 
-**3 tables** (JSONB for flexibility):
+**4 tables** (JSONB for flexibility):
 - `conversations` - Full conversation (config + messages)
+- `agent_sessions` - Session lifecycle and metrics (NEW)
 - `presets` - Saved configurations
 - `usage_logs` - Per-request metrics
 
@@ -1438,21 +998,28 @@ config: {
 
 ## Important Files
 
-- `lib/store.ts`: Global state management (Zustand) including Skills state
-- `lib/types.ts`: Shared TypeScript interfaces (30+ Agent SDK parameters, SkillMetadata)
-- `lib/api-client.ts`: Backend API wrapper (includes Skills API methods)
-- `lib/hook-templates.ts`: Pre-built hook configurations for various integrations
-- `backend/src/routes/agent.ts`: Agent SDK integration and tool configuration (handles settingSources)
-- `backend/src/routes/skills.ts`: Skills CRUD API (list, get, create, update, delete)
-- `backend/db/schema.sql`: Database schema
-- `components/agent-tester.tsx`: Main two-panel layout container
-- `components/config-panel.tsx`: Comprehensive configuration UI with collapsible sections (includes Skills Manager)
-- `components/tool-selector.tsx`: Tool selection component (includes Skill tool)
-- `components/skills-manager.tsx`: Skills management UI (discovery, creation, editing)
-- `components/chat-interface.tsx`: Tabbed interface with Chat and Debug views
-- `components/debug-panel.tsx`: Debug metrics display (embedded in ChatInterface)
-- `.claude/skills/README.md`: Comprehensive Skills documentation
-- `.claude/skills/example-*/SKILL.md`: Example skill definitions
+**Backend Core:**
+- `backend/src/session-manager.ts`: Session lifecycle, AbortController registry, emergency stop
+- `backend/src/routes/sessions.ts`: Session API endpoints (stop, force-kill, status)
+- `backend/src/routes/agent.ts`: Agent SDK integration, session creation/resumption
+- `backend/src/routes/skills.ts`: Skills CRUD API
+- `backend/db/schema.sql`: Database schema (conversations, agent_sessions, presets, usage_logs)
+
+**Frontend State & API:**
+- `lib/store.ts`: Zustand store (config, messages, sessions, skills)
+- `lib/types.ts`: TypeScript interfaces (AgentSDKConfig, SessionMetadata, etc.)
+- `lib/api-client.ts`: Backend API wrapper
+- `lib/hook-templates.ts`: Pre-built hook configurations
+
+**Components:**
+- `components/agent-tester.tsx`: Main two-panel layout
+- `components/config-panel.tsx`: Configuration UI (tools, MCP, skills, hooks)
+- `components/chat-interface.tsx`: Chat + Debug tabbed interface
+- `components/session-control-bar.tsx`: Emergency stop controls (UI)
+
+**Configuration:**
+- `.claude/skills/*/SKILL.md`: Skill definitions and documentation
+- `.claude/agents/*.json`: Custom agent definitions
 - `docker-compose.yml`: Service orchestration
 
 ## Testing the Application

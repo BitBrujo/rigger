@@ -2,6 +2,10 @@
 
 Quick reference for the Session Management API.
 
+> **Implementation Status**: This document describes both **implemented** and **planned** features. See each endpoint for status.
+>
+> **Note**: Sessions are typically **auto-created** by `/api/agent/stream` - you rarely need to call `POST /api/sessions` directly.
+
 ## Base URL
 
 ```
@@ -12,6 +16,8 @@ Quick reference for the Session Management API.
 
 ### Create Session
 
+**Status**: ✅ Implemented (rarely used - sessions auto-created by `/api/agent/stream`)
+
 ```http
 POST /api/sessions
 ```
@@ -20,7 +26,6 @@ POST /api/sessions
 
 ```json
 {
-  "pattern": "ephemeral" | "long-running" | "hybrid" | "single-container",
   "config": {
     "model": "claude-3-5-sonnet-20241022",
     "systemPrompt": "Your system prompt",
@@ -28,14 +33,7 @@ POST /api/sessions
     "allowedTools": ["Read", "Write", "Edit", "Bash"],
     "workingDirectory": "/app/workspace"
   },
-  "conversationId": 123,
-  "maxIdleTimeMs": 1800000,
-  "maxLifetimeMs": 86400000,
-  "maxBudgetUsd": 5.00,
-  "maxTurns": 50,
-  "tags": ["bug-fix", "urgent"],
-  "description": "Fix authentication bug",
-  "userId": "user_123"
+  "conversationId": 123  // Optional - link to conversation
 }
 ```
 
@@ -43,44 +41,64 @@ POST /api/sessions
 
 ```json
 {
-  "id": "sess_abc123",
-  "sessionId": "",
-  "pattern": "ephemeral",
-  "status": "initializing",
-  "config": { ... },
-  "createdAt": "2025-01-15T10:00:00Z",
-  "totalCost": 0,
-  "totalTokens": 0,
-  "numTurns": 0,
-  "toolsUsed": []
+  "success": true,
+  "session": {
+    "id": "a1b2c3d4-e5f6-...",
+    "sdkSessionId": null,
+    "status": "initializing",
+    "conversationId": 123,
+    "config": { ... },
+    "createdAt": "2025-01-15T10:00:00.000Z",
+    "totalCost": 0,
+    "totalTokens": 0,
+    "numTurns": 0,
+    "toolsUsed": [],
+    "abortRequested": false,
+    "forceKillRequested": false
+  }
 }
 ```
 
 ### List Sessions
 
+**Status**: ✅ Implemented
+
 ```http
-GET /api/sessions?pattern=ephemeral&status=active&userId=user_123&tags=bug-fix,urgent&page=1&pageSize=50
+GET /api/sessions?status=active&conversationId=123&limit=50
 ```
+
+**Query Parameters:**
+- `status` - Filter by status (initializing, active, idle, stopping, completed, error, terminated)
+- `conversationId` - Filter by conversation ID
+- `limit` - Max results (default: 50)
 
 **Response:**
 
 ```json
 {
+  "success": true,
   "sessions": [
     {
-      "id": "sess_abc123",
-      "pattern": "ephemeral",
+      "id": "a1b2c3d4-...",
+      "sdkSessionId": "sdk_xyz...",
       "status": "active",
-      ...
+      "conversationId": 123,
+      "totalCost": 0.35,
+      "totalTokens": 18500,
+      "numTurns": 3,
+      "toolsUsed": ["Read", "Edit"],
+      "currentTool": "Bash",
+      "createdAt": "2025-01-15T10:00:00.000Z",
+      "lastActivityAt": "2025-01-15T10:05:00.000Z"
     }
   ],
-  "total": 150,
-  "page": 1,
-  "pageSize": 50
+  "count": 15
 }
 ```
 
 ### Get Session
+
+**Status**: ✅ Implemented
 
 ```http
 GET /api/sessions/:id
@@ -90,260 +108,205 @@ GET /api/sessions/:id
 
 ```json
 {
-  "id": "sess_abc123",
-  "sessionId": "sdk_sess_xyz789",
-  "pattern": "ephemeral",
-  "status": "active",
-  "conversationId": 42,
-  "config": { ... },
-  "createdAt": "2025-01-15T10:00:00Z",
-  "startedAt": "2025-01-15T10:00:05Z",
-  "lastActivityAt": "2025-01-15T10:05:00Z",
-  "totalCost": 0.35,
-  "totalTokens": 18500,
-  "numTurns": 3,
-  "toolsUsed": ["Read", "Edit", "Bash"],
-  "maxIdleTimeMs": 1800000,
-  "maxBudgetUsd": 0.50,
-  "description": "Fix authentication bug",
-  "tags": ["bug-fix", "auth"]
-}
-```
-
-### Update Session
-
-```http
-PATCH /api/sessions/:id
-```
-
-**Request Body:**
-
-```json
-{
-  "status": "idle",
-  "tags": ["completed", "verified"],
-  "description": "Bug fix completed and verified"
-}
-```
-
-**Response:**
-
-```json
-{
-  "id": "sess_abc123",
-  "status": "idle",
-  "tags": ["completed", "verified"],
-  "description": "Bug fix completed and verified",
-  ...
-}
-```
-
-### Execute Message
-
-```http
-POST /api/sessions/:id/message
-```
-
-**Request Body:**
-
-```json
-{
-  "prompt": "Fix the authentication bug in src/auth/user.ts",
-  "streaming": true
-}
-```
-
-**Streaming Response (SSE):**
-
-```
-data: {"type":"stream_event","data":{...}}
-data: {"type":"message","data":{...}}
-data: {"type":"done","latency":5300,"usage":{...},"cost":0.35}
-```
-
-**Batch Response (JSON):**
-
-```json
-{
-  "response": {
-    "role": "assistant",
-    "content": "I've fixed the authentication bug..."
-  },
-  "result": {
-    "uuid": "msg_xyz",
-    "total_cost_usd": 0.35,
-    "usage": { ... }
-  },
-  "latency": 5300,
+  "success": true,
   "session": {
-    "id": "sess_abc123",
+    "id": "a1b2c3d4-...",
+    "sdkSessionId": "sdk_xyz...",
+    "status": "active",
+    "conversationId": 123,
+    "config": { ... },
+    "createdAt": "2025-01-15T10:00:00.000Z",
+    "startedAt": "2025-01-15T10:00:05.000Z",
+    "lastActivityAt": "2025-01-15T10:05:00.000Z",
+    "completedAt": null,
+    "terminatedAt": null,
+    "terminationReason": null,
     "totalCost": 0.35,
-    "numTurns": 1,
-    ...
+    "totalTokens": 18500,
+    "totalInputTokens": 12000,
+    "totalOutputTokens": 6500,
+    "totalCachedTokens": 5000,
+    "numTurns": 3,
+    "toolsUsed": ["Read", "Edit", "Bash"],
+    "currentTool": "Bash",
+    "messages": [...],
+    "abortRequested": false,
+    "forceKillRequested": false
   }
 }
 ```
 
-### Terminate Session
+### Graceful Stop
+
+**Status**: ✅ Implemented
 
 ```http
-POST /api/sessions/:id/terminate
+POST /api/sessions/:id/stop
 ```
 
-**Request Body:**
-
-```json
-{
-  "reason": "user_requested" | "idle_timeout" | "budget_exceeded" | "max_turns" | "error"
-}
-```
-
-**Response:**
-
-```json
-{
-  "session": {
-    "id": "sess_abc123",
-    "status": "terminated",
-    "terminatedAt": "2025-01-15T10:30:00Z",
-    ...
-  },
-  "reason": "user_requested"
-}
-```
-
-### Delete Session
-
-```http
-DELETE /api/sessions/:id
-```
+Requests graceful shutdown - agent checks abort flag periodically and stops cleanly (typical delay: 1-5 seconds).
 
 **Response:**
 
 ```json
 {
   "success": true,
-  "id": "sess_abc123"
+  "message": "Stop requested. Session will terminate gracefully.",
+  "session": {
+    "id": "a1b2c3d4-...",
+    "status": "stopping",
+    "abortRequested": true,
+    ...
+  }
 }
 ```
 
-### Get Statistics
+### Force Kill
+
+**Status**: ✅ Implemented
 
 ```http
-GET /api/sessions/stats/summary
+POST /api/sessions/:id/force-kill
 ```
+
+Emergency termination - immediately aborts execution, kills processes, cleans up resources.
 
 **Response:**
 
 ```json
 {
-  "totalSessions": 150,
-  "activeSessions": 12,
-  "completedSessions": 130,
-  "errorSessions": 8,
-  "totalCost": 45.32,
-  "totalTokens": 2500000,
-  "avgSessionDuration": 3600000,
-  "byPattern": {
-    "ephemeral": {
-      "count": 100,
-      "avgCost": 0.25,
-      "avgTokens": 15000,
-      "avgDuration": 120000
-    },
-    "long-running": {
-      "count": 10,
-      "avgCost": 8.50,
-      "avgTokens": 450000,
-      "avgDuration": 28800000
-    },
-    "hybrid": {
-      "count": 40,
-      "avgCost": 0.80,
-      "avgTokens": 45000,
-      "avgDuration": 7200000
-    }
+  "success": true,
+  "message": "Session force killed",
+  "session": {
+    "id": "a1b2c3d4-...",
+    "status": "terminated",
+    "terminatedAt": "2025-01-15T10:30:00.000Z",
+    "terminationReason": "emergency_stop",
+    "abortRequested": true,
+    "forceKillRequested": true,
+    ...
   }
 }
 ```
 
+### Get Session Status
+
+**Status**: ✅ Implemented
+
+```http
+GET /api/sessions/:id/status
+```
+
+Lightweight endpoint for polling session status (optimized for real-time UI updates).
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "status": "active",
+  "currentTool": "Bash",
+  "totalCost": 0.35,
+  "totalTokens": 18500,
+  "numTurns": 3,
+  "lastActivityAt": "2025-01-15T10:05:00.000Z",
+  "abortRequested": false,
+  "forceKillRequested": false
+}
+```
+
+### Update Session Metadata
+
+**Status**: 📅 Planned
+
+```http
+PATCH /api/sessions/:id
+```
+
+Update session metadata (tags, description, etc.). Not yet implemented.
+
+### Execute Message in Session
+
+**Status**: 📅 Planned
+
+```http
+POST /api/sessions/:id/message
+```
+
+Execute message in specific session context. Use `/api/agent/stream` instead (auto-handles session creation/resumption).
+
+### Delete Session
+
+**Status**: ✅ Implemented
+
+```http
+DELETE /api/sessions/:id
+```
+
+Deletes session from database. If session is active, force-kills it first.
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Session deleted"
+}
+```
+
+### Get Statistics
+
+**Status**: 📅 Planned
+
+```http
+GET /api/sessions/stats/summary
+```
+
+Aggregate statistics across sessions. Not yet implemented - use `/api/analytics` endpoints for usage statistics.
+
 ## Session Statuses
 
-- `initializing` - Session created but SDK not yet started
-- `active` - Session running and accepting messages
-- `idle` - Session inactive but can be resumed
+- `initializing` - Session created, AbortController initialized
+- `active` - Session running and executing agent queries
+- `idle` - Session paused after response, can be resumed (5-min timeout)
+- `stopping` - Graceful stop requested, agent checking abort flag
 - `completed` - Session finished successfully
 - `error` - Session encountered an error
-- `terminated` - Session manually or automatically terminated
+- `terminated` - Session force-killed or emergency stopped
 
 ## Session Patterns
 
-### Ephemeral
+> **Implementation Status**: 📅 Pattern-specific lifecycle management is **planned** but not yet implemented.
+>
+> Currently, all sessions use a **generic 5-minute idle timeout** regardless of pattern. The `pattern` field exists in the database but doesn't affect behavior.
+>
+> Use `/api/agent/stream` for normal usage - it auto-creates sessions.
 
-**Best for**: One-off tasks, batch processing
+### Current Behavior (Implemented)
 
-**Auto-cleanup**: Deleted 1 minute after completion
+- **Auto-creation**: Sessions created automatically by `/api/agent/stream`
+- **Idle timeout**: 5 minutes for all sessions
+- **Cleanup**: Sessions marked idle after 5 minutes of inactivity
+- **Emergency stop**: Two-tier (graceful + force kill) available for all sessions
+- **Resumption**: Send same `sessionId` to resume within idle window
 
-**Example**:
-```javascript
-const session = await createSession({
-  pattern: 'ephemeral',
-  maxIdleTimeMs: 300000,  // 5 minutes
-  maxBudgetUsd: 0.50
-});
-```
+### Planned Pattern-Based Behavior
 
-### Long-Running
+**Ephemeral** (planned):
+- Auto-cleanup 1 minute after completion
+- Best for: one-off tasks, batch processing
 
-**Best for**: Continuous services, real-time monitoring
+**Long-Running** (planned):
+- Never auto-cleanup, manual termination required
+- Best for: continuous services, monitoring
 
-**Auto-cleanup**: Never (manual termination required)
+**Hybrid** (planned):
+- Auto-cleanup after configurable idle timeout
+- Best for: intermittent interaction, cost optimization
 
-**Example**:
-```javascript
-const session = await createSession({
-  pattern: 'long-running',
-  maxLifetimeMs: 86400000,  // 24 hours
-  maxBudgetUsd: 10.00
-});
-```
-
-### Hybrid
-
-**Best for**: Intermittent interaction, cost optimization
-
-**Auto-cleanup**: After idle timeout
-
-**Example**:
-```javascript
-const session = await createSession({
-  pattern: 'hybrid',
-  conversationId: 123,
-  maxIdleTimeMs: 1800000,  // 30 minutes
-  config: {
-    resumeSessionId: 'sess_previous'
-  }
-});
-```
-
-### Single-Container
-
-**Best for**: Multi-agent simulations, agent collaboration
-
-**Auto-cleanup**: Never (manual termination required)
-
-**Example**:
-```javascript
-const session = await createSession({
-  pattern: 'single-container',
-  config: {
-    customAgents: {
-      'agent1': { systemPrompt: '...' },
-      'agent2': { systemPrompt: '...' }
-    }
-  }
-});
-```
+**Single-Container** (planned):
+- Multiple agents in one session container
+- Best for: multi-agent simulations
 
 ## Error Handling
 
@@ -393,141 +356,89 @@ Currently no rate limits are enforced, but consider implementing:
 
 ## Examples
 
-### Quick Bug Fix (Ephemeral)
+### Quick Agent Request (Auto-creates Session)
 
 ```javascript
-async function fixBug(description) {
-  // Create session
-  const session = await fetch('/api/sessions', {
+async function askAgent(message, config) {
+  // Sessions auto-created by /api/agent/stream
+  const response = await fetch('/api/agent/stream', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      pattern: 'ephemeral',
+      message,
       config: {
         model: 'claude-3-5-sonnet-20241022',
-        systemPrompt: 'Fix bugs in code',
+        systemPrompt: 'You are a helpful assistant',
         maxTurns: 10,
-        allowedTools: ['Read', 'Edit', 'Bash']
-      },
-      maxBudgetUsd: 0.50,
-      tags: ['bug-fix'],
-      description
-    })
-  }).then(r => r.json());
-
-  // Execute fix
-  const response = await fetch(`/api/sessions/${session.id}/message`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      prompt: `Fix: ${description}`,
-      streaming: false
-    })
-  }).then(r => r.json());
-
-  return response;
-}
-
-await fixBug('Authentication timeout in user service');
-```
-
-### Email Monitor (Long-Running)
-
-```javascript
-async function startEmailMonitor() {
-  // Create session
-  const session = await fetch('/api/sessions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      pattern: 'long-running',
-      config: {
-        model: 'claude-3-5-sonnet-20241022',
-        systemPrompt: 'Triage incoming emails',
-        maxTurns: 1000,
-        allowedTools: ['WebFetch', 'Write']
-      },
-      maxLifetimeMs: 86400000,  // 24 hours
-      maxBudgetUsd: 10.00,
-      tags: ['email', 'automation'],
-      description: 'Email triage agent'
-    })
-  }).then(r => r.json());
-
-  // Process emails continuously
-  while (true) {
-    const emails = await fetchNewEmails();
-
-    for (const email of emails) {
-      await fetch(`/api/sessions/${session.id}/message`, {
-        method: 'POST',
-        body: JSON.stringify({
-          prompt: `Triage: ${email.subject}`,
-          streaming: true
-        })
-      });
-    }
-
-    await new Promise(r => setTimeout(r, 60000)); // Check every minute
-  }
-}
-```
-
-### Research Assistant (Hybrid)
-
-```javascript
-async function askResearchQuestion(conversationId, question) {
-  // Check for existing session
-  let sessionId = localStorage.getItem(`research_session_${conversationId}`);
-  let session;
-
-  if (sessionId) {
-    // Try to get existing session
-    try {
-      session = await fetch(`/api/sessions/${sessionId}`).then(r => r.json());
-
-      // If terminated/completed, create new one
-      if (session.status === 'terminated' || session.status === 'completed') {
-        session = null;
+        allowedTools: ['Read', 'Write', 'Edit'],
+        ...config
       }
-    } catch {
-      session = null;
-    }
-  }
-
-  // Create new session if needed
-  if (!session) {
-    session = await fetch('/api/sessions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        pattern: 'hybrid',
-        conversationId,
-        config: {
-          model: 'claude-3-5-sonnet-20241022',
-          systemPrompt: 'Deep research assistant',
-          maxTurns: 50,
-          allowedTools: ['WebSearch', 'WebFetch', 'Write', 'Read']
-        },
-        maxIdleTimeMs: 1800000,  // 30 minutes
-        maxBudgetUsd: 2.00,
-        tags: ['research'],
-        description: 'Research session'
-      })
-    }).then(r => r.json());
-
-    localStorage.setItem(`research_session_${conversationId}`, session.id);
-  }
-
-  // Ask question
-  const response = await fetch(`/api/sessions/${session.id}/message`, {
-    method: 'POST',
-    body: JSON.stringify({
-      prompt: question,
-      streaming: true
     })
   });
 
-  return response;
+  // Handle SSE stream
+  const reader = response.body.getReader();
+  // ... process stream
+}
+
+await askAgent('Fix the authentication bug in src/auth/user.ts');
+```
+
+### Resume Existing Session
+
+```javascript
+async function resumeSession(sessionId, message) {
+  const response = await fetch('/api/agent/stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message,
+      sessionId,  // Pass existing session ID to resume
+      config: { /* config from original session */ }
+    })
+  });
+
+  // Session status updated to 'active', abort signal reconnected
+}
+```
+
+### Emergency Stop
+
+```javascript
+async function stopSession(sessionId, emergency = false) {
+  const endpoint = emergency ? 'force-kill' : 'stop';
+
+  const response = await fetch(`/api/sessions/${sessionId}/${endpoint}`, {
+    method: 'POST'
+  }).then(r => r.json());
+
+  console.log(response.message);
+  // Graceful: "Stop requested. Session will terminate gracefully."
+  // Force: "Session force killed"
+}
+
+// Request graceful stop (5-second grace period)
+await stopSession('session-id-123', false);
+
+// Emergency termination (immediate)
+await stopSession('session-id-123', true);
+```
+
+### Poll Session Status
+
+```javascript
+async function monitorSession(sessionId) {
+  const interval = setInterval(async () => {
+    const status = await fetch(`/api/sessions/${sessionId}/status`)
+      .then(r => r.json());
+
+    console.log(`Status: ${status.status}`);
+    console.log(`Current tool: ${status.currentTool || 'none'}`);
+    console.log(`Cost: $${status.totalCost.toFixed(4)}`);
+
+    if (['completed', 'error', 'terminated'].includes(status.status)) {
+      clearInterval(interval);
+    }
+  }, 1000);  // Poll every second
 }
 ```

@@ -186,19 +186,24 @@ class SessionManager {
     const updates: string[] = [];
     const params: any[] = [];
     let paramIndex = 1;
+    let totalTokensIncrement = 0;
 
     if (metrics.inputTokens !== undefined) {
       updates.push(`total_input_tokens = total_input_tokens + $${paramIndex++}`);
       params.push(metrics.inputTokens);
-      updates.push(`total_tokens = total_tokens + $${paramIndex++}`);
-      params.push(metrics.inputTokens);
+      totalTokensIncrement += metrics.inputTokens;
     }
 
     if (metrics.outputTokens !== undefined) {
       updates.push(`total_output_tokens = total_output_tokens + $${paramIndex++}`);
       params.push(metrics.outputTokens);
+      totalTokensIncrement += metrics.outputTokens;
+    }
+
+    // Update total_tokens once with the sum of input and output tokens
+    if (totalTokensIncrement > 0) {
       updates.push(`total_tokens = total_tokens + $${paramIndex++}`);
-      params.push(metrics.outputTokens);
+      params.push(totalTokensIncrement);
     }
 
     if (metrics.cachedTokens !== undefined) {

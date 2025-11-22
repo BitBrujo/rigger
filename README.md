@@ -16,9 +16,10 @@ Think of it as **mission control for AI agents**—you see everything happening 
 
 **Core Features:**
 - **19 built-in tools** the agent can use (files, bash, web, more)
+- **Session management** with two-tier emergency stop (graceful + force kill)
 - **Real-time debug view** showing tokens, costs, and API calls
 - **Live streaming** so you watch responses generate
-- **Full persistence** with PostgreSQL for all conversations
+- **Full persistence** with PostgreSQL for conversations and sessions
 
 **Advanced Stuff:**
 - **MCP servers** to connect external tools (GitHub, Notion, browsers, etc.)
@@ -204,8 +205,15 @@ rigger/
 The backend exposes these REST endpoints:
 
 **Agent:**
-- `POST /api/agent/stream` → Stream responses (SSE)
+- `POST /api/agent/stream` → Stream responses (SSE, auto-creates/resumes sessions)
 - `POST /api/agent/message` → Batch responses
+
+**Sessions:**
+- `GET/POST /api/sessions/:id?` → List/create sessions
+- `POST /api/sessions/:id/stop` → Graceful stop (5-second grace period)
+- `POST /api/sessions/:id/force-kill` → Emergency termination (immediate)
+- `GET /api/sessions/:id/status` → Lightweight status polling
+- `DELETE /api/sessions/:id` → Delete session
 
 **Conversations:**
 - `GET/POST/PUT/DELETE /api/conversations/:id?` → CRUD
@@ -226,9 +234,10 @@ The backend exposes these REST endpoints:
 
 ## Want to Learn More?
 
+- **`CLAUDE.md`** → Comprehensive developer guide (architecture, sessions, advanced features)
 - **`.claude/skills/README.md`** → Deep dive into the skills system
-- **`docs/HOSTING_PATTERNS.md`** → Session patterns and deployment
-- **`examples/session-patterns.js`** → Code examples
+- **`docs/API_SESSIONS.md`** → Session API reference and patterns
+- **`docs/HOSTING_PATTERNS.md`** → Session deployment patterns
 
 ## Ports Reference
 

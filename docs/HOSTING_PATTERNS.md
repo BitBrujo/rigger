@@ -1,26 +1,33 @@
 # Hosting Patterns for Agent SDK
 
-This document describes the hosting patterns implemented in Rigger for deploying Claude Agent SDK applications in production environments.
+This document describes session hosting patterns for deploying Claude Agent SDK applications.
+
+> **Implementation Status**: Pattern-specific lifecycle management is **planned** but not yet fully implemented.
+>
+> **Current behavior**: All sessions use generic 5-minute idle timeout. Sessions are auto-created by `/api/agent/stream`.
+>
+> See [API_SESSIONS.md](./API_SESSIONS.md) for implemented API endpoints.
 
 ## Overview
 
-Rigger now supports four hosting patterns based on Anthropic's official hosting guide:
+Four hosting patterns are planned, based on Anthropic's official hosting guide:
 
-1. **Ephemeral Sessions** - One-off tasks that terminate on completion
-2. **Long-Running Sessions** - Persistent sessions for continuous operation
-3. **Hybrid Sessions** - Resumable sessions with state hydration
-4. **Single-Container** - Multiple agents in one container (for simulations)
+1. **Ephemeral Sessions** (📅 Planned) - One-off tasks that terminate on completion
+2. **Long-Running Sessions** (📅 Planned) - Persistent sessions for continuous operation
+3. **Hybrid Sessions** (📅 Planned) - Resumable sessions with state hydration
+4. **Single-Container** (📅 Planned) - Multiple agents in one container (for simulations)
 
 ## Architecture
 
 ### Session Manager
 
-The `SessionManager` service (`backend/src/services/session-manager.ts`) is a singleton that manages all active sessions in memory:
+The `SessionManager` service (`backend/src/session-manager.ts`) is a singleton that manages all active sessions:
 
-- **Lifecycle Management**: Create, start, update, complete, and terminate sessions
-- **Activity Tracking**: Record cost, tokens, turns, and tool usage
-- **Auto-Cleanup**: Automatically terminate idle or over-budget sessions
-- **Statistics**: Aggregate metrics across all sessions
+- **Lifecycle Management**: ✅ Create, resume, stop (graceful + force kill), complete, error
+- **Activity Tracking**: ✅ Record cost, tokens, turns, tools used, current tool
+- **Auto-Cleanup**: ✅ Terminates idle sessions (>5 minutes inactive) every 60 seconds
+- **Abort Control**: ✅ Two-tier emergency stop with AbortController registry
+- **Statistics**: 📅 Planned - use `/api/analytics` for current usage stats
 
 ### Database Schema
 
@@ -65,16 +72,20 @@ CREATE TABLE agent_sessions (
 
 All session endpoints are mounted at `/api/sessions`:
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/sessions` | Create new session |
-| GET | `/api/sessions` | List sessions with filters |
-| GET | `/api/sessions/:id` | Get session by ID |
-| PATCH | `/api/sessions/:id` | Update session metadata |
-| POST | `/api/sessions/:id/message` | Execute message in session |
-| POST | `/api/sessions/:id/terminate` | Terminate session |
-| DELETE | `/api/sessions/:id` | Delete session |
-| GET | `/api/sessions/stats/summary` | Get session statistics |
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
+| POST | `/api/sessions` | Create new session | ✅ |
+| GET | `/api/sessions` | List sessions (status, conversationId, limit) | ✅ |
+| GET | `/api/sessions/:id` | Get session by ID | ✅ |
+| POST | `/api/sessions/:id/stop` | Request graceful stop (5-sec grace) | ✅ |
+| POST | `/api/sessions/:id/force-kill` | Emergency termination (immediate) | ✅ |
+| GET | `/api/sessions/:id/status` | Lightweight status polling | ✅ |
+| DELETE | `/api/sessions/:id` | Delete session | ✅ |
+| PATCH | `/api/sessions/:id` | Update metadata | 📅 Planned |
+| POST | `/api/sessions/:id/message` | Execute message | 📅 Planned |
+| GET | `/api/sessions/stats/summary` | Statistics | 📅 Planned |
+
+**Note**: Sessions are typically auto-created by `/api/agent/stream` - you rarely need to call `POST /api/sessions` directly.
 
 ## Hosting Patterns
 
