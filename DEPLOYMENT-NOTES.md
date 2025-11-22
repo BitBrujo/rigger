@@ -75,7 +75,7 @@ NEXT_PUBLIC_API_URL=http://100.87.169.2:3333/api
 **Backend** (`backend/.env`):
 ```env
 DATABASE_URL=postgresql://agent_user:agent_pass@postgres:5432/agent_db
-ANTHROPIC_API_KEY=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
+ANTHROPIC_API_KEY=your-api-key-here
 NODE_ENV=development
 PORT=3001
 ```
