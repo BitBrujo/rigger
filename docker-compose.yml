@@ -24,7 +24,7 @@ services:
       - "3333:3001"
     environment:
       DATABASE_URL: postgresql://agent_user:agent_pass@postgres:5432/agent_db
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      ANTHROPIC_API_KEY: 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
       NODE_ENV: development
       AGENT_WORKSPACE: /app/workspace
     depends_on:

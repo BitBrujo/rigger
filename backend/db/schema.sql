@@ -174,44 +174,56 @@ CREATE TABLE IF NOT EXISTS todo_items (
     CONSTRAINT todo_items_status_check CHECK (status IN ('pending', 'in_progress', 'completed'))
 );
 
--- Agent Sessions table for hosting patterns
+-- Agent Sessions table for session-based UI
 CREATE TABLE IF NOT EXISTS agent_sessions (
     id VARCHAR(255) PRIMARY KEY,
-    session_id VARCHAR(255),  -- SDK session ID
-    pattern VARCHAR(50) NOT NULL,
+    sdk_session_id VARCHAR(255),  -- SDK session ID from Agent SDK
+    pattern VARCHAR(50) DEFAULT 'ephemeral',
     status VARCHAR(50) NOT NULL DEFAULT 'initializing',
     conversation_id INTEGER REFERENCES conversations(id) ON DELETE SET NULL,
 
-    -- Configuration
+    -- Configuration snapshot (full AgentSDKConfig)
     config JSONB NOT NULL,
 
     -- Lifecycle timestamps
-    created_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     started_at TIMESTAMP,
     last_activity_at TIMESTAMP,
     completed_at TIMESTAMP,
     terminated_at TIMESTAMP,
+    termination_reason VARCHAR(100),  -- 'user_requested', 'emergency_stop', 'budget_exceeded', 'error', 'idle_timeout'
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     -- Resource tracking
     total_cost DECIMAL(10, 6) DEFAULT 0,
     total_tokens INTEGER DEFAULT 0,
+    total_input_tokens INTEGER DEFAULT 0,
+    total_output_tokens INTEGER DEFAULT 0,
+    total_cached_tokens INTEGER DEFAULT 0,
     num_turns INTEGER DEFAULT 0,
     tools_used TEXT[] DEFAULT ARRAY[]::TEXT[],
+    current_tool VARCHAR(100),  -- Currently executing tool
+
+    -- Messages in this session
+    messages JSONB DEFAULT '[]'::jsonb,
 
     -- Session limits
-    max_idle_time_ms BIGINT,
+    max_idle_time_ms BIGINT DEFAULT 300000,  -- 5 minutes default
     max_lifetime_ms BIGINT,
     max_budget_usd DECIMAL(10, 4),
     max_turns INTEGER,
 
     -- Metadata
-    tags JSONB,
+    tags JSONB DEFAULT '{}'::jsonb,
     description TEXT,
     user_id VARCHAR(255),
 
+    -- Abort control
+    abort_requested BOOLEAN DEFAULT FALSE,
+    force_kill_requested BOOLEAN DEFAULT FALSE,
+
     CONSTRAINT agent_sessions_pattern_check CHECK (pattern IN ('ephemeral', 'long-running', 'hybrid', 'single-container')),
-    CONSTRAINT agent_sessions_status_check CHECK (status IN ('initializing', 'active', 'idle', 'completed', 'error', 'terminated'))
+    CONSTRAINT agent_sessions_status_check CHECK (status IN ('initializing', 'active', 'idle', 'stopping', 'completed', 'error', 'terminated'))
 );
 
 -- Indexes for better query performance
@@ -233,7 +245,9 @@ CREATE INDEX IF NOT EXISTS idx_agent_sessions_pattern ON agent_sessions(pattern)
 CREATE INDEX IF NOT EXISTS idx_agent_sessions_status ON agent_sessions(status);
 CREATE INDEX IF NOT EXISTS idx_agent_sessions_user_id ON agent_sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_agent_sessions_created_at ON agent_sessions(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_agent_sessions_session_id ON agent_sessions(session_id);
+CREATE INDEX IF NOT EXISTS idx_agent_sessions_sdk_session_id ON agent_sessions(sdk_session_id);
+CREATE INDEX IF NOT EXISTS idx_agent_sessions_abort_requested ON agent_sessions(abort_requested) WHERE abort_requested = TRUE;
+CREATE INDEX IF NOT EXISTS idx_agent_sessions_last_activity ON agent_sessions(last_activity_at DESC);
 
 -- Insert default Agent SDK presets
 INSERT INTO presets (name, description, model, system_prompt, max_turns, allowed_tools, permission_mode) VALUES

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import pool from '../../db/client';
+import { sessionManager } from '../session-manager.js';
 
 const router = Router();
 
@@ -8,7 +9,7 @@ const router = Router();
 function buildSdkOptions(config: any) {
   const options: any = {
     // Core settings
-    model: config.model || 'claude-3-5-sonnet-20241022',
+    model: config.model || 'claude-sonnet-4-20250514',
     systemPrompt: config.systemPrompt || config.system, // Support both formats
 
     // Agent behavior
@@ -119,13 +120,58 @@ function buildSdkOptions(config: any) {
 
 // Agent SDK streaming endpoint
 router.post('/stream', async (req: Request, res: Response) => {
+  let agentSessionId: string | null = null;
+
   try {
-    const { messages, config, conversationId } = req.body;
+    const { messages, config, conversationId, sessionId: clientSessionId } = req.body;
     const startTime = Date.now();
 
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
+
+    // Validate request
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      res.write(`data: ${JSON.stringify({
+        type: 'error',
+        error: 'No messages provided',
+        name: 'ValidationError'
+      })}\n\n`);
+      res.end();
+      return;
+    }
+
+    // Create or retrieve session
+    if (clientSessionId) {
+      // Resume existing session
+      const existingSession = await sessionManager.getSession(clientSessionId);
+      if (!existingSession) {
+        res.write(`data: ${JSON.stringify({
+          type: 'error',
+          error: 'Session not found',
+          name: 'SessionError'
+        })}\n\n`);
+        res.end();
+        return;
+      }
+      agentSessionId = clientSessionId; // TypeScript knows clientSessionId is string here
+      await sessionManager.updateStatus(clientSessionId, 'active');
+    } else {
+      // Create new session
+      const newSession = await sessionManager.createSession(config, conversationId || null);
+      agentSessionId = newSession.id;
+    }
+
+    // Ensure agentSessionId is set (should always be true at this point)
+    if (!agentSessionId) {
+      throw new Error('Failed to create or retrieve session');
+    }
+
+    // From this point forward, TypeScript knows agentSessionId is string
+    const sessionId: string = agentSessionId;
+
+    // Get abort signal for this session
+    const abortSignal = sessionManager.getAbortSignal(sessionId);
 
     // Extract the last user message as the prompt
     const userPrompt = messages[messages.length - 1]?.content || '';
@@ -136,7 +182,7 @@ router.post('/stream', async (req: Request, res: Response) => {
     let cacheCreationTokens = 0;
     let cacheReadTokens = 0;
     let toolsUsed: string[] = [];
-    let sessionId: string | null = null;
+    let sdkSessionId: string | null = null;
 
     // Build SDK options from config
     const sdkOptions = buildSdkOptions(config);
@@ -150,10 +196,37 @@ router.post('/stream', async (req: Request, res: Response) => {
       }));
     }
 
-    for await (const msg of query({
+    // Send session_created event
+    res.write(`data: ${JSON.stringify({
+      type: 'session_created',
+      session_id: sessionId,
+      timestamp: new Date().toISOString()
+    })}\n\n`);
+
+    // Update session status to active
+    await sessionManager.updateStatus(sessionId, 'active');
+
+    const queryGenerator = query({
       prompt: userPrompt,
       options: sdkOptions
-    })) {
+    });
+
+    // Register query generator for potential cleanup
+    sessionManager.setQueryGenerator(sessionId, queryGenerator);
+
+    for await (const msg of queryGenerator) {
+      // Check for abort signal
+      if (abortSignal?.aborted) {
+        res.write(`data: ${JSON.stringify({
+          type: 'aborted',
+          session_id: sessionId,
+          message: 'Session stopped by user',
+          timestamp: new Date().toISOString()
+        })}\n\n`);
+        await sessionManager.completeSession(sessionId);
+        res.end();
+        return;
+      }
       // Track tools used from stream events and assistant messages
       if (msg.type === 'stream_event') {
         // Tool use detected in streaming content block
@@ -162,12 +235,17 @@ router.post('/stream', async (req: Request, res: Response) => {
           if (toolName && !toolsUsed.includes(toolName)) {
             toolsUsed.push(toolName);
           }
+
+          // Update session with current tool
+          await sessionManager.setCurrentTool(sessionId, toolName);
+
           // Send tool_start event to frontend
           res.write(`data: ${JSON.stringify({
             type: 'tool_start',
             tool_name: toolName,
             tool_use_id: msg.event.content_block.id,
             input: msg.event.content_block.input,
+            session_id: sessionId,
             timestamp: new Date().toISOString()
           })}\n\n`);
 
@@ -237,14 +315,23 @@ router.post('/stream', async (req: Request, res: Response) => {
         })}\n\n`);
       } else if (msg.type === 'system') {
         // System messages (init, hook_response, compact_boundary)
-        sessionId = msg.session_id || null;
+        sdkSessionId = msg.session_id || null;
+
+        // Update session with SDK session ID
+        if (sdkSessionId) {
+          await pool.query(
+            'UPDATE agent_sessions SET sdk_session_id = $1 WHERE id = $2',
+            [sdkSessionId, sessionId]
+          );
+        }
 
         if (msg.subtype === 'init') {
           // Send complete system info to frontend
           res.write(`data: ${JSON.stringify({
             type: 'system_init',
             data: {
-              session_id: msg.session_id,
+              session_id: sessionId,
+              sdk_session_id: msg.session_id,
               cwd: msg.cwd,
               tools: msg.tools,
               mcp_servers: msg.mcp_servers,
@@ -309,6 +396,22 @@ router.post('/stream', async (req: Request, res: Response) => {
         outputTokens = msg.usage.output_tokens;
         cacheCreationTokens = msg.usage.cache_creation_input_tokens || 0;
         cacheReadTokens = msg.usage.cache_read_input_tokens || 0;
+
+        // Update session metrics
+        await sessionManager.updateMetrics(sessionId, {
+          inputTokens,
+          outputTokens,
+          cachedTokens: cacheCreationTokens + cacheReadTokens,
+          cost: msg.total_cost_usd,
+          turns: msg.num_turns || 1,
+          toolsUsed
+        });
+
+        // Clear current tool
+        await sessionManager.setCurrentTool(sessionId, null);
+
+        // Mark session as idle (waiting for next request)
+        await sessionManager.updateStatus(sessionId, 'idle');
 
         // Log to database with message ID deduplication
         if (conversationId && msg.uuid) {
@@ -391,6 +494,8 @@ router.post('/stream', async (req: Request, res: Response) => {
         res.write(`data: ${JSON.stringify({
           type: 'done',
           message_id: msg.uuid, // Include message ID for frontend deduplication
+          session_id: sessionId,
+          sdk_session_id: sdkSessionId,
           latency,
           usage: {
             input_tokens: inputTokens,
@@ -401,7 +506,6 @@ router.post('/stream', async (req: Request, res: Response) => {
           cost: msg.total_cost_usd,
           num_turns: msg.num_turns,
           is_error: msg.is_error,
-          session_id: sessionId,
           tools_used: toolsUsed,
           permission_denials: msg.permission_denials || [],
           timestamp: new Date().toISOString()
@@ -411,10 +515,17 @@ router.post('/stream', async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.error('Agent SDK stream error:', error);
+
+    // Mark session as error if it exists
+    if (agentSessionId) {
+      await sessionManager.errorSession(agentSessionId, error.message);
+    }
+
     res.write(`data: ${JSON.stringify({
       type: 'error',
       error: error.message,
-      name: error.name
+      name: error.name,
+      session_id: agentSessionId // Use agentSessionId here since sessionId may not be defined in catch block
     })}\n\n`);
     res.end();
   }
@@ -425,6 +536,15 @@ router.post('/message', async (req: Request, res: Response) => {
   try {
     const { messages, config, conversationId } = req.body;
     const startTime = Date.now();
+
+    // Validate request
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      res.status(400).json({
+        error: 'No messages provided',
+        type: 'ValidationError'
+      });
+      return;
+    }
 
     // Extract the last user message as the prompt
     const userPrompt = messages[messages.length - 1]?.content || '';

@@ -103,7 +103,7 @@ export default function ChatInterface() {
     const startTime = Date.now();
 
     // Choose API based on SDK mode
-    const streamFn = ApiClient.streamAgentMessage; // Always use Agent SDK
+    const streamFn = ApiClient.streamMessage; // Use the correct endpoint
 
     await streamFn(messages, config, conversationId || undefined, (event) => {
       if (event.type === 'text') {
@@ -464,17 +464,17 @@ export default function ChatInterface() {
       </TabsContent>
 
       {/* Tools Tab */}
-      <TabsContent value="tools" className="flex-1 m-0 data-[state=inactive]:hidden overflow-hidden">
+      <TabsContent value="tools" className="flex-1 m-0 data-[state=inactive]:hidden overflow-auto">
         <ToolsPanel />
       </TabsContent>
 
       {/* Todos Tab */}
-      <TabsContent value="todos" className="flex-1 m-0 data-[state=inactive]:hidden overflow-hidden">
+      <TabsContent value="todos" className="flex-1 m-0 data-[state=inactive]:hidden overflow-auto">
         <TodoPanel />
       </TabsContent>
 
       {/* Debug Tab */}
-      <TabsContent value="debug" className="flex-1 m-0 data-[state=inactive]:hidden overflow-hidden">
+      <TabsContent value="debug" className="flex-1 m-0 data-[state=inactive]:hidden overflow-auto">
         <DebugPanel />
       </TabsContent>
     </Tabs>

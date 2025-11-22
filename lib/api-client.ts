@@ -1,6 +1,13 @@
 import { AgentConfig, Message, AgentResponse, Conversation, Preset, UsageLog, UsageStats } from './types';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333/api';
+// TEMPORARY HARDCODE: Turbopack is not picking up environment variable changes
+const API_BASE_URL = 'http://100.87.169.2:3333/api';
+
+// Debug: Log the actual API URL being used
+if (typeof window !== 'undefined') {
+  console.log('[API Client] Using API_BASE_URL:', API_BASE_URL);
+  console.log('[API Client] HARDCODED for remote access');
+}
 
 export class ApiClient {
   // Agent endpoints (Messages API)
@@ -41,15 +48,31 @@ export class ApiClient {
     conversationId: number | undefined,
     onEvent: (event: any) => void
   ) {
+    console.log('[API Client] Sending request to:', `${API_BASE_URL}/agent/stream`);
+    console.log('[API Client] Payload:', { messages, config, conversationId });
+
     const response = await fetch(`${API_BASE_URL}/agent/stream`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages, config, conversationId }),
     });
 
+    console.log('[API Client] Response status:', response.status, response.statusText);
+    console.log('[API Client] Response headers:', Object.fromEntries(response.headers.entries()));
+
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to stream message');
+      const contentType = response.headers.get('content-type');
+      console.error('[API Client] Error response content-type:', contentType);
+
+      const errorText = await response.text();
+      console.error('[API Client] Error response body:', errorText);
+
+      try {
+        const error = JSON.parse(errorText);
+        throw new Error(error.error || 'Failed to stream message');
+      } catch (parseError) {
+        throw new Error(`Failed to stream message: ${response.status} ${response.statusText}. Response: ${errorText.substring(0, 200)}`);
+      }
     }
 
     const reader = response.body?.getReader();
