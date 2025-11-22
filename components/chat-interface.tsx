@@ -44,6 +44,12 @@ export default function ChatInterface() {
     // Todos
     todoLists,
     addTodoList,
+    // Session state
+    activeSessionId,
+    setActiveSessionId,
+    setActiveSessionStatus,
+    setActiveSessionCost,
+    setCurrentTool,
   } = useAgentStore();
 
   const [input, setInput] = useState('');
@@ -106,6 +112,19 @@ export default function ChatInterface() {
     const streamFn = ApiClient.streamMessage; // Use the correct endpoint
 
     await streamFn(messages, config, conversationId || undefined, (event) => {
+      // Handle session events
+      if (event.type === 'session_created') {
+        setActiveSessionId(event.session_id);
+        setActiveSessionStatus('active');
+      } else if (event.type === 'aborted') {
+        toast.info('Session stopped', {
+          description: 'The session was stopped by user request',
+        });
+        setActiveSessionStatus('terminated');
+        return;
+      }
+
+      // Handle regular events
       if (event.type === 'text') {
         fullText += event.data;
         setStreamingText(fullText);
@@ -126,6 +145,9 @@ export default function ChatInterface() {
         };
         addToolExecution(toolExecution);
         addActiveTool(event.tool_use_id);
+
+        // Update session current tool
+        setCurrentTool(event.tool_name);
 
         // Reload todos when TodoWrite is executed
         if (event.tool_name === 'TodoWrite') {
@@ -185,6 +207,16 @@ export default function ChatInterface() {
         finalMessage = event.data;
       } else if (event.type === 'done') {
         const latency = event.latency || Date.now() - startTime;
+
+        // Update session state
+        if (event.session_id) {
+          setActiveSessionId(event.session_id);
+        }
+        if (event.cost) {
+          setActiveSessionCost(event.cost);
+        }
+        setActiveSessionStatus('idle');
+        setCurrentTool(null);
 
         // Agent SDK always has final message
         addMessage({
@@ -247,7 +279,7 @@ export default function ChatInterface() {
       } else if (event.type === 'error') {
         throw new Error(event.error);
       }
-    });
+    }, activeSessionId);
   };
 
   const handleBatchRequest = async (messages: Message[]) => {

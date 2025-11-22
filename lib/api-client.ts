@@ -46,15 +46,16 @@ export class ApiClient {
     messages: Message[],
     config: AgentConfig,
     conversationId: number | undefined,
-    onEvent: (event: any) => void
+    onEvent: (event: any) => void,
+    sessionId?: string | null
   ) {
     console.log('[API Client] Sending request to:', `${API_BASE_URL}/agent/stream`);
-    console.log('[API Client] Payload:', { messages, config, conversationId });
+    console.log('[API Client] Payload:', { messages, config, conversationId, sessionId });
 
     const response = await fetch(`${API_BASE_URL}/agent/stream`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages, config, conversationId }),
+      body: JSON.stringify({ messages, config, conversationId, sessionId }),
     });
 
     console.log('[API Client] Response status:', response.status, response.statusText);
