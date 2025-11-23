@@ -23,6 +23,7 @@ Think of it as **mission control for AI agents**—you see everything happening 
 
 **Advanced Stuff:**
 - **MCP servers** to connect external tools (GitHub, Notion, browsers, etc.)
+- **File uploads** to provide additional context (up to 10MB)
 - **Subagents** for specialized tasks
 - **Skills system** for reusable agent workflows
 - **Hooks** for event-driven automation
@@ -86,12 +87,13 @@ The interface has two main panels:
 - Categories: File Ops, Bash, Web, Planning, etc.
 - The agent can only use what you enable here
 
-**Advanced options** (click to expand):
+**Additional tabs:**
 - **MCP Servers** → Connect external services (GitHub, Notion, browsers)
 - **Subagents** → Define specialized subagents for specific tasks
 - **Skills** → Load reusable workflows from `.claude/skills/`
 - **Hooks** → Set up event triggers (auto-commit, notifications, etc.)
-- **Workspace** → Control which directories the agent can access
+- **Files** → Upload files for agent context (system prompt or working directory)
+- **Advanced** → Working directory, thinking budget, cache control, etc.
 
 **Save configurations:**
 - Hit "Save Preset" to store your setup
@@ -177,60 +179,14 @@ docker-compose down -v            # Stop + delete data
 
 ## What's Inside
 
-**Frontend:** Next.js 16 + React 19 + TypeScript + Tailwind 4
-**Backend:** Express + Node.js
-**Database:** PostgreSQL (with JSONB for flexible storage)
-**Agent SDK:** `@anthropic-ai/claude-agent-sdk`
-**State:** Zustand (simpler than Redux)
-**Real-time:** Server-Sent Events for streaming
+**Tech stack:**
+- Frontend: Next.js 16 + React 19 + TypeScript + Tailwind 4
+- Backend: Express + Node.js + PostgreSQL
+- Agent SDK: `@anthropic-ai/claude-agent-sdk`
+- State: Zustand
+- Real-time: Server-Sent Events for streaming
 
-**Project structure:**
-```
-rigger/
-├── components/             # UI components
-│   ├── agent-tester.tsx   # Main layout
-│   ├── config-panel.tsx   # Left side
-│   └── chat-interface.tsx # Right side
-├── lib/
-│   ├── store.ts           # Global state
-│   └── api-client.ts      # Backend calls
-├── backend/
-│   ├── routes/            # API endpoints
-│   └── db/                # Database stuff
-└── .claude/skills/        # Agent workflows
-```
-
-## API Endpoints
-
-The backend exposes these REST endpoints:
-
-**Agent:**
-- `POST /api/agent/stream` → Stream responses (SSE, auto-creates/resumes sessions)
-- `POST /api/agent/message` → Batch responses
-
-**Sessions:**
-- `GET/POST /api/sessions/:id?` → List/create sessions
-- `POST /api/sessions/:id/stop` → Graceful stop (5-second grace period)
-- `POST /api/sessions/:id/force-kill` → Emergency termination (immediate)
-- `GET /api/sessions/:id/status` → Lightweight status polling
-- `DELETE /api/sessions/:id` → Delete session
-
-**Conversations:**
-- `GET/POST/PUT/DELETE /api/conversations/:id?` → CRUD
-
-**Presets:**
-- `GET/POST/PUT/DELETE /api/presets/:id?` → CRUD
-
-**Skills:**
-- `GET/POST/PUT/DELETE /api/skills/:name?` → CRUD
-
-**Subagents:**
-- `GET/POST/PUT/DELETE /api/agents/:name?` → CRUD
-
-**Analytics:**
-- `GET /api/analytics` → Usage logs
-- `GET /api/analytics/stats` → Aggregated stats
-- `GET /api/analytics/timeline` → Time-series data
+**API:** See `CLAUDE.md` for complete API reference and architecture details.
 
 ## Want to Learn More?
 
@@ -238,12 +194,6 @@ The backend exposes these REST endpoints:
 - **`.claude/skills/README.md`** → Deep dive into the skills system
 - **`docs/API_SESSIONS.md`** → Session API reference and patterns
 - **`docs/HOSTING_PATTERNS.md`** → Session deployment patterns
-
-## Ports Reference
-
-- **Frontend:** http://localhost:3334
-- **Backend API:** http://localhost:3333
-- **Database:** localhost:5335 (internal only)
 
 ## License
 

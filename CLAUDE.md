@@ -95,7 +95,7 @@ The application uses a **three-panel responsive layout** with sidebar navigation
 
 **Left: Sidebar Navigation** (`components/navigation/sidebar-nav.tsx`)
 - Collapsible sidebar (64px collapsed, 240px expanded on hover)
-- 9 navigation tabs with icons and labels
+- 10 navigation tabs with icons and labels
 - Active tab highlighting
 - State: `activeTab` in Zustand store
 
@@ -113,7 +113,7 @@ The application uses a **three-panel responsive layout** with sidebar navigation
 
 The application features a **tab-based navigation system** defined in `lib/navigation-config.ts`. Users navigate between configuration and management screens using the sidebar.
 
-#### Navigation Tabs (9 Tabs)
+#### Navigation Tabs (10 Tabs)
 
 1. **Sessions** (`tabs/sessions-tab.tsx`)
    - Active session monitoring with real-time metrics
@@ -124,8 +124,9 @@ The application features a **tab-based navigation system** defined in `lib/navig
 2. **Configuration** (`tabs/presets-tab.tsx`)
    - Import and export agent configurations as JSON files
    - Save and load complete agent configurations
-   - Manage saved presets
+   - Manage saved presets with modification tracking
    - Quick configuration switching
+   - Visual indicators show when active config differs from loaded preset
 
 3. **Basic Config** (`tabs/basic-config-tab.tsx`)
    - Model selection (Sonnet, Opus, Haiku)
@@ -158,7 +159,14 @@ The application features a **tab-based navigation system** defined in `lib/navig
    - Trigger types: on-prompt-submit, on-response-complete, on-tool-use, on-error
    - Pre-built templates (Git Auto-Commit, Slack Notifications, etc.)
 
-9. **Advanced** (`tabs/advanced-tab.tsx`)
+9. **Files** (`tabs/files-tab.tsx`)
+   - Upload and manage files for agent context (max 10MB)
+   - Integration methods: system-prompt, working-directory, or both
+   - Global vs conversation-scoped file management
+   - Supported formats: text, JSON, CSV, PDF, images, code files
+   - Enable/disable individual files and add descriptions
+
+10. **Advanced** (`tabs/advanced-tab.tsx`)
    - Working directory and allowed directories
    - Thinking budget configuration
    - Cache control and advanced SDK settings
@@ -205,6 +213,13 @@ interface StoreState {
   config: AgentSDKConfig;           // Complete agent configuration
   setConfig: (config: AgentSDKConfig) => void;
 
+  // Active Preset Tracking
+  activePresetId: string | null;           // Currently loaded preset ID
+  activePresetName: string | null;         // Currently loaded preset name
+  loadedPresetConfig: AgentSDKConfig | null; // Original preset config (for change detection)
+  setActivePreset: (id, name, config) => void;
+  clearActivePreset: () => void;
+
   // Conversation State
   messages: Message[];              // Full message history
   setMessages: (messages: Message[]) => void;
@@ -243,6 +258,16 @@ interface StoreState {
   // Skills
   availableSkills: SkillMetadata[]; // Discovered skills
   setAvailableSkills: (skills: SkillMetadata[]) => void;
+
+  // Uploaded Files
+  uploadedFiles: UploadedFile[];    // Uploaded files for agent context
+  setUploadedFiles: (files: UploadedFile[]) => void;
+  toggleFileEnabled: (id: number) => void;
+
+  // Todo Lists
+  todoLists: TodoList[];            // Task lists from agent
+  setTodoLists: (lists: TodoList[]) => void;
+  clearTodoLists: () => void;
 }
 ```
 
@@ -257,14 +282,16 @@ interface StoreState {
 **Components consume store directly:**
 ```typescript
 // In any component
-import { useStore } from '@/lib/store';
+import { useAgentStore } from '@/lib/store';
 
 function MyComponent() {
-  const config = useStore((state) => state.config);
-  const setConfig = useStore((state) => state.setConfig);
+  const config = useAgentStore((state) => state.config);
+  const setConfig = useAgentStore((state) => state.setConfig);
   // Component automatically re-renders when config changes
 }
 ```
+
+**Note:** `useStore` is also exported as an alias for backward compatibility.
 
 ### Complete Request Flow
 
@@ -421,75 +448,21 @@ const pool = new Pool({
 export default pool;
 ```
 
-**`schema.sql`** - Database schema (auto-initialized on first run):
+**`schema.sql`** - Complete database schema defined in `backend/db/schema.sql`:
 
-```sql
--- Conversations table
-CREATE TABLE conversations (
-  id SERIAL PRIMARY KEY,
-  config JSONB NOT NULL,
-  messages JSONB NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
+**Core tables:**
+- `conversations` - Chat history and messages
+- `agent_sessions` - Session lifecycle, metrics, and emergency control
+- `presets` - Saved agent configurations
+- `usage_logs` - Per-request metrics and analytics
+- `tool_usage_logs` - Per-tool execution tracking
+- `todos` / `todo_items` - Task list management
+- `custom_agents` - User-defined subagent definitions
+- `uploaded_files` - File uploads for agent context
 
--- Sessions table (NEW - for session management)
-CREATE TABLE agent_sessions (
-  id VARCHAR(255) PRIMARY KEY,
-  sdk_session_id VARCHAR(255),           -- Agent SDK session ID
-  status VARCHAR(50) NOT NULL,           -- initializing, active, idle, stopping, completed, error, terminated
-  conversation_id INTEGER REFERENCES conversations(id),
-  config JSONB NOT NULL,                 -- Session configuration snapshot
-  created_at TIMESTAMP DEFAULT NOW(),
-  started_at TIMESTAMP,
-  last_activity_at TIMESTAMP DEFAULT NOW(),
-  completed_at TIMESTAMP,
-  terminated_at TIMESTAMP,
-  termination_reason VARCHAR(50),        -- user_requested, emergency_stop, budget_exceeded, error, idle_timeout, max_turns_reached
-  total_cost DECIMAL(10, 6) DEFAULT 0,
-  total_tokens INTEGER DEFAULT 0,
-  total_input_tokens INTEGER DEFAULT 0,
-  total_output_tokens INTEGER DEFAULT 0,
-  total_cached_tokens INTEGER DEFAULT 0,
-  num_turns INTEGER DEFAULT 0,
-  tools_used TEXT[] DEFAULT '{}',
-  current_tool VARCHAR(255),
-  messages JSONB DEFAULT '[]',
-  abort_requested BOOLEAN DEFAULT FALSE,
-  force_kill_requested BOOLEAN DEFAULT FALSE,
-  updated_at TIMESTAMP DEFAULT NOW()
-);
+**Note:** The schema uses individual columns for most configuration data (model, temperature, etc.) rather than JSONB blobs. This provides better indexing and query performance. JSONB is used selectively for truly flexible data like messages and tool results.
 
--- Presets table
-CREATE TABLE presets (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR(255) NOT NULL,
-  description TEXT,
-  config JSONB NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW()
-);
-
--- Usage logs table
-CREATE TABLE usage_logs (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  conversation_id UUID REFERENCES conversations(id),
-  model VARCHAR(50),
-  input_tokens INTEGER,
-  output_tokens INTEGER,
-  cached_tokens INTEGER,
-  cost DECIMAL(10, 6),
-  latency_ms INTEGER,
-  created_at TIMESTAMP DEFAULT NOW()
-);
-
--- Indexes for performance
-CREATE INDEX idx_conversations_updated ON conversations(updated_at DESC);
-CREATE INDEX idx_sessions_status ON agent_sessions(status);
-CREATE INDEX idx_sessions_last_activity ON agent_sessions(last_activity_at DESC);
-CREATE INDEX idx_sessions_conversation ON agent_sessions(conversation_id);
-CREATE INDEX idx_usage_logs_created ON usage_logs(created_at DESC);
-CREATE INDEX idx_usage_logs_conversation ON usage_logs(conversation_id);
-```
+See `backend/db/schema.sql` for the complete schema definition with all columns, constraints, and indexes.
 
 **Why JSONB?**
 - Flexible schema - config parameters change frequently
@@ -581,83 +554,19 @@ The UI provides checkboxes in the Tool Selector component for easy management.
 
 #### Architecture
 
-**SessionManager Singleton** (`backend/src/session-manager.ts`):
-```typescript
-class SessionManager {
-  private activeSessions: Map<string, ActiveSession>
+**SessionManager Singleton** (`backend/src/session-manager.ts`) - Manages session lifecycle, metrics, and emergency controls:
+- **Lifecycle:** `createSession()`, `getSession()`, `updateStatus()`, `completeSession()`
+- **Emergency Control:** `requestStop()` (graceful), `requestForceKill()` (immediate), `getAbortSignal()`
+- **Metrics:** `updateMetrics()`, `setCurrentTool()` - Tracks tokens, cost, turns, tools used
+- **Cleanup:** Auto-cleanup job runs every minute (terminates idle sessions >5 minutes)
 
-  // Lifecycle
-  createSession(config, conversationId?) → SessionMetadata
-  getSession(id) → SessionMetadata | null
-  updateStatus(id, status) → void
+#### Session Data
 
-  // Emergency Control
-  requestStop(id) → void           // Graceful
-  requestForceKill(id) → void      // Immediate
-  getAbortSignal(id) → AbortSignal
-
-  // Metrics
-  updateMetrics(id, { tokens, cost, turns, toolsUsed })
-  setCurrentTool(id, toolName)
-
-  // Cleanup
-  completeSession(id) → void
-  errorSession(id, message) → void
-  startCleanupJob() // Auto-cleanup idle sessions every minute
-}
-```
-
-#### Session Data Model
-
-```typescript
-interface SessionMetadata {
-  id: string;
-  status: SessionStatus;
-  conversationId: number | null;   // Link to conversation
-  config: AgentSDKConfig;           // Snapshot of configuration
-
-  // Lifecycle timestamps
-  createdAt: Date;
-  startedAt: Date | null;
-  lastActivityAt: Date | null;
-  completedAt: Date | null;
-  terminatedAt: Date | null;
-  terminationReason: TerminationReason | null;
-
-  // Resource tracking
-  totalCost: number;
-  totalTokens: number;
-  totalInputTokens: number;
-  totalOutputTokens: number;
-  totalCachedTokens: number;
-  numTurns: number;
-  toolsUsed: string[];
-  currentTool: string | null;
-
-  // Emergency control
-  abortRequested: boolean;
-  forceKillRequested: boolean;
-}
-```
+Sessions store: ID, status, config snapshot, lifecycle timestamps (created, started, completed, terminated), resource metrics (tokens, cost, turns), tool tracking, and emergency control flags. See `SessionMetadata` type in `lib/types.ts`.
 
 #### Frontend Integration
 
-Sessions are automatically managed - no explicit creation needed:
-
-```typescript
-// Zustand store tracks active session
-const {
-  activeSessionId,          // Current session ID
-  activeSessionStatus,      // Session status
-  activeSessionCost,        // Running cost total
-  currentTool,              // Currently executing tool
-  isStopRequested,          // Graceful stop flag
-  isForceKillRequested      // Force kill flag
-} = useStore();
-
-// Sessions auto-created by ApiClient.streamMessage()
-// Passes activeSessionId if resuming, creates new if null
-```
+Sessions auto-created by `ApiClient.streamMessage()` - no explicit creation needed. Zustand store tracks `activeSessionId`, `activeSessionStatus`, `activeSessionCost`, `currentTool`, `isStopRequested`, and `isForceKillRequested`.
 
 #### Session API
 
@@ -690,38 +599,21 @@ SessionManager runs cleanup job every 60 seconds:
 
 ### Skills System
 
-**Skills** are packaged agent workflows from `.claude/skills/` that provide step-by-step instructions for specific tasks (PDF processing, code review, data transformation).
+**Skills** are packaged agent workflows that provide step-by-step instructions for specific tasks (PDF processing, code review, data transformation).
 
-#### Quick Overview
-
+**How it works:**
 - **Discovery**: Auto-loaded from `.claude/skills/*/SKILL.md` files
 - **Usage**: Agent invokes via `Skill` tool when request matches description
-- **Format**: Markdown with frontmatter (description, workflow, prerequisites)
-- **Management**: Create/edit via UI (Navigation → Skills tab) or manually
-- **Examples**: `example-pdf-processing`, `example-data-transform`
+- **Format**: Markdown with frontmatter: `---\ndescription: Brief description\n---\n# Skill Name\n## Workflow, Prerequisites, etc.`
+- **Management**: Create/edit via UI (Skills tab) or manually edit files
+- **Examples**: `example-pdf-processing`, `example-data-transform`, `example-code-review`
 
-#### SKILL.md Structure
+**Configuration:**
+- **State**: `availableSkills: SkillMetadata[]` (Zustand)
+- **Enable**: `settingSources: ['project']` + `allowedTools: ['Skill']`
+- **API**: `/api/skills` (GET list, GET :name, POST create, PUT update, DELETE)
 
-```markdown
----
-description: Brief description shown to user
----
-# Skill Name
-## When to Use, Prerequisites, Workflow, Expected Output
-```
-
-#### Skills API
-
-- `GET /api/skills` - List discovered skills
-- `GET /api/skills/:name` - Get skill content
-- `POST /api/skills` - Create skill
-- `PUT /api/skills/:name` - Update skill
-- `DELETE /api/skills/:name` - Delete skill
-
-**State**: `availableSkills: SkillMetadata[]` (Zustand)
-**Config**: `settingSources: ['project']` + `allowedTools: ['Skill']`
-
-**See `.claude/skills/README.md` for detailed documentation.**
+See `.claude/skills/README.md` for detailed documentation.
 
 ### MCP (Model Context Protocol) Servers
 
@@ -868,6 +760,56 @@ Hooks run asynchronously in parallel, don't block agent execution. Errors logged
 - Test individually before enabling
 - Use conditions to avoid unnecessary executions
 
+### File Upload System
+
+**Files** can be uploaded to provide additional context to the agent. Files are stored in the database and can be integrated into agent execution in multiple ways.
+
+#### File Management
+
+**Upload:** Files up to 10MB with supported formats (text, JSON, CSV, PDF, images, code files)
+
+**Storage:** Files stored in `uploaded_files` table with metadata:
+- Original filename, MIME type, size
+- Upload timestamp and description
+- Global vs conversation-scoped
+- Enabled/disabled status
+- Integration method selection
+
+**Scope:**
+- **Global files**: Available across all conversations (marked with globe icon)
+- **Conversation files**: Only available in specific conversation (marked with user icon)
+
+#### Integration Methods
+
+**Three ways to integrate uploaded files:**
+
+1. **System Prompt** - File content injected into system prompt
+   - Ideal for: Reference documents, guidelines, context data
+   - Automatically included in every request
+   - Best for text-based files (JSON, MD, TXT)
+
+2. **Working Directory** - File copied to agent's working directory
+   - Ideal for: Files agent needs to read/modify with tools
+   - Agent can use Read, Edit tools on the file
+   - Best for code files, data files agent will process
+
+3. **Both** - Combined approach
+   - File content in system prompt AND copied to working directory
+   - Maximum context availability
+   - Use when file needs to be both referenced and modified
+
+**State**: `uploadedFiles: UploadedFile[]` (Zustand)
+**API**: `/api/files` (CRUD operations)
+**Management**: Navigation → Files tab
+
+#### Best Practices
+
+- Use system prompt integration for read-only reference materials
+- Use working directory for files the agent should manipulate
+- Disable unused files to reduce token consumption
+- Add descriptions to help track file purposes
+- Use global scope for commonly referenced files across projects
+
 ## Technical Details
 
 ### Type System (`lib/types.ts`)
@@ -896,18 +838,17 @@ Important interfaces:
 
 ### Database
 
-**Core tables** (with JSONB for flexibility):
-- `conversations` - Agent configuration with individual columns + messages JSONB
-- `agent_sessions` - Session lifecycle and metrics with config snapshot
-- `presets` - Saved agent configurations with individual columns
-- `usage_logs` - Per-request metrics with message tracking
+**Core tables:**
+- `conversations` - Chat history and messages
+- `agent_sessions` - Session lifecycle, metrics, and emergency control
+- `presets` - Saved agent configurations
+- `usage_logs` - Per-request metrics and analytics
 - `tool_usage_logs` - Per-tool execution tracking
 - `todos` / `todo_items` - Task list management
 - `custom_agents` - User-defined subagent definitions
+- `uploaded_files` - File uploads for agent context
 
-**Note**: The actual schema (in `backend/db/schema.sql`) stores most configuration as individual columns rather than a single JSONB blob, providing better indexing and query performance. The documented schema above is simplified for clarity.
-
-Auto-initialized via `schema.sql` on first run.
+**Schema details:** See `backend/db/schema.sql` for complete table definitions, columns, constraints, and indexes. Auto-initialized on first run.
 
 ### Environment
 
@@ -1011,20 +952,7 @@ Currently using: button, input, textarea, select, slider, switch, badge, card, t
 - `cacheControl`: Enable prompt caching
 - `metadata`: Custom request metadata
 
-**Full Configuration Flow:**
-```
-User configures in UI (via navigation tabs)
-  ↓
-Stored in Zustand (lib/store.ts)
-  ↓
-Sent to backend (/api/agent/stream)
-  ↓
-Transformed by buildSdkOptions() (backend/src/routes/agent.ts)
-  ↓
-Passed to Agent SDK query()
-  ↓
-Agent executes with configuration
-```
+**Configuration flow:** UI → Zustand store → Backend API → `buildSdkOptions()` → Agent SDK → Execution (see "Complete Request Flow" section for details)
 
 ### Performance Optimization
 
@@ -1087,6 +1015,7 @@ config: {
 - `components/tabs/skills-tab.tsx`: Skills management
 - `components/tabs/agents-tab.tsx`: Subagents configuration
 - `components/tabs/hooks-tab.tsx`: Hooks configuration
+- `components/tabs/files-tab.tsx`: File upload and management
 - `components/tabs/advanced-tab.tsx`: Advanced SDK settings
 
 **Shared Components:**
