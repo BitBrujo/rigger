@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
-import { Bookmark, Plus, Trash2, Download, Upload } from 'lucide-react';
+import { Bookmark, Plus, Trash2, Download, Upload, Check, RotateCcw, AlertCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -22,12 +22,25 @@ import {
 } from '@/components/ui/dialog';
 
 export function PresetsTab() {
-  const { config, setConfig } = useAgentStore();
+  const { config, setConfig, setActivePreset, clearActivePreset, activePresetId, activePresetName, loadedPresetConfig } = useAgentStore();
   const [presets, setPresets] = useState<any[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [presetName, setPresetName] = useState('');
   const [presetDescription, setPresetDescription] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  // Check if current config differs from loaded preset
+  const isConfigModified = loadedPresetConfig &&
+    JSON.stringify(config) !== JSON.stringify(loadedPresetConfig);
+
+  const handleRevertToPreset = () => {
+    if (loadedPresetConfig) {
+      setConfig(loadedPresetConfig);
+      toast.success('Reverted to preset configuration', {
+        description: activePresetName || 'Configuration restored',
+      });
+    }
+  };
 
   const loadPresets = async () => {
     try {
@@ -71,8 +84,9 @@ export function PresetsTab() {
     try {
       const preset = await ApiClient.getPreset(presetId);
       setConfig(preset.config);
-      toast.success('Preset loaded successfully', {
-        description: preset.name,
+      setActivePreset(String(presetId), preset.name, preset.config);
+      toast.success(`Preset "${preset.name}" loaded`, {
+        description: 'Configuration updated successfully',
       });
     } catch (error: any) {
       toast.error('Failed to load preset', {
@@ -111,6 +125,31 @@ export function PresetsTab() {
             <p className="text-muted-foreground">
               Save and load complete agent configurations
             </p>
+            {activePresetName && (
+              <div className="mt-2 space-y-2">
+                <div className="flex items-center gap-2 text-sm">
+                  <Check className="h-4 w-4 text-primary" />
+                  <span className="font-medium text-primary">Currently using: {activePresetName}</span>
+                  {isConfigModified && (
+                    <div className="flex items-center gap-1 px-2 py-0.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs rounded-full">
+                      <AlertCircle className="h-3 w-3" />
+                      Modified
+                    </div>
+                  )}
+                </div>
+                {isConfigModified && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleRevertToPreset}
+                    className="h-7 text-xs"
+                  >
+                    <RotateCcw className="h-3 w-3 mr-1" />
+                    Revert to "{activePresetName}"
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
@@ -183,16 +222,28 @@ export function PresetsTab() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {presets.map((preset) => (
-              <Card key={preset.id} className="p-4 hover:border-primary/50 transition-all">
+            {presets.map((preset) => {
+              const isActive = activePresetId === String(preset.id);
+              return (
+              <Card key={preset.id} className={`p-4 hover:border-primary/50 transition-all ${isActive ? 'border-primary bg-primary/5' : ''}`}>
                 <div className="space-y-3">
-                  <div>
-                    <h3 className="font-medium">{preset.name}</h3>
-                    {preset.description && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {preset.description}
-                      </p>
-                    )}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-medium">{preset.name}</h3>
+                        {isActive && (
+                          <div className="flex items-center gap-1 px-2 py-0.5 bg-primary text-primary-foreground text-xs rounded-full">
+                            <Check className="h-3 w-3" />
+                            Active
+                          </div>
+                        )}
+                      </div>
+                      {preset.description && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {preset.description}
+                        </p>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span>Model: {preset.config?.model || 'N/A'}</span>
@@ -221,7 +272,8 @@ export function PresetsTab() {
                   </div>
                 </div>
               </Card>
-            ))}
+            );
+            })}
           </div>
         )}
 

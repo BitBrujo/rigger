@@ -65,84 +65,132 @@ docker-compose logs -f postgres
 
 ### Application Structure
 
-The application uses a **two-panel resizable layout** implemented in `components/agent-tester.tsx`:
+The application uses a **three-panel responsive layout** with sidebar navigation and tabbed content:
 
-#### Left Panel: Configuration (`components/config-panel.tsx`)
+```
+┌──────────┬────────────────────────┬─────────────────────┐
+│          │                        │                     │
+│ Sidebar  │   Center Content       │   Chat Panel        │
+│ Nav      │   (Active Tab)         │                     │
+│          │                        │  ┌───────────────┐  │
+│ [≡]      │                        │  │ Chat          │  │
+│          │  Configuration or      │  │ Debug         │  │
+│ Sessions │  Management UI         │  │ Tools         │  │
+│ Presets  │  based on selected     │  │ Todo          │  │
+│ Basic    │  navigation tab        │  └───────────────┘  │
+│ Tools    │                        │                     │
+│ MCP      │                        │  Message history    │
+│ Skills   │                        │  Streaming input    │
+│ Agents   │                        │  User input area    │
+│ Hooks    │                        │                     │
+│ Advanced │                        │                     │
+│          │                        │                     │
+└──────────┴────────────────────────┴─────────────────────┘
+ 64/240px        Flexible              ~400px
+```
 
-This panel contains collapsible sections for comprehensive agent configuration:
+**Layout implemented in** `components/agent-tester.tsx`
 
-1. **Basic Agent Settings**
+#### Panel Breakdown
+
+**Left: Sidebar Navigation** (`components/navigation/sidebar-nav.tsx`)
+- Collapsible sidebar (64px collapsed, 240px expanded on hover)
+- 9 navigation tabs with icons and labels
+- Active tab highlighting
+- State: `activeTab` in Zustand store
+
+**Center: Tabbed Content Area**
+- Renders active tab component based on navigation selection
+- Each tab is a dedicated component in `components/tabs/`
+- Configuration and management UIs
+
+**Right: Chat Interface** (`components/chat-interface.tsx`)
+- Multi-tabbed interface with 4 views
+- Persistent across navigation changes
+- Real-time message streaming
+
+### Navigation System
+
+The application features a **tab-based navigation system** defined in `lib/navigation-config.ts`. Users navigate between configuration and management screens using the sidebar.
+
+#### Navigation Tabs (9 Tabs)
+
+1. **Sessions** (`tabs/sessions-tab.tsx`)
+   - Active session monitoring with real-time metrics
+   - Session history and management
+   - Two-tier emergency stop controls (Graceful Stop / Force Kill)
+   - New session creation and deletion
+
+2. **Presets** (`tabs/presets-tab.tsx`)
+   - Save and load complete agent configurations
+   - Manage saved presets
+   - Quick configuration switching
+
+3. **Basic Config** (`tabs/basic-config-tab.tsx`)
    - Model selection (Sonnet, Opus, Haiku)
-   - Temperature slider (0.0 - 1.0)
-   - Max turns configuration
+   - Permission mode and sandbox controls
+   - Max turns and token budget
    - System prompt editor
 
-2. **Tool Selection** (`components/tool-selector.tsx`)
-   - 19 built-in Agent SDK tools organized by category:
-     - **File Operations**: Read, Write, Edit, Glob, Grep
-     - **Execution**: Bash, BashOutput, KillShell
-     - **Web**: WebFetch, WebSearch
-     - **Planning & Interaction**: TodoWrite, Task, AskUserQuestion, ExitPlanMode
-     - **Agent System**: Skill, SlashCommand
-   - Visual checkboxes for enabling/disabling tools
+4. **Tools** (`tabs/tools-tab.tsx`)
+   - 19 built-in Agent SDK tools with checkboxes
+   - Organized by category: File Operations, Execution, Web, Planning, Agent System
    - Stored in `config.allowedTools` array
 
-3. **MCP Servers Configuration**
-   - Add/edit/remove external MCP servers
-   - Configure command, args, and environment variables
-   - Preconfigured servers available (GitHub, Notion, Playwright, etc.)
+5. **MCP Servers** (`tabs/mcp-servers-tab.tsx`)
+   - Add/edit/remove external Model Context Protocol servers
+   - Configure command, args, environment variables
+   - Preconfigured server templates (GitHub, Notion, Playwright, etc.)
 
-4. **Skills Configuration** (`components/skills-manager.tsx`)
+6. **Skills** (`tabs/skills-tab.tsx`)
    - List discovered skills from `.claude/skills/`
-   - Create new skills with wizard
-   - Edit existing SKILL.md files
-   - Delete skills
-   - View skill descriptions and content
+   - Create, edit, delete skills
+   - Skill content viewer
 
-5. **Subagents**
-   - Define specialized agents with specific prompts
-   - Configure allowed tools per agent
-   - Set model and temperature overrides
-   - Templates: Code Reviewer, Bug Hunter, Documentation Writer, etc.
+7. **Subagents** (`tabs/agents-tab.tsx`)
+   - Define specialized subagents with custom prompts
+   - Configure tools and model overrides per agent
+   - Built-in templates (Code Reviewer, Bug Hunter, etc.)
 
-6. **Hooks Configuration**
-   - Event-driven automation setup
+8. **Hooks** (`tabs/hooks-tab.tsx`)
+   - Event-driven automation configuration
    - Trigger types: on-prompt-submit, on-response-complete, on-tool-use, on-error
-   - Action types: bash, api-call, notification, custom
    - Pre-built templates (Git Auto-Commit, Slack Notifications, etc.)
 
-7. **Advanced Settings**
+9. **Advanced** (`tabs/advanced-tab.tsx`)
    - Working directory and allowed directories
    - Thinking budget configuration
-   - Cache control settings
-   - Sandbox controls
+   - Cache control and advanced SDK settings
    - 30+ additional Agent SDK parameters
 
-8. **Presets Management**
-   - Save current configuration as preset
-   - Load saved presets
-   - Delete presets
-   - Share configurations
+**Navigation State:**
+- `activeTab: string` - Current tab ID (default: `'sessions'`)
+- `sidebarHovered: boolean` - Sidebar expansion state
+- Both stored in Zustand store
 
-#### Right Panel: Chat & Debug (`components/chat-interface.tsx`)
+#### Chat Panel Tabs
 
-Tabbed interface with two main views:
+The right-side chat panel has its own tab system:
 
 1. **Chat Tab**
    - Message history display
    - Real-time streaming responses
    - Tool execution visualization
-   - User input area
-   - Message formatting with markdown support
+   - User input area with markdown support
 
 2. **Debug Tab** (`components/debug-panel.tsx`)
    - Token usage breakdown (input, output, cached)
    - Cost calculation per message
-   - API latency metrics
-   - Cache performance statistics
-   - Raw API responses (JSON formatted)
+   - API latency and cache metrics
+   - Raw API responses (JSON)
+
+3. **Tools Tab**
    - Tool execution timeline
-   - Request/response headers
+   - Tool call parameters and results
+
+4. **Todo Tab**
+   - Task list management
+   - Agent-created todos visualization
 
 ### State Management with Zustand
 
@@ -184,6 +232,12 @@ interface StoreState {
   isStopRequested: boolean;                  // Graceful stop requested
   isForceKillRequested: boolean;             // Emergency stop requested
   availableSessions: SessionMetadata[];      // Session registry
+
+  // Navigation
+  activeTab: string;                         // Current navigation tab (default: 'sessions')
+  setActiveTab: (tab: string) => void;
+  sidebarHovered: boolean;                   // Sidebar expansion state
+  setSidebarHovered: (hovered: boolean) => void;
 
   // Skills
   availableSkills: SkillMetadata[]; // Discovered skills
@@ -371,7 +425,7 @@ export default pool;
 ```sql
 -- Conversations table
 CREATE TABLE conversations (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id SERIAL PRIMARY KEY,
   config JSONB NOT NULL,
   messages JSONB NOT NULL,
   created_at TIMESTAMP DEFAULT NOW(),
@@ -380,10 +434,10 @@ CREATE TABLE conversations (
 
 -- Sessions table (NEW - for session management)
 CREATE TABLE agent_sessions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id VARCHAR(255) PRIMARY KEY,
   sdk_session_id VARCHAR(255),           -- Agent SDK session ID
-  status VARCHAR(20) NOT NULL,           -- initializing, active, idle, stopping, completed, error, terminated
-  conversation_id UUID REFERENCES conversations(id),
+  status VARCHAR(50) NOT NULL,           -- initializing, active, idle, stopping, completed, error, terminated
+  conversation_id INTEGER REFERENCES conversations(id),
   config JSONB NOT NULL,                 -- Session configuration snapshot
   created_at TIMESTAMP DEFAULT NOW(),
   started_at TIMESTAMP,
@@ -642,8 +696,8 @@ SessionManager runs cleanup job every 60 seconds:
 - **Discovery**: Auto-loaded from `.claude/skills/*/SKILL.md` files
 - **Usage**: Agent invokes via `Skill` tool when request matches description
 - **Format**: Markdown with frontmatter (description, workflow, prerequisites)
-- **Management**: Create/edit via UI (Config Panel → Skills) or manually
-- **Examples**: `example-pdf-processing`, `example-code-review`, `example-data-transform`
+- **Management**: Create/edit via UI (Navigation → Skills tab) or manually
+- **Examples**: `example-pdf-processing`, `example-data-transform`
 
 #### SKILL.md Structure
 
@@ -688,7 +742,7 @@ config: {
 
 #### Common Servers
 
-Available via UI (Config Panel → MCP Servers) or programmatically:
+Available via UI (Navigation → MCP Servers tab) or programmatically:
 
 - **Playwright**: Browser automation (navigate, click, screenshot)
 - **Fetch**: HTTP requests (GET/POST/PUT/DELETE)
@@ -729,7 +783,7 @@ interface AgentDefinition {
 
 #### Built-in Templates
 
-Available via UI (Config Panel → Subagents):
+Available via UI (Navigation → Subagents tab):
 
 - **Code Reviewer**: Analyze code quality, security, performance (temp: 0.3)
 - **Bug Hunter**: Find bugs, trace errors, suggest fixes (temp: 0.2)
@@ -805,7 +859,7 @@ Hooks run asynchronously in parallel, don't block agent execution. Errors logged
 
 **State**: `config.hooks` (Zustand)
 **Execution**: `backend/src/hooks/executor.ts`
-**Management**: Config Panel → Hooks
+**Management**: Navigation → Hooks tab
 
 #### Best Practices
 
@@ -841,11 +895,16 @@ Important interfaces:
 
 ### Database
 
-**4 tables** (JSONB for flexibility):
-- `conversations` - Full conversation (config + messages)
-- `agent_sessions` - Session lifecycle and metrics (NEW)
-- `presets` - Saved configurations
-- `usage_logs` - Per-request metrics
+**Core tables** (with JSONB for flexibility):
+- `conversations` - Agent configuration with individual columns + messages JSONB
+- `agent_sessions` - Session lifecycle and metrics with config snapshot
+- `presets` - Saved agent configurations with individual columns
+- `usage_logs` - Per-request metrics with message tracking
+- `tool_usage_logs` - Per-tool execution tracking
+- `todos` / `todo_items` - Task list management
+- `custom_agents` - User-defined subagent definitions
+
+**Note**: The actual schema (in `backend/db/schema.sql`) stores most configuration as individual columns rather than a single JSONB blob, providing better indexing and query performance. The documented schema above is simplified for clarity.
 
 Auto-initialized via `schema.sql` on first run.
 
@@ -881,10 +940,10 @@ Currently using: button, input, textarea, select, slider, switch, badge, card, t
 ## Common Development Patterns
 
 ### Add Agent Config Parameter
-1. Update `AgentConfig` in `lib/types.ts`
-2. Update `DEFAULT_CONFIG` constant
-3. Add UI control in `config-panel.tsx`
-4. Pass to Agent SDK in `backend/src/routes/agent.ts`
+1. Update `AgentSDKConfig` in `lib/types.ts`
+2. Update `DEFAULT_CONFIG` constant in store
+3. Add UI control in appropriate tab component (`tabs/basic-config-tab.tsx` or `tabs/advanced-tab.tsx`)
+4. Pass to Agent SDK in `backend/src/routes/agent.ts` via `buildSdkOptions()`
 5. Make optional (SDK has defaults)
 
 ### Add API Endpoint
@@ -953,7 +1012,7 @@ Currently using: button, input, textarea, select, slider, switch, badge, card, t
 
 **Full Configuration Flow:**
 ```
-User configures in UI (ConfigPanel)
+User configures in UI (via navigation tabs)
   ↓
 Stored in Zustand (lib/store.ts)
   ↓
@@ -1006,16 +1065,33 @@ config: {
 - `backend/db/schema.sql`: Database schema (conversations, agent_sessions, presets, usage_logs)
 
 **Frontend State & API:**
-- `lib/store.ts`: Zustand store (config, messages, sessions, skills)
+- `lib/store.ts`: Zustand store (config, messages, sessions, navigation state)
 - `lib/types.ts`: TypeScript interfaces (AgentSDKConfig, SessionMetadata, etc.)
 - `lib/api-client.ts`: Backend API wrapper
+- `lib/navigation-config.ts`: Navigation tab definitions and structure
 - `lib/hook-templates.ts`: Pre-built hook configurations
 
-**Components:**
-- `components/agent-tester.tsx`: Main two-panel layout
-- `components/config-panel.tsx`: Configuration UI (tools, MCP, skills, hooks)
-- `components/chat-interface.tsx`: Chat + Debug tabbed interface
-- `components/session-control-bar.tsx`: Emergency stop controls (UI)
+**Layout & Navigation:**
+- `components/agent-tester.tsx`: Main three-panel layout
+- `components/navigation/sidebar-nav.tsx`: Collapsible sidebar navigation
+- `components/navigation/nav-item.tsx`: Individual navigation items
+- `components/chat-interface.tsx`: Chat panel with multi-tab interface
+
+**Tab Components:**
+- `components/tabs/sessions-tab.tsx`: Session management and emergency stop controls
+- `components/tabs/presets-tab.tsx`: Configuration presets management
+- `components/tabs/basic-config-tab.tsx`: Basic agent configuration
+- `components/tabs/tools-tab.tsx`: Tool selector UI
+- `components/tabs/mcp-servers-tab.tsx`: MCP server configuration
+- `components/tabs/skills-tab.tsx`: Skills management
+- `components/tabs/agents-tab.tsx`: Subagents configuration
+- `components/tabs/hooks-tab.tsx`: Hooks configuration
+- `components/tabs/advanced-tab.tsx`: Advanced SDK settings
+
+**Shared Components:**
+- `components/debug-panel.tsx`: Debug metrics and API response viewer
+- `components/tool-selector.tsx`: Reusable tool selection component
+- `components/skills-manager.tsx`: Skills CRUD operations
 
 **Configuration:**
 - `.claude/skills/*/SKILL.md`: Skill definitions and documentation
@@ -1026,10 +1102,11 @@ config: {
 
 1. Start services: `docker-compose up -d && npm run dev`
 2. Visit http://localhost:3334
-3. Configure agent in left panel (model, temperature, system prompt)
-4. Select tools in tools panel
-5. Send test message in center panel
-6. Verify metrics in right panel (tokens, cost, latency)
-7. Save preset and reload to verify database persistence
-8. Toggle streaming mode and compare response behavior
-9. Check backend logs for errors: `docker-compose logs -f backend`
+3. Navigate to Basic Config tab and configure agent (model, temperature, system prompt)
+4. Navigate to Tools tab and select desired tools
+5. Send test message in chat panel (right side)
+6. Verify metrics in Debug tab (tokens, cost, latency)
+7. Navigate to Presets tab, save current configuration, and reload to verify database persistence
+8. Navigate to Sessions tab to view active session and test emergency stop controls
+9. Toggle streaming mode and compare response behavior
+10. Check backend logs for errors: `docker-compose logs -f backend`

@@ -22,6 +22,13 @@ interface AgentStore {
   setConfig: (config: Partial<AgentSDKConfig>) => void;
   resetConfig: () => void;
 
+  // Active preset tracking
+  activePresetId: string | null;
+  activePresetName: string | null;
+  loadedPresetConfig: AgentSDKConfig | null;
+  setActivePreset: (id: string, name: string, config: AgentSDKConfig) => void;
+  clearActivePreset: () => void;
+
   // Individual config setters for granular updates
   setModel: (model: string) => void;
   setSystemPrompt: (prompt: string) => void;
@@ -191,35 +198,176 @@ export const useAgentStore = create<AgentStore>((set) => ({
   setConfig: (newConfig) =>
     set((state) => ({
       config: { ...state.config, ...newConfig },
+      // Clear active preset when config is manually changed
+      activePresetId: null,
+      activePresetName: null,
+      loadedPresetConfig: null,
     })),
-  resetConfig: () => set({ config: DEFAULT_SDK_CONFIG }),
+  resetConfig: () => set({
+    config: DEFAULT_SDK_CONFIG,
+    activePresetId: null,
+    activePresetName: null,
+    loadedPresetConfig: null,
+  }),
 
-  // Individual config setters
-  setModel: (model) => set((state) => ({ config: { ...state.config, model } })),
-  setSystemPrompt: (systemPrompt) => set((state) => ({ config: { ...state.config, systemPrompt } })),
-  setMaxTurns: (maxTurns) => set((state) => ({ config: { ...state.config, maxTurns } })),
-  setMaxBudgetUsd: (maxBudgetUsd) => set((state) => ({ config: { ...state.config, maxBudgetUsd } })),
-  setMaxThinkingTokens: (maxThinkingTokens) => set((state) => ({ config: { ...state.config, maxThinkingTokens } })),
-  setPermissionMode: (permissionMode) => set((state) => ({ config: { ...state.config, permissionMode } })),
+  // Active preset tracking
+  activePresetId: null,
+  activePresetName: null,
+  loadedPresetConfig: null,
+  setActivePreset: (id, name, config) =>
+    set({
+      activePresetId: id,
+      activePresetName: name,
+      loadedPresetConfig: { ...config },
+    }),
+  clearActivePreset: () =>
+    set({
+      activePresetId: null,
+      activePresetName: null,
+      loadedPresetConfig: null,
+    }),
+
+  // Individual config setters (clear active preset on manual changes)
+  setModel: (model) => set((state) => ({
+    config: { ...state.config, model },
+    activePresetId: null,
+    activePresetName: null,
+    loadedPresetConfig: null,
+  })),
+  setSystemPrompt: (systemPrompt) => set((state) => ({
+    config: { ...state.config, systemPrompt },
+    activePresetId: null,
+    activePresetName: null,
+    loadedPresetConfig: null,
+  })),
+  setMaxTurns: (maxTurns) => set((state) => ({
+    config: { ...state.config, maxTurns },
+    activePresetId: null,
+    activePresetName: null,
+    loadedPresetConfig: null,
+  })),
+  setMaxBudgetUsd: (maxBudgetUsd) => set((state) => ({
+    config: { ...state.config, maxBudgetUsd },
+    activePresetId: null,
+    activePresetName: null,
+    loadedPresetConfig: null,
+  })),
+  setMaxThinkingTokens: (maxThinkingTokens) => set((state) => ({
+    config: { ...state.config, maxThinkingTokens },
+    activePresetId: null,
+    activePresetName: null,
+    loadedPresetConfig: null,
+  })),
+  setPermissionMode: (permissionMode) => set((state) => ({
+    config: { ...state.config, permissionMode },
+    activePresetId: null,
+    activePresetName: null,
+    loadedPresetConfig: null,
+  })),
   setAllowDangerouslySkipPermissions: (allowDangerouslySkipPermissions) =>
-    set((state) => ({ config: { ...state.config, allowDangerouslySkipPermissions } })),
-  setAllowedTools: (allowedTools) => set((state) => ({ config: { ...state.config, allowedTools } })),
-  setDisallowedTools: (disallowedTools) => set((state) => ({ config: { ...state.config, disallowedTools } })),
-  setWorkingDirectory: (workingDirectory) => set((state) => ({ config: { ...state.config, workingDirectory } })),
+    set((state) => ({
+      config: { ...state.config, allowDangerouslySkipPermissions },
+      activePresetId: null,
+      activePresetName: null,
+      loadedPresetConfig: null,
+    })),
+  setAllowedTools: (allowedTools) => set((state) => ({
+    config: { ...state.config, allowedTools },
+    activePresetId: null,
+    activePresetName: null,
+    loadedPresetConfig: null,
+  })),
+  setDisallowedTools: (disallowedTools) => set((state) => ({
+    config: { ...state.config, disallowedTools },
+    activePresetId: null,
+    activePresetName: null,
+    loadedPresetConfig: null,
+  })),
+  setWorkingDirectory: (workingDirectory) => set((state) => ({
+    config: { ...state.config, workingDirectory },
+    activePresetId: null,
+    activePresetName: null,
+    loadedPresetConfig: null,
+  })),
   setAdditionalDirectories: (additionalDirectories) =>
-    set((state) => ({ config: { ...state.config, additionalDirectories } })),
-  setEnv: (env) => set((state) => ({ config: { ...state.config, env } })),
-  setExecutable: (executable) => set((state) => ({ config: { ...state.config, executable } })),
-  setExecutableArgs: (executableArgs) => set((state) => ({ config: { ...state.config, executableArgs } })),
-  setContinueSession: (continueSession) => set((state) => ({ config: { ...state.config, continueSession } })),
-  setResumeSessionId: (resumeSessionId) => set((state) => ({ config: { ...state.config, resumeSessionId } })),
-  setResumeAtMessageId: (resumeAtMessageId) => set((state) => ({ config: { ...state.config, resumeAtMessageId } })),
-  setForkSession: (forkSession) => set((state) => ({ config: { ...state.config, forkSession } })),
-  setFallbackModel: (fallbackModel) => set((state) => ({ config: { ...state.config, fallbackModel } })),
-  setMcpServers: (mcpServers) => set((state) => ({ config: { ...state.config, mcpServers } })),
-  setStrictMcpConfig: (strictMcpConfig) => set((state) => ({ config: { ...state.config, strictMcpConfig } })),
-  setCustomAgents: (customAgents) => set((state) => ({ config: { ...state.config, customAgents } })),
-  setHooks: (hooks) => set((state) => ({ config: { ...state.config, hooks } })),
+    set((state) => ({
+      config: { ...state.config, additionalDirectories },
+      activePresetId: null,
+      activePresetName: null,
+      loadedPresetConfig: null,
+    })),
+  setEnv: (env) => set((state) => ({
+    config: { ...state.config, env },
+    activePresetId: null,
+    activePresetName: null,
+    loadedPresetConfig: null,
+  })),
+  setExecutable: (executable) => set((state) => ({
+    config: { ...state.config, executable },
+    activePresetId: null,
+    activePresetName: null,
+    loadedPresetConfig: null,
+  })),
+  setExecutableArgs: (executableArgs) => set((state) => ({
+    config: { ...state.config, executableArgs },
+    activePresetId: null,
+    activePresetName: null,
+    loadedPresetConfig: null,
+  })),
+  setContinueSession: (continueSession) => set((state) => ({
+    config: { ...state.config, continueSession },
+    activePresetId: null,
+    activePresetName: null,
+    loadedPresetConfig: null,
+  })),
+  setResumeSessionId: (resumeSessionId) => set((state) => ({
+    config: { ...state.config, resumeSessionId },
+    activePresetId: null,
+    activePresetName: null,
+    loadedPresetConfig: null,
+  })),
+  setResumeAtMessageId: (resumeAtMessageId) => set((state) => ({
+    config: { ...state.config, resumeAtMessageId },
+    activePresetId: null,
+    activePresetName: null,
+    loadedPresetConfig: null,
+  })),
+  setForkSession: (forkSession) => set((state) => ({
+    config: { ...state.config, forkSession },
+    activePresetId: null,
+    activePresetName: null,
+    loadedPresetConfig: null,
+  })),
+  setFallbackModel: (fallbackModel) => set((state) => ({
+    config: { ...state.config, fallbackModel },
+    activePresetId: null,
+    activePresetName: null,
+    loadedPresetConfig: null,
+  })),
+  setMcpServers: (mcpServers) => set((state) => ({
+    config: { ...state.config, mcpServers },
+    activePresetId: null,
+    activePresetName: null,
+    loadedPresetConfig: null,
+  })),
+  setStrictMcpConfig: (strictMcpConfig) => set((state) => ({
+    config: { ...state.config, strictMcpConfig },
+    activePresetId: null,
+    activePresetName: null,
+    loadedPresetConfig: null,
+  })),
+  setCustomAgents: (customAgents) => set((state) => ({
+    config: { ...state.config, customAgents },
+    activePresetId: null,
+    activePresetName: null,
+    loadedPresetConfig: null,
+  })),
+  setHooks: (hooks) => set((state) => ({
+    config: { ...state.config, hooks },
+    activePresetId: null,
+    activePresetName: null,
+    loadedPresetConfig: null,
+  })),
   toggleHookEnabled: (hookId) =>
     set((state) => {
       const hooks = state.config.hooks || {};
@@ -237,10 +385,23 @@ export const useAgentStore = create<AgentStore>((set) => ({
             },
           },
         },
+        activePresetId: null,
+        activePresetName: null,
+        loadedPresetConfig: null,
       };
     }),
-  setPlugins: (plugins) => set((state) => ({ config: { ...state.config, plugins } })),
-  setSettingSources: (settingSources) => set((state) => ({ config: { ...state.config, settingSources } })),
+  setPlugins: (plugins) => set((state) => ({
+    config: { ...state.config, plugins },
+    activePresetId: null,
+    activePresetName: null,
+    loadedPresetConfig: null,
+  })),
+  setSettingSources: (settingSources) => set((state) => ({
+    config: { ...state.config, settingSources },
+    activePresetId: null,
+    activePresetName: null,
+    loadedPresetConfig: null,
+  })),
 
   // Skills Management
   availableSkills: [],

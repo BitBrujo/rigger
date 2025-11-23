@@ -19,6 +19,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAgentStore } from '@/lib/store';
 import { ApiClient } from '@/lib/api-client';
 import { AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function AgentTester() {
   const { resetConfig, activeTab, sidebarHovered } = useAgentStore();
@@ -35,6 +36,15 @@ export default function AgentTester() {
     } catch (error) {
       console.error('Failed to check API key status:', error);
       setHasApiKey(false);
+    }
+  };
+
+  const handleResetConfig = () => {
+    if (confirm('Are you sure you want to reset all configuration to defaults?')) {
+      resetConfig();
+      toast.success('Configuration reset to defaults', {
+        description: 'All settings have been restored to their default values',
+      });
     }
   };
 
@@ -96,7 +106,7 @@ export default function AgentTester() {
           )}
 
           <div className="flex gap-2">
-            <Button size="sm" variant="ghost" onClick={resetConfig}>
+            <Button size="sm" variant="ghost" onClick={handleResetConfig}>
               Reset Config
             </Button>
           </div>
