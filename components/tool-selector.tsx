@@ -51,7 +51,7 @@ export function ToolSelector({ selectedTools, onChange, disabled = false }: Tool
   };
 
   const handleToggleCategory = (category: string) => {
-    const categoryTools = TOOL_CATEGORIES[category as keyof typeof TOOL_CATEGORIES];
+    const categoryTools = TOOL_CATEGORIES[category as keyof typeof TOOL_CATEGORIES] as readonly string[];
     const allSelected = categoryTools.every((tool) => selectedTools.includes(tool));
 
     if (allSelected) {

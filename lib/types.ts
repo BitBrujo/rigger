@@ -53,6 +53,11 @@ export interface AgentDefinition {
   enabled?: boolean;          // Whether this agent is enabled (default: true)
 }
 
+// Agent with Name (for stored agents that need an identifier)
+export interface AgentWithName extends AgentDefinition {
+  name: string;
+}
+
 // Agent Template (for pre-built templates)
 export interface AgentTemplate extends AgentDefinition {
   name: string;
@@ -93,6 +98,10 @@ export interface AgentSDKConfig {
   maxTurns: number;
   maxBudgetUsd?: number;
   maxThinkingTokens?: number | null;
+  max_tokens?: number;
+  temperature?: number;
+  top_p?: number;
+  top_k?: number;
 
   // Permissions & Security
   permissionMode: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan';
@@ -122,6 +131,7 @@ export interface AgentSDKConfig {
   customAgents?: Record<string, AgentDefinition>;
   hooks?: Record<string, any>;
   plugins?: any[];
+  stop_sequences?: string[];
 
   // Skills Configuration
   settingSources?: string[]; // Directories to load Skills from (e.g., ['project', 'user'] or custom paths)
@@ -634,6 +644,8 @@ export interface DebugInfo {
   }>;
   sessionId?: string;
   toolsUsed?: string[];
+  sdkMode?: boolean; // Whether Agent SDK or Messages API was used
+  rawResponse?: any; // Raw API response for debugging
 }
 
 // Session History

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAgentStore } from '@/lib/store';
 import { toast } from 'sonner';
+import { ApiClient } from '@/lib/api-client';
 import { MODEL_OPTIONS, ALL_SDK_TOOLS, CLAUDE_CODE_PRESET_PROMPT, AgentDefinition } from '@/lib/types';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -12,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Card } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -95,6 +96,27 @@ export default function ConfigPanel() {
     } else {
       // Direct system prompt
       setConfig({ systemPrompt: value });
+    }
+  };
+
+  const handleToggleHookEnabled = async (hookId: string, hook: any) => {
+    try {
+      // Optimistic update - toggle locally first
+      toggleHookEnabled(hookId);
+
+      // Persist to backend
+      const updatedHook = { ...hook, enabled: !(hook.enabled ?? true) };
+      await ApiClient.updateHook(hookId, updatedHook);
+
+      toast.success('Hook updated', {
+        description: `${hook.name || hookId} ${updatedHook.enabled ? 'enabled' : 'disabled'}`,
+      });
+    } catch (err: any) {
+      // Revert on error
+      toggleHookEnabled(hookId);
+      toast.error('Failed to update hook', {
+        description: err.message || 'An error occurred',
+      });
     }
   };
 
@@ -422,63 +444,47 @@ export default function ConfigPanel() {
 
                 {/* Active Hooks List */}
                 {config.hooks && Object.keys(config.hooks).length > 0 && (
-                  <Card className="p-3 bg-background">
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Label className="text-sm font-medium">Active Hooks</Label>
-                          <Badge variant="secondary" className="text-[10px]">
-                            {Object.keys(config.hooks).length}
-                          </Badge>
-                        </div>
-                      </div>
-
-                      {/* Hooks List */}
-                      <div className="space-y-2 max-h-60 overflow-y-auto">
-                        {Object.entries(config.hooks).map(([hookId, hook]: [string, any]) => (
-                          <div
-                            key={hookId}
-                            className={`p-2 border rounded-md transition-all ${
-                              hook.enabled === false ? 'opacity-60 bg-muted/50' : 'bg-background'
-                            }`}
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <h4 className="text-xs font-medium truncate">
-                                    {hook.name || hookId}
-                                  </h4>
-                                  {hook.enabled === false && (
-                                    <Badge variant="outline" className="text-[10px] px-1 py-0">
-                                      Disabled
-                                    </Badge>
-                                  )}
-                                  {hook.event && (
-                                    <Badge variant="outline" className="text-[10px] px-1 py-0">
-                                      {hook.event}
-                                    </Badge>
-                                  )}
-                                </div>
-                                {hook.description && (
-                                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                                    {hook.description}
-                                  </p>
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-rounded">
+                    {Object.entries(config.hooks).map(([hookId, hook]: [string, any]) => (
+                      <Card
+                        key={hookId}
+                        className={`hover:border-primary/50 transition-all ${
+                          hook.enabled === false ? 'opacity-60' : ''
+                        }`}
+                      >
+                        <CardHeader className="py-3">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <CardTitle className="text-sm flex items-center gap-2">
+                                {hook.name || hookId}
+                                {hook.enabled === false && (
+                                  <Badge variant="outline" className="text-xs">Disabled</Badge>
                                 )}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Switch
-                                  checked={hook.enabled ?? true}
-                                  onCheckedChange={() => toggleHookEnabled(hookId)}
-                                  aria-label={`Toggle ${hook.name || hookId}`}
-                                  className="scale-75"
-                                />
-                              </div>
+                                {hook.event && (
+                                  <Badge variant="outline" className="text-xs">{hook.event}</Badge>
+                                )}
+                              </CardTitle>
+                              {hook.description && (
+                                <CardDescription className="text-xs mt-1">
+                                  {hook.description}
+                                </CardDescription>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Switch
+                                checked={hook.enabled ?? true}
+                                onCheckedChange={() => handleToggleHookEnabled(hookId, hook)}
+                                aria-label={`Toggle ${hook.name || hookId}`}
+                              />
+                              <span className="text-xs text-muted-foreground">
+                                {hook.enabled ?? true ? 'Enabled' : 'Disabled'}
+                              </span>
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  </Card>
+                        </CardHeader>
+                      </Card>
+                    ))}
+                  </div>
                 )}
 
                 {/* Manual JSON Editor */}
@@ -953,7 +959,7 @@ export default function ConfigPanel() {
                   </div>
                   <Slider
                     id="max-tokens"
-                    value={[config.max_tokens]}
+                    value={[config.max_tokens ?? 4096]}
                     onValueChange={([value]) => setConfig({ max_tokens: value })}
                     min={256}
                     max={8192}

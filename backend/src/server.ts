@@ -9,6 +9,7 @@ import skillsRouter from './routes/skills';
 import todosRouter from './routes/todos';
 import agentsRouter from './routes/agents';
 import sessionsRouter from './routes/sessions';
+import hooksRouter from './routes/hooks';
 
 dotenv.config();
 
@@ -42,6 +43,7 @@ app.use('/api/skills', skillsRouter);
 app.use('/api/todos', todosRouter);
 app.use('/api/agents', agentsRouter);
 app.use('/api/sessions', sessionsRouter);
+app.use('/api/hooks', hooksRouter);
 
 // Error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

@@ -12,7 +12,7 @@ import { Clock, DollarSign, Zap, AlertCircle, TrendingUp, Info, Terminal, Server
 import { toast } from 'sonner';
 
 export default function DebugPanel() {
-  const { debugInfo, config, accumulatedCost, sdkMode, systemInfo, hookLogs, sessionHistory } = useAgentStore();
+  const { debugInfo, config, accumulatedCost, systemInfo, hookLogs, sessionHistory } = useAgentStore();
 
   const budgetRemaining = config.maxBudgetUsd ? config.maxBudgetUsd - accumulatedCost : null;
   const budgetPercentage = config.maxBudgetUsd ? (accumulatedCost / config.maxBudgetUsd) * 100 : null;
@@ -119,7 +119,7 @@ export default function DebugPanel() {
         </div>
 
         {/* Budget Tracking (SDK Mode only) */}
-        {sdkMode && (
+        {debugInfo?.sdkMode && (
           <>
             <Separator />
             <div className="space-y-3">
@@ -301,7 +301,7 @@ export default function DebugPanel() {
             <div>
               <p className="text-sm font-medium mb-2">Tools Used</p>
               <div className="flex flex-wrap gap-1">
-                {debugInfo.toolsUsed.map((tool, i) => (
+                {debugInfo.toolsUsed.map((tool: string, i: number) => (
                   <Badge key={i} variant="default" className="text-xs">
                     {tool}
                   </Badge>
@@ -397,7 +397,7 @@ export default function DebugPanel() {
             <Separator />
             <div>
               <p className="text-sm font-medium mb-2">Permission Denials</p>
-              {debugInfo.permissionDenials.map((denial, i) => (
+              {debugInfo.permissionDenials.map((denial: { tool_name: string; tool_use_id: string; tool_input: any }, i: number) => (
                 <Alert key={i} variant="destructive" className="mb-2">
                   <AlertDescription className="text-xs">
                     Tool: {denial.tool_name} (ID: {denial.tool_use_id})
@@ -414,7 +414,7 @@ export default function DebugPanel() {
             <Separator />
             <div>
               <p className="text-sm font-medium mb-2">Errors</p>
-              {debugInfo.errors.map((error, i) => (
+              {debugInfo.errors.map((error: string, i: number) => (
                 <Alert key={i} variant="destructive" className="mb-2">
                   <AlertDescription className="text-xs">{error}</AlertDescription>
                 </Alert>
@@ -481,7 +481,7 @@ export default function DebugPanel() {
                     </CardHeader>
                     <CardContent>
                       <div className="flex flex-wrap gap-1">
-                        {systemInfo.tools.map((tool, i) => (
+                        {systemInfo.tools.map((tool: string, i: number) => (
                           <Badge key={i} variant="outline" className="text-xs">
                             {tool}
                           </Badge>
@@ -500,7 +500,7 @@ export default function DebugPanel() {
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-2">
-                        {systemInfo.mcpServers.map((server, i) => (
+                        {systemInfo.mcpServers.map((server: { name: string; status: string }, i: number) => (
                           <div key={i} className="flex items-center justify-between p-2 border rounded-md">
                             <div className="flex items-center gap-2">
                               {server.status === 'connected' ? (
@@ -539,7 +539,7 @@ export default function DebugPanel() {
                       </CardHeader>
                       <CardContent>
                         <div className="flex flex-wrap gap-1">
-                          {systemInfo.agents.map((agent, i) => (
+                          {systemInfo.agents.map((agent: string, i: number) => (
                             <Badge key={i} variant="default" className="text-xs">
                               {agent}
                             </Badge>
@@ -559,7 +559,7 @@ export default function DebugPanel() {
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-2">
-                        {systemInfo.plugins.map((plugin, i) => (
+                        {systemInfo.plugins.map((plugin: { name: string; version: string }, i: number) => (
                           <div key={i} className="flex items-center justify-between text-xs">
                             <span className="font-medium">{plugin.name}</span>
                             <Badge variant="outline" className="text-xs">{plugin.version}</Badge>
@@ -580,7 +580,7 @@ export default function DebugPanel() {
                       </CardHeader>
                       <CardContent>
                         <div className="flex flex-wrap gap-1">
-                          {systemInfo.slashCommands.map((cmd, i) => (
+                          {systemInfo.slashCommands.map((cmd: string, i: number) => (
                             <Badge key={i} variant="outline" className="text-xs font-mono">
                               /{cmd}
                             </Badge>
@@ -683,7 +683,7 @@ export default function DebugPanel() {
 
               {hookLogs && hookLogs.length > 0 ? (
                 <div className="space-y-3">
-                  {hookLogs.slice().reverse().map((log, i) => (
+                  {hookLogs.slice().reverse().map((log: { hookName: string; hookEvent: string; stdout: string; stderr: string; exitCode?: number; timestamp: string }, i: number) => (
                     <Card key={i}>
                       <CardHeader className="pb-3">
                         <CardTitle className="text-sm flex items-center justify-between">
@@ -909,7 +909,7 @@ export default function DebugPanel() {
                           <div>
                             <p className="text-xs text-muted-foreground mb-2">Tools Used</p>
                             <div className="flex flex-wrap gap-1">
-                              {debugInfo.toolsUsed.map((tool, i) => (
+                              {debugInfo.toolsUsed.map((tool: string, i: number) => (
                                 <Badge key={i} variant="outline" className="text-xs">
                                   {tool}
                                 </Badge>
@@ -1032,7 +1032,7 @@ export default function DebugPanel() {
                         <div>
                           <p className="text-xs font-medium mb-2">Content Types</p>
                           <div className="flex flex-wrap gap-1">
-                            {debugInfo.rawResponse.content.map((block, i) => (
+                            {debugInfo.rawResponse.content.map((block: any, i: number) => (
                               <Badge key={i} variant="secondary" className="text-xs">
                                 {block.type}
                               </Badge>

@@ -152,24 +152,9 @@ export function SkillsManager() {
     }
   };
 
-  const handleToggleEnabled = async (skillName: string) => {
-    try {
-      // Toggle in local state immediately for responsive UI
-      toggleSkillEnabled(skillName);
-
-      // Find the skill to get its new enabled state
-      const skill = availableSkills.find(s => s.name === skillName);
-      if (skill) {
-        // Persist to backend
-        await ApiClient.updateSkill(skillName, {
-          enabled: !(skill.enabled ?? true)
-        });
-      }
-    } catch (err: any) {
-      // Revert on error
-      toggleSkillEnabled(skillName);
-      setError(err.message || 'Failed to toggle skill');
-    }
+  const handleToggleEnabled = (skillName: string) => {
+    // Toggle in local state only (enabled is frontend-only state, not persisted)
+    toggleSkillEnabled(skillName);
   };
 
   const resetForm = () => {
@@ -306,8 +291,8 @@ export function SkillsManager() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4">
-          {availableSkills.map((skill) => (
+        <div className="grid gap-4 max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-rounded">
+          {availableSkills.map((skill: SkillMetadata) => (
             <Card
               key={skill.name}
               className={`hover:border-primary/50 transition-all ${

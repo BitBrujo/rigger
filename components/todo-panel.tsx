@@ -79,7 +79,7 @@ export function TodoPanel() {
   return (
     <ScrollArea className="h-full">
       <div className="p-4 space-y-4">
-        {todoLists.map((list) => {
+        {todoLists.map((list: import('@/lib/types').TodoList) => {
           const progress = calculateProgress(list);
           return (
             <Card key={list.id}>

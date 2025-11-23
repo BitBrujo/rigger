@@ -651,7 +651,7 @@ export function ToolsPanel() {
 
   // Monitor tool executions and show toasts for file operations
   useEffect(() => {
-    toolExecutions.forEach((execution) => {
+    toolExecutions.forEach((execution: ToolExecution) => {
       // Only process completed executions that we haven't seen before
       if (execution.status === 'completed' && !processedExecutionsRef.current.has(execution.id)) {
         processedExecutionsRef.current.add(execution.id);
@@ -661,9 +661,9 @@ export function ToolsPanel() {
   }, [toolExecutions]);
 
   // Separate active and completed executions
-  const activeExecutions = toolExecutions.filter((exec) => exec.status === 'running');
+  const activeExecutions = toolExecutions.filter((exec: ToolExecution) => exec.status === 'running');
   const completedExecutions = toolExecutions.filter(
-    (exec) => exec.status === 'completed' || exec.status === 'failed'
+    (exec: ToolExecution) => exec.status === 'completed' || exec.status === 'failed'
   );
 
   return (
@@ -711,7 +711,7 @@ export function ToolsPanel() {
                 {completedExecutions
                   .slice()
                   .reverse()
-                  .map((exec) => (
+                  .map((exec: ToolExecution) => (
                     <ToolExecutionCard key={exec.id} execution={exec} />
                   ))}
               </div>
@@ -728,7 +728,7 @@ export function ToolsPanel() {
               </div>
             ) : (
               <div className="space-y-2">
-                {activeExecutions.map((exec) => (
+                {activeExecutions.map((exec: ToolExecution) => (
                   <ToolExecutionCard key={exec.id} execution={exec} />
                 ))}
               </div>

@@ -6,6 +6,7 @@ import {
   DEFAULT_SDK_CONFIG,
   McpServerConfig,
   AgentDefinition,
+  AgentWithName,
   ToolExecution,
   SystemInfo,
   PermissionRequest,
@@ -58,9 +59,9 @@ interface AgentStore {
   toggleSkillEnabled: (name: string) => void;
 
   // Agents Management
-  availableAgents: AgentDefinition[];
-  setAvailableAgents: (agents: AgentDefinition[]) => void;
-  addAgent: (agent: AgentDefinition) => void;
+  availableAgents: AgentWithName[];
+  setAvailableAgents: (agents: AgentWithName[]) => void;
+  addAgent: (agent: AgentWithName) => void;
   removeAgent: (name: string) => void;
   updateAgent: (name: string, updates: Partial<AgentDefinition>) => void;
   toggleAgentEnabled: (name: string) => void;
@@ -99,7 +100,6 @@ interface AgentStore {
   processedMessageIds: Set<string>;
   addProcessedMessageId: (messageId: string) => void;
   clearProcessedMessageIds: () => void;
-  hasProcessedMessageId: (messageId: string) => boolean;
 
   // Active session
   activeSessionId: string | null;
@@ -332,10 +332,6 @@ export const useAgentStore = create<AgentStore>((set) => ({
       processedMessageIds: new Set([...state.processedMessageIds, messageId]),
     })),
   clearProcessedMessageIds: () => set({ processedMessageIds: new Set() }),
-  hasProcessedMessageId: (messageId) => {
-    const state = useAgentStore.getState();
-    return state.processedMessageIds.has(messageId);
-  },
 
   // Active session
   activeSessionId: null,
@@ -448,6 +444,12 @@ export const useAgentStore = create<AgentStore>((set) => ({
   error: null,
   setError: (error) => set({ error }),
 }));
+
+// Helper function to check if message ID has been processed
+// (moved outside store to avoid circular reference)
+export const hasProcessedMessageId = (messageId: string): boolean => {
+  return useAgentStore.getState().processedMessageIds.has(messageId);
+};
 
 // Backward compatibility export
 export const useStore = useAgentStore;

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAgentStore } from '@/lib/store';
 import { ApiClient } from '@/lib/api-client';
-import { Message, AgentResponse, ContentBlock } from '@/lib/types';
+import { Message, ContentBlock, TodoList } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -89,7 +89,6 @@ export default function ChatInterface() {
         description: error.message,
       });
       setDebugInfo({
-        rawResponse: null,
         latency: 0,
         tokens: { input: 0, output: 0, total: 0 },
         cost: 0,
@@ -156,7 +155,7 @@ export default function ChatInterface() {
               const lists = await ApiClient.getTodos();
               lists.forEach(list => {
                 // Only add if not already in the store
-                const exists = todoLists.some(existing => existing.id === list.id);
+                const exists = todoLists.some((existing: TodoList) => existing.id === list.id);
                 if (!exists) {
                   addTodoList(list);
                 }
@@ -426,7 +425,7 @@ export default function ChatInterface() {
       {/* Messages */}
       <ScrollArea className="flex-1 p-6" ref={scrollRef}>
         <div className="space-y-4 max-w-4xl mx-auto">
-          {messages.map((message, i) => (
+          {messages.map((message: Message, i: number) => (
             <div
               key={i}
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}

@@ -226,6 +226,19 @@ CREATE TABLE IF NOT EXISTS agent_sessions (
     CONSTRAINT agent_sessions_status_check CHECK (status IN ('initializing', 'active', 'idle', 'stopping', 'completed', 'error', 'terminated'))
 );
 
+-- Hooks table for event-driven automation
+CREATE TABLE IF NOT EXISTS hooks (
+    id VARCHAR(255) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    trigger VARCHAR(100) NOT NULL,  -- 'on-prompt-submit', 'on-response-complete', 'on-tool-use', 'on-error'
+    action JSONB NOT NULL,  -- { type: 'bash' | 'api-call' | 'notification', config: {...} }
+    enabled BOOLEAN DEFAULT TRUE,
+    config JSONB DEFAULT '{}'::jsonb,  -- Additional hook configuration
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_conversations_created_at ON conversations(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_conversations_model ON conversations(model);
@@ -248,6 +261,9 @@ CREATE INDEX IF NOT EXISTS idx_agent_sessions_created_at ON agent_sessions(creat
 CREATE INDEX IF NOT EXISTS idx_agent_sessions_sdk_session_id ON agent_sessions(sdk_session_id);
 CREATE INDEX IF NOT EXISTS idx_agent_sessions_abort_requested ON agent_sessions(abort_requested) WHERE abort_requested = TRUE;
 CREATE INDEX IF NOT EXISTS idx_agent_sessions_last_activity ON agent_sessions(last_activity_at DESC);
+CREATE INDEX IF NOT EXISTS idx_hooks_trigger ON hooks(trigger);
+CREATE INDEX IF NOT EXISTS idx_hooks_enabled ON hooks(enabled);
+CREATE INDEX IF NOT EXISTS idx_hooks_created_at ON hooks(created_at DESC);
 
 -- Insert default Agent SDK presets
 INSERT INTO presets (name, description, model, system_prompt, max_turns, allowed_tools, permission_mode) VALUES

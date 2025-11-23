@@ -1,4 +1,4 @@
-import { AgentConfig, Message, AgentResponse, Conversation, Preset, UsageLog, UsageStats } from './types';
+import { AgentSDKConfig, Message, Conversation, Preset, UsageLog, UsageStats } from './types';
 
 // TEMPORARY HARDCODE: Turbopack is not picking up environment variable changes
 const API_BASE_URL = 'http://100.87.169.2:3333/api';
@@ -11,7 +11,7 @@ if (typeof window !== 'undefined') {
 
 export class ApiClient {
   // Agent endpoints (Messages API)
-  static async sendMessage(messages: Message[], config: AgentConfig, conversationId?: number) {
+  static async sendMessage(messages: Message[], config: AgentSDKConfig, conversationId?: number) {
     const response = await fetch(`${API_BASE_URL}/agent/message`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -27,7 +27,7 @@ export class ApiClient {
   }
 
   // Agent SDK endpoints
-  static async sendAgentMessage(messages: Message[], config: AgentConfig, conversationId?: number) {
+  static async sendAgentMessage(messages: Message[], config: AgentSDKConfig, conversationId?: number) {
     const response = await fetch(`${API_BASE_URL}/agent-sdk/message`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -44,7 +44,7 @@ export class ApiClient {
 
   static async streamMessage(
     messages: Message[],
-    config: AgentConfig,
+    config: AgentSDKConfig,
     conversationId: number | undefined,
     onEvent: (event: any) => void,
     sessionId?: string | null
@@ -104,7 +104,7 @@ export class ApiClient {
 
   static async streamAgentMessage(
     messages: Message[],
-    config: AgentConfig,
+    config: AgentSDKConfig,
     conversationId: number | undefined,
     onEvent: (event: any) => void
   ) {
@@ -160,7 +160,7 @@ export class ApiClient {
 
   static async createConversation(
     title: string,
-    config: AgentConfig,
+    config: AgentSDKConfig,
     messages: Message[] = []
   ): Promise<Conversation> {
     const response = await fetch(`${API_BASE_URL}/conversations`, {
@@ -175,7 +175,7 @@ export class ApiClient {
 
   static async updateConversation(
     id: number,
-    updates: Partial<{ title: string; config: AgentConfig; messages: Message[] }>
+    updates: Partial<{ title: string; config: AgentSDKConfig; messages: Message[] }>
   ): Promise<Conversation> {
     const response = await fetch(`${API_BASE_URL}/conversations/${id}`, {
       method: 'PUT',
@@ -210,7 +210,7 @@ export class ApiClient {
 
   static async createPreset(
     name: string,
-    config: AgentConfig,
+    config: AgentSDKConfig,
     description?: string
   ): Promise<Preset> {
     const response = await fetch(`${API_BASE_URL}/presets`, {
@@ -228,7 +228,7 @@ export class ApiClient {
 
   static async updatePreset(
     id: number,
-    updates: Partial<{ name: string; description: string; config: AgentConfig }>
+    updates: Partial<{ name: string; description: string; config: AgentSDKConfig }>
   ): Promise<Preset> {
     const response = await fetch(`${API_BASE_URL}/presets/${id}`, {
       method: 'PUT',
@@ -498,6 +498,70 @@ export class ApiClient {
       throw new Error(error.error || 'Failed to delete skill');
     }
     return response.json();
+  }
+
+  // Hooks API endpoints
+  static async getHooks(): Promise<Record<string, any>> {
+    const response = await fetch(`${API_BASE_URL}/hooks`);
+    if (!response.ok) throw new Error('Failed to fetch hooks');
+    return response.json();
+  }
+
+  static async getHook(id: string): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/hooks/${id}`);
+    if (!response.ok) throw new Error('Failed to fetch hook');
+    return response.json();
+  }
+
+  static async createHook(data: {
+    id?: string;
+    name: string;
+    description?: string;
+    trigger: string;
+    action: any;
+    enabled?: boolean;
+    [key: string]: any;
+  }): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/hooks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create hook');
+    }
+    return response.json();
+  }
+
+  static async updateHook(id: string, data: Partial<{
+    name: string;
+    description: string;
+    trigger: string;
+    action: any;
+    enabled: boolean;
+    [key: string]: any;
+  }>): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/hooks/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update hook');
+    }
+    return response.json();
+  }
+
+  static async deleteHook(id: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/hooks/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete hook');
+    }
   }
 
   // Step-level cost breakdown
