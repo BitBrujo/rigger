@@ -10,7 +10,7 @@ import { McpServersTab } from './tabs/mcp-servers-tab';
 import { SkillsTab } from './tabs/skills-tab';
 import { AgentsTab } from './tabs/agents-tab';
 import { HooksTab } from './tabs/hooks-tab';
-import { PresetsTab } from './tabs/presets-tab';
+import { ConfigurationTab } from './tabs/presets-tab';
 import { SessionsTab } from './tabs/sessions-tab';
 import { AdvancedTab } from './tabs/advanced-tab';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
@@ -63,8 +63,8 @@ export default function AgentTester() {
         return <AgentsTab />;
       case 'hooks':
         return <HooksTab />;
-      case 'presets':
-        return <PresetsTab />;
+      case 'configuration':
+        return <ConfigurationTab />;
       case 'sessions':
         return <SessionsTab />;
       case 'advanced':

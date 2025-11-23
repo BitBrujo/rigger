@@ -27,10 +27,10 @@ export const navigationTabs: NavigationTab[] = [
     description: 'Session management and controls',
   },
   {
-    id: 'presets',
-    label: 'Presets',
+    id: 'configuration',
+    label: 'Configuration',
     icon: Bookmark,
-    description: 'Save and load agent configurations',
+    description: 'Import/export configurations and manage presets',
     dividerAfter: true,
   },
   {

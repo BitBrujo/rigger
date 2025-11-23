@@ -32,7 +32,7 @@ This document contains detailed architecture, patterns, and implementation detai
 - **Skills System**: Packaged agent workflows loaded from `.claude/skills/`
 - **Subagents**: Define specialized subagents with their own prompts and tools
 - **Hooks**: Event-driven automation (git commits, notifications, webhooks)
-- **Presets**: Save and load complete agent configurations
+- **Configuration Management**: Import/export configurations as JSON and manage saved presets
 - **Analytics**: Usage tracking, cost analysis, and performance metrics
 
 ## Quick Reference
@@ -76,7 +76,7 @@ The application uses a **three-panel responsive layout** with sidebar navigation
 │ [≡]      │                        │  │ Chat          │  │
 │          │  Configuration or      │  │ Debug         │  │
 │ Sessions │  Management UI         │  │ Tools         │  │
-│ Presets  │  based on selected     │  │ Todo          │  │
+│ Config   │  based on selected     │  │ Todo          │  │
 │ Basic    │  navigation tab        │  └───────────────┘  │
 │ Tools    │                        │                     │
 │ MCP      │                        │  Message history    │
@@ -121,7 +121,8 @@ The application features a **tab-based navigation system** defined in `lib/navig
    - Two-tier emergency stop controls (Graceful Stop / Force Kill)
    - New session creation and deletion
 
-2. **Presets** (`tabs/presets-tab.tsx`)
+2. **Configuration** (`tabs/presets-tab.tsx`)
+   - Import and export agent configurations as JSON files
    - Save and load complete agent configurations
    - Manage saved presets
    - Quick configuration switching
@@ -1106,7 +1107,7 @@ config: {
 4. Navigate to Tools tab and select desired tools
 5. Send test message in chat panel (right side)
 6. Verify metrics in Debug tab (tokens, cost, latency)
-7. Navigate to Presets tab, save current configuration, and reload to verify database persistence
+7. Navigate to Configuration tab, save current configuration as preset, export to JSON, and reload to verify database persistence
 8. Navigate to Sessions tab to view active session and test emergency stop controls
 9. Toggle streaming mode and compare response behavior
 10. Check backend logs for errors: `docker-compose logs -f backend`
