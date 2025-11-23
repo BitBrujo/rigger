@@ -2,8 +2,6 @@
 
 **The visual dashboard for Claude's Agent SDK.** Test, debug, and manage your AI agents without writing code.
 
-<img width="3024" height="1646" alt="screencapture-100-87-169-2-3334-2025-11-23-17_41_17 (1)" src="https://github.com/user-attachments/assets/2f70d33d-940e-43fe-a79e-4e4b7da38e8a" />
-
 <img width="3058" height="1772" alt="screencapture-100-87-169-2-3334-2025-11-23-17_43_27" src="https://github.com/user-attachments/assets/cd3d679c-01a5-4726-b6d4-c58e3add98b1" />
 
 ## What Is This?
@@ -16,8 +14,6 @@ If you're working with the [Claude Agent SDK](https://github.com/anthropics/clau
 - Monitor sessions with token usage, costs, and execution timelines
 - Manage tools, MCP servers, skills, and subagents visually
 - Save and share agent configurations as presets
-
-<img width="3025" height="1832" alt="screencapture-100-87-169-2-3334-2025-11-23-17_41_04 (1)" src="https://github.com/user-attachments/assets/1bf1c317-8ae7-4dee-a2a7-9e980fd7d38d" />
 
 <img width="3024" height="1646" alt="screencapture-100-87-169-2-3334-2025-11-23-17_41_41" src="https://github.com/user-attachments/assets/ca85f2fb-4fcd-47e2-bc00-da2721846f89" />
 
