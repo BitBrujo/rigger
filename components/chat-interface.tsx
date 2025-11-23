@@ -58,7 +58,11 @@ export default function ChatInterface() {
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      // Access the internal viewport element (Radix UI ScrollArea structure)
+      const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+      if (viewport) {
+        viewport.scrollTop = viewport.scrollHeight;
+      }
     }
   }, [messages, streamingText]);
 
@@ -216,6 +220,10 @@ export default function ChatInterface() {
         }
         setActiveSessionStatus('idle');
         setCurrentTool(null);
+
+        // Clear any remaining active tools when session completes
+        const { activeTools } = useAgentStore.getState();
+        activeTools.forEach(toolId => removeActiveTool(toolId));
 
         // Agent SDK always has final message
         addMessage({

@@ -2,10 +2,12 @@
 
 import { useAgentStore } from '@/lib/store';
 import { Label } from '@/components/ui/label';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,7 +20,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { ApiClient } from '@/lib/api-client';
 import { toast } from 'sonner';
-import { Activity, StopCircle, XCircle, Trash2, Plus } from 'lucide-react';
+import { Activity, StopCircle, XCircle, Trash2, Plus, Copy, Play, RotateCcw, GitBranch, ChevronDown } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 export function SessionsTab() {
@@ -41,11 +43,16 @@ export function SessionsTab() {
     setAvailableSessions,
     setMessages,
     addMessage,
+    debugInfo,
+    accumulatedCost,
+    config,
+    setConfig,
   } = useAgentStore();
 
   const [isLoading, setIsLoading] = useState(false);
   const [showForceKillDialog, setShowForceKillDialog] = useState(false);
   const [stopCountdown, setStopCountdown] = useState<number | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const loadSessions = async () => {
     try {
@@ -282,6 +289,167 @@ export function SessionsTab() {
               </div>
             </div>
           </Card>
+        )}
+
+        {/* Session Details (Collapsible) */}
+        {activeSessionId && debugInfo?.sessionId && (
+          <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
+            <Card className="p-4">
+              <CollapsibleTrigger className="w-full flex items-center justify-between hover:opacity-80">
+                <Label className="text-base font-medium cursor-pointer">Session Details</Label>
+                <ChevronDown className={`h-5 w-5 transition-transform ${detailsOpen ? 'rotate-180' : ''}`} />
+              </CollapsibleTrigger>
+
+              <CollapsibleContent className="mt-4">
+                <div className="space-y-4">
+                  {/* Session Controls */}
+                  <div>
+                    <p className="text-sm font-medium mb-2">Session Controls</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs flex items-center gap-1"
+                        onClick={() => {
+                          navigator.clipboard.writeText(debugInfo.sessionId || '');
+                          toast.success('Session ID copied', {
+                            description: 'Copied to clipboard',
+                          });
+                        }}
+                      >
+                        <Copy className="h-3 w-3" />
+                        Copy ID
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs flex items-center gap-1"
+                        onClick={() => {
+                          setConfig({ continueSession: true });
+                          toast.info('Continue session enabled', {
+                            description: 'Next message will continue this session',
+                          });
+                        }}
+                      >
+                        <Play className="h-3 w-3" />
+                        Continue
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs flex items-center gap-1"
+                        onClick={() => {
+                          setConfig({ resumeSessionId: debugInfo.sessionId });
+                          toast.info('Resume session set', {
+                            description: `Will resume from ${debugInfo.sessionId?.slice(0, 8)}...`,
+                          });
+                        }}
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                        Resume
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs flex items-center gap-1"
+                        onClick={() => {
+                          setConfig({ forkSession: true });
+                          toast.info('Fork session enabled', {
+                            description: 'Next message will fork this session',
+                          });
+                        }}
+                      >
+                        <GitBranch className="h-3 w-3" />
+                        Fork
+                      </Button>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Session Metadata */}
+                  <div>
+                    <p className="text-sm font-medium mb-2">Session Metadata</p>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Started</p>
+                        <p className="font-medium">{debugInfo.timestamp ? new Date(debugInfo.timestamp).toLocaleTimeString() : 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Turns</p>
+                        <Badge variant="secondary">{debugInfo.numTurns || 1}</Badge>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Total Cost</p>
+                        <p className="font-medium">${accumulatedCost.toFixed(6)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Total Tokens</p>
+                        <p className="font-medium">{debugInfo.tokens?.total.toLocaleString() || 0}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tools Used */}
+                  {debugInfo.toolsUsed && debugInfo.toolsUsed.length > 0 && (
+                    <>
+                      <Separator />
+                      <div>
+                        <p className="text-sm font-medium mb-2">Tools Used</p>
+                        <div className="flex flex-wrap gap-1">
+                          {debugInfo.toolsUsed.map((tool: string, i: number) => (
+                            <Badge key={i} variant="outline" className="text-xs">
+                              {tool}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  <Separator />
+
+                  {/* Session Timeline */}
+                  <div>
+                    <p className="text-sm font-medium mb-2">Session Timeline</p>
+                    <div className="relative pl-4">
+                      {/* Vertical line */}
+                      <div className="absolute left-1 top-0 bottom-0 w-px bg-border" />
+
+                      {/* Timeline items */}
+                      <div className="space-y-3">
+                        <div className="relative">
+                          <div className="absolute -left-[13px] top-1 w-2 h-2 rounded-full bg-green-600" />
+                          <div className="text-xs">
+                            <p className="font-medium">Session Started</p>
+                            <p className="text-muted-foreground">{debugInfo.timestamp ? new Date(debugInfo.timestamp).toLocaleString() : 'N/A'}</p>
+                          </div>
+                        </div>
+
+                        {debugInfo.numTurns && debugInfo.numTurns > 1 && (
+                          <div className="relative">
+                            <div className="absolute -left-[13px] top-1 w-2 h-2 rounded-full bg-blue-600" />
+                            <div className="text-xs">
+                              <p className="font-medium">{debugInfo.numTurns} Turns Completed</p>
+                              <p className="text-muted-foreground">Multi-turn conversation</p>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="relative">
+                          <div className="absolute -left-[13px] top-1 w-2 h-2 rounded-full bg-primary animate-pulse" />
+                          <div className="text-xs">
+                            <p className="font-medium">{activeSessionStatus === 'active' ? 'Active' : 'Idle'}</p>
+                            <p className="text-muted-foreground">{activeSessionStatus === 'active' ? 'Processing' : 'Ready for next turn'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
         )}
 
         {/* Session History */}
