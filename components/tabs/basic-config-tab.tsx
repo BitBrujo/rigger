@@ -119,6 +119,32 @@ export function BasicConfigTab() {
           </div>
         </Card>
 
+        {/* System Prompt */}
+        <Card className="p-4">
+          <div className="space-y-3">
+            <div>
+              <Label className="text-base font-medium">System Prompt</Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                Instructions that guide the agent's behavior
+              </p>
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="claude-code-preset" className="text-sm">Use Claude Code Preset</Label>
+              <Switch
+                id="claude-code-preset"
+                checked={useClaudeCodePreset}
+                onCheckedChange={handleClaudeCodePresetToggle}
+              />
+            </div>
+            <Textarea
+              placeholder={useClaudeCodePreset ? "Additional instructions (optional)" : "Enter system prompt..."}
+              value={systemPromptText}
+              onChange={(e) => handleSystemPromptChange(e.target.value)}
+              className="min-h-[200px] font-mono text-xs"
+            />
+          </div>
+        </Card>
+
         {/* Temperature */}
         <Card className="p-4">
           <div className="space-y-3">
@@ -155,32 +181,6 @@ export function BasicConfigTab() {
               />
             </div>
             <p className="text-xs text-muted-foreground">Maximum conversation turns</p>
-          </div>
-        </Card>
-
-        {/* System Prompt */}
-        <Card className="p-4">
-          <div className="space-y-3">
-            <div>
-              <Label className="text-base font-medium">System Prompt</Label>
-              <p className="text-xs text-muted-foreground mt-1">
-                Instructions that guide the agent's behavior
-              </p>
-            </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="claude-code-preset" className="text-sm">Use Claude Code Preset</Label>
-              <Switch
-                id="claude-code-preset"
-                checked={useClaudeCodePreset}
-                onCheckedChange={handleClaudeCodePresetToggle}
-              />
-            </div>
-            <Textarea
-              placeholder={useClaudeCodePreset ? "Additional instructions (optional)" : "Enter system prompt..."}
-              value={systemPromptText}
-              onChange={(e) => handleSystemPromptChange(e.target.value)}
-              className="min-h-[200px] font-mono text-xs"
-            />
           </div>
         </Card>
       </div>

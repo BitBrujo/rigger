@@ -145,7 +145,7 @@ export function PresetsTab() {
                     className="h-7 text-xs"
                   >
                     <RotateCcw className="h-3 w-3 mr-1" />
-                    Revert to "{activePresetName}"
+                    Remove Preset
                   </Button>
                 )}
               </div>
