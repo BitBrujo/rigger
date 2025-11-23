@@ -489,44 +489,9 @@ export interface Preset {
   id: number;
   name: string;
   description: string | null;
+  config: AgentSDKConfig;
   created_at: string;
   updated_at: string;
-
-  // Core SDK settings
-  model: string;
-  system_prompt?: string;
-  max_turns: number;
-  max_budget_usd?: number;
-  max_thinking_tokens?: number;
-
-  // Permissions & Security
-  permission_mode: string;
-  allow_dangerous_skip_permissions: boolean;
-
-  // Tools
-  allowed_tools: string[];
-  disallowed_tools: string[];
-
-  // Workspace
-  working_directory: string;
-  additional_directories: string[];
-  environment_vars: Record<string, string>;
-  executable: string;
-  executable_args: string[];
-
-  // Session Management
-  continue_session: boolean;
-  resume_session_id?: string;
-  resume_at_message_id?: string;
-  fork_session: boolean;
-
-  // Advanced
-  fallback_model?: string;
-  mcp_servers: Record<string, McpServerConfig>;
-  strict_mcp_config: boolean;
-  custom_agents: Record<string, AgentDefinition>;
-  hooks: Record<string, any>;
-  plugins: any[];
 }
 
 export interface UsageLog {

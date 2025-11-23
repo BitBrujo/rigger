@@ -48,11 +48,11 @@ export function PresetsTab() {
 
     try {
       setIsCreating(true);
-      await ApiClient.createPreset({
-        name: presetName,
-        description: presetDescription,
-        config: config,
-      });
+      await ApiClient.createPreset(
+        presetName,
+        config,
+        presetDescription
+      );
       toast.success('Preset saved successfully');
       setPresetName('');
       setPresetDescription('');

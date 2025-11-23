@@ -564,6 +564,64 @@ export class ApiClient {
     }
   }
 
+  // Sessions API endpoints
+  static async getSessions(filters?: {
+    status?: string;
+    conversationId?: number;
+    limit?: number;
+  }): Promise<any[]> {
+    const params = new URLSearchParams();
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.conversationId) params.append('conversationId', filters.conversationId.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+
+    const response = await fetch(`${API_BASE_URL}/sessions?${params}`);
+    if (!response.ok) throw new Error('Failed to fetch sessions');
+    return response.json();
+  }
+
+  static async getSession(id: string): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/sessions/${id}`);
+    if (!response.ok) throw new Error('Failed to fetch session');
+    return response.json();
+  }
+
+  static async stopSession(id: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/sessions/${id}/stop`, {
+      method: 'POST',
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to stop session');
+    }
+  }
+
+  static async forceKillSession(id: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/sessions/${id}/force-kill`, {
+      method: 'POST',
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to force kill session');
+    }
+  }
+
+  static async deleteSession(id: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/sessions/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete session');
+    }
+  }
+
+  static async getSessionStatus(id: string): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/sessions/${id}/status`);
+    if (!response.ok) throw new Error('Failed to fetch session status');
+    return response.json();
+  }
+
   // Step-level cost breakdown
   static async getStepBreakdown(conversationId: number): Promise<import('./types').StepCostBreakdown[]> {
     const response = await fetch(`${API_BASE_URL}/analytics/steps/${conversationId}`);

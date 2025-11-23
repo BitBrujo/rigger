@@ -45,9 +45,9 @@ export const navigationTabs: NavigationTab[] = [
   },
   {
     id: 'agents',
-    label: 'Agents',
+    label: 'Subagents',
     icon: Users,
-    description: 'Custom agent definitions and subagents',
+    description: 'Define specialized subagents with custom prompts and tools',
   },
   {
     id: 'hooks',

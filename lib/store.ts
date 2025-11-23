@@ -179,6 +179,10 @@ interface AgentStore {
   setIsLoading: (loading: boolean) => void;
   error: string | null;
   setError: (error: string | null) => void;
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
+  sidebarHovered: boolean;
+  setSidebarHovered: (hovered: boolean) => void;
 }
 
 export const useAgentStore = create<AgentStore>((set) => ({
@@ -443,6 +447,10 @@ export const useAgentStore = create<AgentStore>((set) => ({
   setIsLoading: (loading) => set({ isLoading: loading }),
   error: null,
   setError: (error) => set({ error }),
+  activeTab: 'basic-config',
+  setActiveTab: (tab) => set({ activeTab: tab }),
+  sidebarHovered: false,
+  setSidebarHovered: (hovered) => set({ sidebarHovered: hovered }),
 }));
 
 // Helper function to check if message ID has been processed

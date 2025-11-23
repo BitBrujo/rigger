@@ -8,9 +8,9 @@ export function AgentsTab() {
     <ScrollArea className="h-full">
       <div className="p-6 space-y-6">
         <div>
-          <h2 className="text-2xl font-bold">Custom Agents</h2>
+          <h2 className="text-2xl font-bold">Subagents</h2>
           <p className="text-muted-foreground">
-            Define specialized sub-agents with custom prompts, tools, and configurations
+            Define specialized subagents with custom prompts, tools, and configurations
           </p>
         </div>
 
