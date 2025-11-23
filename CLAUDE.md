@@ -30,7 +30,7 @@ This document contains detailed architecture, patterns, and implementation detai
 - **Session Management**: Persistent execution contexts with two-tier emergency stop (graceful + force kill)
 - **MCP Servers**: Connect external Model Context Protocol servers (GitHub, Notion, Playwright, etc.)
 - **Skills System**: Packaged agent workflows loaded from `.claude/skills/`
-- **Custom Agents**: Define specialized sub-agents with their own prompts and tools
+- **Subagents**: Define specialized subagents with their own prompts and tools
 - **Hooks**: Event-driven automation (git commits, notifications, webhooks)
 - **Presets**: Save and load complete agent configurations
 - **Analytics**: Usage tracking, cost analysis, and performance metrics
@@ -99,7 +99,7 @@ This panel contains collapsible sections for comprehensive agent configuration:
    - Delete skills
    - View skill descriptions and content
 
-5. **Custom Agents (Subagents)**
+5. **Subagents**
    - Define specialized agents with specific prompts
    - Configure allowed tools per agent
    - Set model and temperature overrides
@@ -327,8 +327,8 @@ The backend is an Express.js application running in Docker with PostgreSQL.
 - `DELETE /api/skills/:name` - Delete skill
 - Reads from `.claude/skills/*/SKILL.md` files
 
-**`agents.ts`** - Custom agent management (future):
-- CRUD operations for custom agent definitions
+**`agents.ts`** - Subagent management (future):
+- CRUD operations for subagent definitions
 - Stored in `.claude/agents/*.json`
 
 **`sessions.ts`** - Session management:
@@ -709,9 +709,9 @@ Available via UI (Config Panel → MCP Servers) or programmatically:
 **State**: `config.mcpServers` (Zustand)
 **Find servers**: `npm search @modelcontextprotocol/server-` or https://github.com/modelcontextprotocol/servers
 
-### Custom Agents (Subagents)
+### Subagents
 
-**Custom agents** are specialized AI agents invoked via the `Task` tool. They delegate specific work with custom prompts, tools, and models.
+**Subagents** are specialized AI agents invoked via the `Task` tool. They delegate specific work with custom prompts, tools, and models.
 
 #### Agent Definition
 
@@ -729,7 +729,7 @@ interface AgentDefinition {
 
 #### Built-in Templates
 
-Available via UI (Config Panel → Custom Agents):
+Available via UI (Config Panel → Subagents):
 
 - **Code Reviewer**: Analyze code quality, security, performance (temp: 0.3)
 - **Bug Hunter**: Find bugs, trace errors, suggest fixes (temp: 0.2)
@@ -820,7 +820,7 @@ Hooks run asynchronously in parallel, don't block agent execution. Errors logged
 Important interfaces:
 - `AgentSDKConfig` - 30+ Agent SDK parameters
 - `Message` / `SDKMessage` - Message formats
-- `AgentDefinition` - Custom agent config
+- `AgentDefinition` - Subagent config
 - `McpServerConfig` - MCP server settings
 - `HookConfig` - Hook definitions
 - `SkillMetadata` - Skill metadata
@@ -1019,7 +1019,7 @@ config: {
 
 **Configuration:**
 - `.claude/skills/*/SKILL.md`: Skill definitions and documentation
-- `.claude/agents/*.json`: Custom agent definitions
+- `.claude/agents/*.json`: Subagent definitions
 - `docker-compose.yml`: Service orchestration
 
 ## Testing the Application

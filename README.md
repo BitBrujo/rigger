@@ -23,7 +23,7 @@ Think of it as **mission control for AI agents**—you see everything happening 
 
 **Advanced Stuff:**
 - **MCP servers** to connect external tools (GitHub, Notion, browsers, etc.)
-- **Custom sub-agents** for specialized tasks
+- **Subagents** for specialized tasks
 - **Skills system** for reusable agent workflows
 - **Hooks** for event-driven automation
 - **Presets** to save and share configurations
@@ -88,7 +88,7 @@ The interface has two main panels:
 
 **Advanced options** (click to expand):
 - **MCP Servers** → Connect external services (GitHub, Notion, browsers)
-- **Custom Agents** → Define specialized sub-agents for specific tasks
+- **Subagents** → Define specialized subagents for specific tasks
 - **Skills** → Load reusable workflows from `.claude/skills/`
 - **Hooks** → Set up event triggers (auto-commit, notifications, etc.)
 - **Workspace** → Control which directories the agent can access
@@ -224,7 +224,7 @@ The backend exposes these REST endpoints:
 **Skills:**
 - `GET/POST/PUT/DELETE /api/skills/:name?` → CRUD
 
-**Custom Agents:**
+**Subagents:**
 - `GET/POST/PUT/DELETE /api/agents/:name?` → CRUD
 
 **Analytics:**
