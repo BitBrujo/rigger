@@ -20,6 +20,7 @@ async function parseSkillFile(skillPath: string, skillName: string) {
       name: skillName,
       description: data.description || 'No description provided',
       allowedTools: data['allowed-tools'] || undefined,
+      enabled: data.enabled !== undefined ? data.enabled : true, // Default to true if not specified
       content: markdownContent,
       path: skillPath,
     };
@@ -83,7 +84,7 @@ router.get('/:name', async (req: Request, res: Response) => {
 // POST /api/skills - Create new skill
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { name, description, content, allowedTools } = req.body;
+    const { name, description, content, allowedTools, enabled } = req.body;
 
     if (!name || !description) {
       return res.status(400).json({ error: 'name and description are required' });
@@ -117,6 +118,8 @@ router.post('/', async (req: Request, res: Response) => {
     if (allowedTools && allowedTools.length > 0) {
       frontmatter += `allowed-tools:\n${allowedTools.map((tool: string) => `  - ${tool}`).join('\n')}\n`;
     }
+    // Add enabled field (defaults to true)
+    frontmatter += `enabled: ${enabled !== undefined ? enabled : true}\n`;
     frontmatter += `---\n\n`;
 
     // Create SKILL.md
@@ -135,7 +138,7 @@ router.post('/', async (req: Request, res: Response) => {
 router.put('/:name', async (req: Request, res: Response) => {
   try {
     const { name } = req.params;
-    const { description, content, allowedTools } = req.body;
+    const { description, content, allowedTools, enabled } = req.body;
 
     const skillPath = path.join(SKILLS_BASE_PATH, name);
 
@@ -164,6 +167,11 @@ router.put('/:name', async (req: Request, res: Response) => {
       } else {
         delete updatedData['allowed-tools'];
       }
+    }
+
+    // Update enabled field
+    if (enabled !== undefined) {
+      updatedData.enabled = enabled;
     }
 
     // Update content

@@ -45,6 +45,7 @@ interface AgentStore {
   setStrictMcpConfig: (strict: boolean) => void;
   setCustomAgents: (agents: Record<string, AgentDefinition>) => void;
   setHooks: (hooks: Record<string, any>) => void;
+  toggleHookEnabled: (hookId: string) => void;
   setPlugins: (plugins: any[]) => void;
   setSettingSources: (sources: string[]) => void;
 
@@ -54,6 +55,7 @@ interface AgentStore {
   addSkill: (skill: SkillMetadata) => void;
   removeSkill: (name: string) => void;
   updateSkill: (name: string, updates: Partial<SkillMetadata>) => void;
+  toggleSkillEnabled: (name: string) => void;
 
   // Agents Management
   availableAgents: AgentDefinition[];
@@ -61,6 +63,7 @@ interface AgentStore {
   addAgent: (agent: AgentDefinition) => void;
   removeAgent: (name: string) => void;
   updateAgent: (name: string, updates: Partial<AgentDefinition>) => void;
+  toggleAgentEnabled: (name: string) => void;
 
   // Todo Lists Management
   todoLists: TodoList[];
@@ -213,6 +216,25 @@ export const useAgentStore = create<AgentStore>((set) => ({
   setStrictMcpConfig: (strictMcpConfig) => set((state) => ({ config: { ...state.config, strictMcpConfig } })),
   setCustomAgents: (customAgents) => set((state) => ({ config: { ...state.config, customAgents } })),
   setHooks: (hooks) => set((state) => ({ config: { ...state.config, hooks } })),
+  toggleHookEnabled: (hookId) =>
+    set((state) => {
+      const hooks = state.config.hooks || {};
+      const hook = hooks[hookId];
+      if (!hook) return state;
+
+      return {
+        config: {
+          ...state.config,
+          hooks: {
+            ...hooks,
+            [hookId]: {
+              ...hook,
+              enabled: !(hook.enabled ?? true),
+            },
+          },
+        },
+      };
+    }),
   setPlugins: (plugins) => set((state) => ({ config: { ...state.config, plugins } })),
   setSettingSources: (settingSources) => set((state) => ({ config: { ...state.config, settingSources } })),
 
@@ -233,6 +255,12 @@ export const useAgentStore = create<AgentStore>((set) => ({
         skill.name === name ? { ...skill, ...updates } : skill
       ),
     })),
+  toggleSkillEnabled: (name) =>
+    set((state) => ({
+      availableSkills: state.availableSkills.map((skill) =>
+        skill.name === name ? { ...skill, enabled: !(skill.enabled ?? true) } : skill
+      ),
+    })),
 
   // Agents Management
   availableAgents: [],
@@ -249,6 +277,12 @@ export const useAgentStore = create<AgentStore>((set) => ({
     set((state) => ({
       availableAgents: state.availableAgents.map((agent) =>
         agent.name === name ? { ...agent, ...updates } : agent
+      ),
+    })),
+  toggleAgentEnabled: (name) =>
+    set((state) => ({
+      availableAgents: state.availableAgents.map((agent) =>
+        agent.name === name ? { ...agent, enabled: !(agent.enabled ?? true) } : agent
       ),
     })),
 

@@ -7,11 +7,15 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { apiClient } from '@/lib/api-client';
 import { AgentDefinition } from '@/lib/types';
 import { AGENT_TEMPLATES, getTemplate } from '@/lib/agent-templates';
+import { useAgentStore } from '@/lib/store';
 
 export function AgentsManager() {
+  const { toggleAgentEnabled } = useAgentStore();
   const [agents, setAgents] = useState<AgentDefinition[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -82,6 +86,23 @@ export function AgentsManager() {
       await loadAgents();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete agent');
+    }
+  };
+
+  const handleToggleEnabled = async (agent: AgentDefinition) => {
+    try {
+      // Toggle in local state immediately for responsive UI
+      const updatedAgent = { ...agent, enabled: !(agent.enabled ?? true) };
+      setAgents(agents.map(a => a.name === agent.name ? updatedAgent : a));
+
+      // Persist to backend
+      await apiClient.updateAgent(agent.name, {
+        enabled: updatedAgent.enabled
+      });
+    } catch (err) {
+      // Revert on error
+      setAgents(agents.map(a => a.name === agent.name ? agent : a));
+      setError(err instanceof Error ? err.message : 'Failed to toggle agent');
     }
   };
 
@@ -222,35 +243,57 @@ export function AgentsManager() {
           ) : (
             <div className="space-y-2">
               {agents.map((agent) => (
-                <Card key={agent.name}>
+                <Card
+                  key={agent.name}
+                  className={`transition-all ${
+                    agent.enabled === false ? 'opacity-60' : ''
+                  }`}
+                >
                   <CardHeader className="py-3">
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
-                        <CardTitle className="text-sm">{agent.name}</CardTitle>
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          {agent.name}
+                          {agent.enabled === false && (
+                            <Badge variant="outline" className="text-xs">Disabled</Badge>
+                          )}
+                        </CardTitle>
                         {agent.description && (
                           <CardDescription className="text-xs mt-1">
                             {agent.description}
                           </CardDescription>
                         )}
                       </div>
-                      <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setEditingAgent(agent);
-                            setIsCreating(false);
-                          }}
-                        >
-                          <Edit2 className="w-3 h-3" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleDelete(agent.name)}
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={agent.enabled ?? true}
+                            onCheckedChange={() => handleToggleEnabled(agent)}
+                            aria-label={`Toggle ${agent.name}`}
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            {agent.enabled ?? true ? 'Enabled' : 'Disabled'}
+                          </span>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setEditingAgent(agent);
+                              setIsCreating(false);
+                            }}
+                          >
+                            <Edit2 className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDelete(agent.name)}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </CardHeader>

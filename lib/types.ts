@@ -50,6 +50,7 @@ export interface AgentDefinition {
   isTemplate?: boolean;       // Whether this is a pre-built template
   createdAt?: string;         // Timestamp when agent was created
   updatedAt?: string;         // Timestamp when agent was last updated
+  enabled?: boolean;          // Whether this agent is enabled (default: true)
 }
 
 // Agent Template (for pre-built templates)
@@ -63,8 +64,13 @@ export interface AgentTemplate extends AgentDefinition {
 
 // Hook Configuration
 export interface HookConfig {
-  event: string;
-  pattern: string | Record<string, any>;
+  id: string;                  // Unique identifier for the hook
+  name: string;                // Human-readable name
+  description?: string;        // What this hook does
+  event: string;               // Event trigger type
+  pattern: string | Record<string, any>; // Pattern to match
+  enabled?: boolean;           // Whether this hook is enabled (default: true)
+  createdAt?: string;          // When the hook was created
 }
 
 // Skill Metadata (from SKILL.md frontmatter)
@@ -74,6 +80,7 @@ export interface SkillMetadata {
   allowedTools?: string[]; // Optional tool restrictions (SDK apps use main allowedTools instead)
   content?: string; // Full SKILL.md content (loaded on demand)
   path?: string; // Filesystem path to skill directory
+  enabled?: boolean; // Whether this skill is enabled (default: true)
 }
 
 // Agent SDK Configuration (30+ parameters)

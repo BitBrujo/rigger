@@ -36,7 +36,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { HOOK_TEMPLATES, HOOK_CATEGORIES, HookTemplate } from '@/lib/hook-templates';
 
 export default function ConfigPanel() {
-  const { config, setConfig } = useAgentStore();
+  const { config, setConfig, toggleHookEnabled } = useAgentStore();
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [hookCategory, setHookCategory] = useState<string>('all');
   const [useClaudeCodePreset, setUseClaudeCodePreset] = useState(false);
@@ -419,6 +419,67 @@ export default function ConfigPanel() {
                     </div>
                   </div>
                 </Card>
+
+                {/* Active Hooks List */}
+                {config.hooks && Object.keys(config.hooks).length > 0 && (
+                  <Card className="p-3 bg-background">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Label className="text-sm font-medium">Active Hooks</Label>
+                          <Badge variant="secondary" className="text-[10px]">
+                            {Object.keys(config.hooks).length}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      {/* Hooks List */}
+                      <div className="space-y-2 max-h-60 overflow-y-auto">
+                        {Object.entries(config.hooks).map(([hookId, hook]: [string, any]) => (
+                          <div
+                            key={hookId}
+                            className={`p-2 border rounded-md transition-all ${
+                              hook.enabled === false ? 'opacity-60 bg-muted/50' : 'bg-background'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="text-xs font-medium truncate">
+                                    {hook.name || hookId}
+                                  </h4>
+                                  {hook.enabled === false && (
+                                    <Badge variant="outline" className="text-[10px] px-1 py-0">
+                                      Disabled
+                                    </Badge>
+                                  )}
+                                  {hook.event && (
+                                    <Badge variant="outline" className="text-[10px] px-1 py-0">
+                                      {hook.event}
+                                    </Badge>
+                                  )}
+                                </div>
+                                {hook.description && (
+                                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                                    {hook.description}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Switch
+                                  checked={hook.enabled ?? true}
+                                  onCheckedChange={() => toggleHookEnabled(hookId)}
+                                  aria-label={`Toggle ${hook.name || hookId}`}
+                                  className="scale-75"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </Card>
+                )}
 
                 {/* Manual JSON Editor */}
                 <div className="space-y-2">

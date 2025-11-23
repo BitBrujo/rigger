@@ -99,11 +99,29 @@ function buildSdkOptions(config: any) {
   }
 
   if (config.customAgents && Object.keys(config.customAgents).length > 0) {
-    options.agents = config.customAgents;
+    // Filter out disabled agents
+    const enabledAgents: Record<string, any> = {};
+    Object.entries(config.customAgents).forEach(([name, agent]: [string, any]) => {
+      if (agent.enabled !== false) {
+        enabledAgents[name] = agent;
+      }
+    });
+    if (Object.keys(enabledAgents).length > 0) {
+      options.agents = enabledAgents;
+    }
   }
 
   if (config.hooks && Object.keys(config.hooks).length > 0) {
-    options.hooks = config.hooks;
+    // Filter out disabled hooks
+    const enabledHooks: Record<string, any> = {};
+    Object.entries(config.hooks).forEach(([hookId, hook]: [string, any]) => {
+      if (hook.enabled !== false) {
+        enabledHooks[hookId] = hook;
+      }
+    });
+    if (Object.keys(enabledHooks).length > 0) {
+      options.hooks = enabledHooks;
+    }
   }
 
   if (config.plugins && config.plugins.length > 0) {

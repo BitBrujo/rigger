@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Switch } from '@/components/ui/switch';
 import {
   Plus,
   Trash2,
@@ -26,7 +27,7 @@ import {
 } from 'lucide-react';
 
 export function SkillsManager() {
-  const { availableSkills, setAvailableSkills, addSkill, removeSkill, updateSkill } = useAgentStore();
+  const { availableSkills, setAvailableSkills, addSkill, removeSkill, updateSkill, toggleSkillEnabled } = useAgentStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedSkill, setSelectedSkill] = useState<SkillMetadata | null>(null);
@@ -148,6 +149,26 @@ export function SkillsManager() {
       setError(err.message || 'Failed to load skill');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleToggleEnabled = async (skillName: string) => {
+    try {
+      // Toggle in local state immediately for responsive UI
+      toggleSkillEnabled(skillName);
+
+      // Find the skill to get its new enabled state
+      const skill = availableSkills.find(s => s.name === skillName);
+      if (skill) {
+        // Persist to backend
+        await ApiClient.updateSkill(skillName, {
+          enabled: !(skill.enabled ?? true)
+        });
+      }
+    } catch (err: any) {
+      // Revert on error
+      toggleSkillEnabled(skillName);
+      setError(err.message || 'Failed to toggle skill');
     }
   };
 
@@ -287,44 +308,64 @@ export function SkillsManager() {
       ) : (
         <div className="grid gap-4">
           {availableSkills.map((skill) => (
-            <Card key={skill.name} className="hover:border-primary/50 transition-colors">
+            <Card
+              key={skill.name}
+              className={`hover:border-primary/50 transition-all ${
+                skill.enabled === false ? 'opacity-60' : ''
+              }`}
+            >
               <CardHeader>
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <CardTitle className="text-base flex items-center gap-2">
                       {skill.name}
                       {skill.name.startsWith('example-') && (
                         <Badge variant="secondary">Example</Badge>
                       )}
+                      {skill.enabled === false && (
+                        <Badge variant="outline" className="text-xs">Disabled</Badge>
+                      )}
                     </CardTitle>
                     <CardDescription className="mt-1">{skill.description}</CardDescription>
                   </div>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleViewClick(skill)}
-                      title="View Details"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEditClick(skill)}
-                      title="Edit Skill"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteSkill(skill.name)}
-                      title="Delete Skill"
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={skill.enabled ?? true}
+                        onCheckedChange={() => handleToggleEnabled(skill.name)}
+                        aria-label={`Toggle ${skill.name}`}
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        {skill.enabled ?? true ? 'Enabled' : 'Disabled'}
+                      </span>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleViewClick(skill)}
+                        title="View Details"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditClick(skill)}
+                        title="Edit Skill"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteSkill(skill.name)}
+                        title="Delete Skill"
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardHeader>

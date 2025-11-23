@@ -243,6 +243,7 @@ router.post('/', (req: Request, res: Response) => {
     // Add metadata
     const agent = {
       ...definition,
+      enabled: definition.enabled !== undefined ? definition.enabled : true, // Default to enabled
       isTemplate: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()

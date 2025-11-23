@@ -12,10 +12,12 @@ export const HOOK_TEMPLATES: HookTemplate[] = [
     category: 'safety',
     hooks: {
       pre_tool_use: {
+        name: 'Block Dangerous Bash Commands',
         tool: 'Bash',
         pattern: '^(rm|dd|mkfs|format)',
         action: 'block',
-        message: 'Dangerous bash command blocked for safety'
+        message: 'Dangerous bash command blocked for safety',
+        enabled: true
       }
     }
   },
@@ -25,10 +27,12 @@ export const HOOK_TEMPLATES: HookTemplate[] = [
     category: 'safety',
     hooks: {
       pre_tool_use: {
+        name: 'Warn on File Deletions',
         tool: 'Bash',
         pattern: 'rm -rf',
         action: 'warn',
-        message: 'About to delete files recursively'
+        message: 'About to delete files recursively',
+        enabled: true
       }
     }
   },
@@ -38,13 +42,17 @@ export const HOOK_TEMPLATES: HookTemplate[] = [
     category: 'budget',
     hooks: {
       on_budget_threshold: {
+        name: 'Budget Alert at 80%',
         threshold: 0.8,
         action: 'warn',
-        message: 'Budget 80% consumed'
+        message: 'Budget 80% consumed',
+        enabled: true
       },
       on_budget_exceeded: {
+        name: 'Budget Limit Reached',
         action: 'stop',
-        message: 'Budget limit reached'
+        message: 'Budget limit reached',
+        enabled: true
       }
     }
   },
@@ -54,12 +62,16 @@ export const HOOK_TEMPLATES: HookTemplate[] = [
     category: 'logging',
     hooks: {
       pre_tool_use: {
+        name: 'Pre-Tool Log',
         action: 'log',
-        message: 'Tool executed: {{tool}}'
+        message: 'Tool executed: {{tool}}',
+        enabled: true
       },
       post_tool_use: {
+        name: 'Post-Tool Log',
         action: 'log',
-        message: 'Tool completed: {{tool}}'
+        message: 'Tool completed: {{tool}}',
+        enabled: true
       }
     }
   },
@@ -69,9 +81,11 @@ export const HOOK_TEMPLATES: HookTemplate[] = [
     category: 'safety',
     hooks: {
       pre_tool_use: {
+        name: 'Require Approval for Web Access',
         tool: 'WebFetch',
         action: 'warn',
-        message: 'About to fetch: {{url}}'
+        message: 'About to fetch: {{url}}',
+        enabled: true
       }
     }
   },
@@ -81,10 +95,12 @@ export const HOOK_TEMPLATES: HookTemplate[] = [
     category: 'workflow',
     hooks: {
       pre_tool_use: {
+        name: 'Plan Before Execute',
         tool: '(Write|Edit|Bash)',
         action: 'warn',
         message: 'About to modify files/execute commands',
-        require_plan: true
+        require_plan: true,
+        enabled: true
       }
     }
   },
@@ -94,12 +110,16 @@ export const HOOK_TEMPLATES: HookTemplate[] = [
     category: 'workflow',
     hooks: {
       on_turn_end: {
+        name: 'Turn End Log',
         action: 'log',
-        message: 'Turn {{turn_number}} completed'
+        message: 'Turn {{turn_number}} completed',
+        enabled: true
       },
       on_max_turns: {
+        name: 'Stop on Max Turns',
         action: 'stop',
-        message: 'Maximum turns reached'
+        message: 'Maximum turns reached',
+        enabled: true
       }
     }
   },
@@ -109,10 +129,12 @@ export const HOOK_TEMPLATES: HookTemplate[] = [
     category: 'safety',
     hooks: {
       pre_tool_use: {
+        name: 'Block System File Access',
         tool: '(Read|Write|Edit)',
         pattern: '(/etc/|/sys/|/proc/|/dev/)',
         action: 'block',
-        message: 'System file access blocked'
+        message: 'System file access blocked',
+        enabled: true
       }
     }
   },
@@ -122,20 +144,28 @@ export const HOOK_TEMPLATES: HookTemplate[] = [
     category: 'logging',
     hooks: {
       on_turn_start: {
+        name: 'Turn Start Log',
         action: 'log',
-        message: 'Starting turn {{turn_number}}'
+        message: 'Starting turn {{turn_number}}',
+        enabled: true
       },
       pre_tool_use: {
+        name: 'Pre-Tool Verbose Log',
         action: 'log',
-        message: 'Calling {{tool}} with params: {{params}}'
+        message: 'Calling {{tool}} with params: {{params}}',
+        enabled: true
       },
       post_tool_use: {
+        name: 'Post-Tool Verbose Log',
         action: 'log',
-        message: '{{tool}} returned: {{result}}'
+        message: '{{tool}} returned: {{result}}',
+        enabled: true
       },
       on_turn_end: {
+        name: 'Turn End Verbose Log',
         action: 'log',
-        message: 'Turn {{turn_number}} complete. Cost: ${{turn_cost}}'
+        message: 'Turn {{turn_number}} complete. Cost: ${{turn_cost}}',
+        enabled: true
       }
     }
   },
@@ -145,18 +175,24 @@ export const HOOK_TEMPLATES: HookTemplate[] = [
     category: 'budget',
     hooks: {
       on_turn_start: {
+        name: 'Cost Tracking Log',
         action: 'log',
-        message: 'Total cost so far: ${{accumulated_cost}}'
+        message: 'Total cost so far: ${{accumulated_cost}}',
+        enabled: true
       },
       on_budget_threshold: {
+        name: 'Budget 50% Warning',
         threshold: 0.5,
         action: 'warn',
-        message: 'Half of budget consumed'
+        message: 'Half of budget consumed',
+        enabled: true
       },
       on_budget_threshold_90: {
+        name: 'Budget 90% Warning',
         threshold: 0.9,
         action: 'warn',
-        message: 'Approaching budget limit (90%)'
+        message: 'Approaching budget limit (90%)',
+        enabled: true
       }
     }
   }
