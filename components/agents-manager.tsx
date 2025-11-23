@@ -32,7 +32,12 @@ export function AgentsManager() {
       setIsLoading(true);
       setError(null);
       const data = await apiClient.getAgents();
-      setAgents(data);
+      // Convert Record<string, AgentDefinition> to AgentDefinition[]
+      const agentsArray = Object.entries(data).map(([name, definition]) => ({
+        ...definition,
+        name,
+      }));
+      setAgents(agentsArray);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load agents');
     } finally {
@@ -65,9 +70,13 @@ export function AgentsManager() {
     try {
       setError(null);
       if (isCreating) {
-        await apiClient.createAgent(editingAgent);
+        // Extract name from editingAgent and pass rest as definition
+        const { name, ...definition } = editingAgent;
+        await apiClient.createAgent({ name, definition });
       } else {
-        await apiClient.updateAgent(editingAgent.name, editingAgent);
+        // For update, pass just the definition without name
+        const { name, ...definition } = editingAgent;
+        await apiClient.updateAgent(name, definition);
       }
       await loadAgents();
       setEditingAgent(null);
@@ -95,10 +104,9 @@ export function AgentsManager() {
       const updatedAgent = { ...agent, enabled: !(agent.enabled ?? true) };
       setAgents(agents.map(a => a.name === agent.name ? updatedAgent : a));
 
-      // Persist to backend
-      await apiClient.updateAgent(agent.name, {
-        enabled: updatedAgent.enabled
-      });
+      // Persist to backend - pass full definition without name
+      const { name, ...definition } = updatedAgent;
+      await apiClient.updateAgent(name, definition);
     } catch (err) {
       // Revert on error
       setAgents(agents.map(a => a.name === agent.name ? agent : a));

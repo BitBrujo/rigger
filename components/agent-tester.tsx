@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAgentStore } from '@/lib/store';
 import { ApiClient } from '@/lib/api-client';
-import { Preset, AgentConfig } from '@/lib/types';
+import { Preset, AgentSDKConfig } from '@/lib/types';
 import { toast } from 'sonner';
 import { AlertCircle } from 'lucide-react';
 
@@ -66,8 +66,8 @@ export default function AgentTester() {
   };
 
   const handleLoadPreset = async (preset: Preset) => {
-    // Convert flat Preset to AgentConfig structure
-    const loadedConfig: AgentConfig = {
+    // Convert flat Preset to AgentSDKConfig structure
+    const loadedConfig: AgentSDKConfig = {
       model: preset.model,
       systemPrompt: preset.system_prompt || '',
       maxTurns: preset.max_turns,
