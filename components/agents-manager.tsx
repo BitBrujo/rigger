@@ -275,7 +275,7 @@ export function AgentsManager() {
                           </CardDescription>
                         )}
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col items-end gap-2 min-w-fit">
                         <div className="flex items-center gap-2">
                           <Switch
                             checked={agent.enabled ?? true}

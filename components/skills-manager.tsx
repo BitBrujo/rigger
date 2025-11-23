@@ -313,7 +313,7 @@ export function SkillsManager() {
                     </CardTitle>
                     <CardDescription className="mt-1">{skill.description}</CardDescription>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col items-end gap-2 min-w-fit">
                     <div className="flex items-center gap-2">
                       <Switch
                         checked={skill.enabled ?? true}

@@ -470,15 +470,17 @@ export default function ConfigPanel() {
                                 </CardDescription>
                               )}
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Switch
-                                checked={hook.enabled ?? true}
-                                onCheckedChange={() => handleToggleHookEnabled(hookId, hook)}
-                                aria-label={`Toggle ${hook.name || hookId}`}
-                              />
-                              <span className="text-xs text-muted-foreground">
-                                {hook.enabled ?? true ? 'Enabled' : 'Disabled'}
-                              </span>
+                            <div className="flex flex-col items-end gap-2 min-w-fit">
+                              <div className="flex items-center gap-2">
+                                <Switch
+                                  checked={hook.enabled ?? true}
+                                  onCheckedChange={() => handleToggleHookEnabled(hookId, hook)}
+                                  aria-label={`Toggle ${hook.name || hookId}`}
+                                />
+                                <span className="text-xs text-muted-foreground">
+                                  {hook.enabled ?? true ? 'Enabled' : 'Disabled'}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </CardHeader>
