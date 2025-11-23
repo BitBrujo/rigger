@@ -513,7 +513,8 @@ export class ApiClient {
 
     const response = await fetch(`${API_BASE_URL}/sessions?${params}`);
     if (!response.ok) throw new Error('Failed to fetch sessions');
-    return response.json();
+    const data = await response.json();
+    return data.sessions;
   }
 
   static async getSession(id: string): Promise<any> {

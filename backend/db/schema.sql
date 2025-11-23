@@ -174,6 +174,34 @@ CREATE TABLE IF NOT EXISTS todo_items (
     CONSTRAINT todo_items_status_check CHECK (status IN ('pending', 'in_progress', 'completed'))
 );
 
+-- Custom Agents table for user-created subagents
+CREATE TABLE IF NOT EXISTS custom_agents (
+    name VARCHAR(255) PRIMARY KEY,
+    description TEXT,
+    system_prompt TEXT NOT NULL,
+
+    -- Tool configuration
+    allowed_tools TEXT[] DEFAULT ARRAY[]::TEXT[],
+    disallowed_tools TEXT[] DEFAULT ARRAY[]::TEXT[],
+
+    -- Model settings
+    model VARCHAR(100),
+    temperature DECIMAL(3, 2),
+    max_turns INTEGER,
+    max_budget_usd DECIMAL(10, 4),
+
+    -- Category and metadata
+    category VARCHAR(100),
+    enabled BOOLEAN DEFAULT TRUE,
+
+    -- Timestamps
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    -- Full definition as JSONB for flexibility
+    definition JSONB NOT NULL
+);
+
 -- Agent Sessions table for session-based UI
 CREATE TABLE IF NOT EXISTS agent_sessions (
     id VARCHAR(255) PRIMARY KEY,
@@ -241,6 +269,9 @@ CREATE INDEX IF NOT EXISTS idx_todos_created_at ON todos(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_todos_tool_use_id ON todos(tool_use_id);
 CREATE INDEX IF NOT EXISTS idx_todo_items_todo_id ON todo_items(todo_id);
 CREATE INDEX IF NOT EXISTS idx_todo_items_status ON todo_items(status);
+CREATE INDEX IF NOT EXISTS idx_custom_agents_name ON custom_agents(name);
+CREATE INDEX IF NOT EXISTS idx_custom_agents_category ON custom_agents(category);
+CREATE INDEX IF NOT EXISTS idx_custom_agents_enabled ON custom_agents(enabled);
 CREATE INDEX IF NOT EXISTS idx_agent_sessions_pattern ON agent_sessions(pattern);
 CREATE INDEX IF NOT EXISTS idx_agent_sessions_status ON agent_sessions(status);
 CREATE INDEX IF NOT EXISTS idx_agent_sessions_user_id ON agent_sessions(user_id);

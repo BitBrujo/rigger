@@ -16,9 +16,23 @@ export interface NavigationTab {
   label: string;
   icon: LucideIcon;
   description: string;
+  dividerAfter?: boolean;
 }
 
 export const navigationTabs: NavigationTab[] = [
+  {
+    id: 'sessions',
+    label: 'Sessions',
+    icon: Activity,
+    description: 'Session management and controls',
+  },
+  {
+    id: 'presets',
+    label: 'Presets',
+    icon: Bookmark,
+    description: 'Save and load agent configurations',
+    dividerAfter: true,
+  },
   {
     id: 'basic-config',
     label: 'Basic Config',
@@ -54,18 +68,7 @@ export const navigationTabs: NavigationTab[] = [
     label: 'Hooks',
     icon: Zap,
     description: 'Event-driven automation and webhooks',
-  },
-  {
-    id: 'presets',
-    label: 'Presets',
-    icon: Bookmark,
-    description: 'Save and load agent configurations',
-  },
-  {
-    id: 'sessions',
-    label: 'Sessions',
-    icon: Activity,
-    description: 'Session management and controls',
+    dividerAfter: true,
   },
   {
     id: 'advanced',

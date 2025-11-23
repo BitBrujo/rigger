@@ -1,8 +1,8 @@
 'use client';
 
+// Force cache refresh
 import { useState, useEffect } from 'react';
 import ChatInterface from './chat-interface';
-import { SessionControlBar } from './session-control-bar';
 import { SidebarNav } from './navigation/sidebar-nav';
 import { BasicConfigTab } from './tabs/basic-config-tab';
 import { ToolsTab } from './tabs/tools-tab';
@@ -101,9 +101,6 @@ export default function AgentTester() {
             </Button>
           </div>
         </div>
-
-        {/* Session Control Bar */}
-        <SessionControlBar />
 
         {/* Content + Chat Layout */}
         <ResizablePanelGroup direction="horizontal" className="flex-1 min-h-0">

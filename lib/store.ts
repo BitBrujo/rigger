@@ -447,7 +447,7 @@ export const useAgentStore = create<AgentStore>((set) => ({
   setIsLoading: (loading) => set({ isLoading: loading }),
   error: null,
   setError: (error) => set({ error }),
-  activeTab: 'basic-config',
+  activeTab: 'sessions',
   setActiveTab: (tab) => set({ activeTab: tab }),
   sidebarHovered: false,
   setSidebarHovered: (hovered) => set({ sidebarHovered: hovered }),

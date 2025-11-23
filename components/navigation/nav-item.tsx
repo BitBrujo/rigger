@@ -47,6 +47,15 @@ export function NavItem({ tab, isActive, isExpanded, onClick }: NavItemProps) {
     </button>
   );
 
+  const content = (
+    <>
+      {button}
+      {tab.dividerAfter && (
+        <div className="mx-2 my-2 border-b border-border" />
+      )}
+    </>
+  );
+
   // Show tooltip only when collapsed
   if (!isExpanded) {
     return (
@@ -62,9 +71,12 @@ export function NavItem({ tab, isActive, isExpanded, onClick }: NavItemProps) {
             </div>
           </TooltipContent>
         </Tooltip>
+        {tab.dividerAfter && (
+          <div className="mx-2 my-2 border-b border-border" />
+        )}
       </TooltipProvider>
     );
   }
 
-  return button;
+  return content;
 }

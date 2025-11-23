@@ -174,19 +174,12 @@ export function SkillsManager() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold">Skills Manager</h3>
-          <p className="text-sm text-muted-foreground">
-            Manage specialized agent skills from .claude/skills/
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={loadSkills}
-            disabled={isLoading}
+      <div className="flex items-center justify-end gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={loadSkills}
+          disabled={isLoading}
           >
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           </Button>
@@ -258,7 +251,6 @@ export function SkillsManager() {
               </div>
             </DialogContent>
           </Dialog>
-        </div>
       </div>
 
       {/* Error Display */}
