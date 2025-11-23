@@ -13,7 +13,8 @@ import {
   McpServerStatus,
   SessionHistory,
   SkillMetadata,
-  TodoList
+  TodoList,
+  UploadedFile
 } from './types';
 
 interface AgentStore {
@@ -72,6 +73,14 @@ interface AgentStore {
   removeAgent: (name: string) => void;
   updateAgent: (name: string, updates: Partial<AgentDefinition>) => void;
   toggleAgentEnabled: (name: string) => void;
+
+  // Uploaded Files Management
+  uploadedFiles: UploadedFile[];
+  setUploadedFiles: (files: UploadedFile[]) => void;
+  addUploadedFile: (file: UploadedFile) => void;
+  removeUploadedFile: (id: number) => void;
+  updateUploadedFile: (id: number, updates: Partial<UploadedFile>) => void;
+  toggleFileEnabled: (id: number) => void;
 
   // Todo Lists Management
   todoLists: TodoList[];
@@ -448,6 +457,30 @@ export const useAgentStore = create<AgentStore>((set) => ({
     set((state) => ({
       availableAgents: state.availableAgents.map((agent) =>
         agent.name === name ? { ...agent, enabled: !(agent.enabled ?? true) } : agent
+      ),
+    })),
+
+  // Uploaded Files Management
+  uploadedFiles: [],
+  setUploadedFiles: (files) => set({ uploadedFiles: files }),
+  addUploadedFile: (file) =>
+    set((state) => ({
+      uploadedFiles: [...state.uploadedFiles, file],
+    })),
+  removeUploadedFile: (id) =>
+    set((state) => ({
+      uploadedFiles: state.uploadedFiles.filter((file) => file.id !== id),
+    })),
+  updateUploadedFile: (id, updates) =>
+    set((state) => ({
+      uploadedFiles: state.uploadedFiles.map((file) =>
+        file.id === id ? { ...file, ...updates } : file
+      ),
+    })),
+  toggleFileEnabled: (id) =>
+    set((state) => ({
+      uploadedFiles: state.uploadedFiles.map((file) =>
+        file.id === id ? { ...file, enabled: !file.enabled } : file
       ),
     })),
 

@@ -2,6 +2,8 @@ import { Router, Request, Response } from 'express';
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import pool from '../../db/client';
 import { sessionManager } from '../session-manager.js';
+import fs from 'fs';
+import path from 'path';
 
 const router = Router();
 
@@ -133,6 +135,60 @@ function buildSdkOptions(config: any) {
     options.settingSources = config.settingSources;
   }
 
+  // Uploaded Files Integration
+  if (config.uploadedFiles && config.uploadedFiles.length > 0) {
+    const enabledFiles = config.uploadedFiles.filter((file: any) => file.enabled);
+
+    if (enabledFiles.length > 0) {
+      let fileContext = '';
+      const uploadDir = path.join(options.cwd, '.rigger-uploads');
+
+      enabledFiles.forEach((file: any) => {
+        const integrationMethod = file.integrationMethod || 'working-directory';
+
+        // Handle working-directory integration
+        if (integrationMethod === 'working-directory' || integrationMethod === 'both') {
+          try {
+            // Create upload directory if it doesn't exist
+            fs.mkdirSync(uploadDir, { recursive: true });
+
+            // Copy file to working directory
+            const destPath = path.join(uploadDir, file.filename);
+            if (fs.existsSync(file.filePath)) {
+              fs.copyFileSync(file.filePath, destPath);
+              console.log(`[Files] Copied file to working directory: ${destPath}`);
+            }
+          } catch (err) {
+            console.error(`[Files] Failed to copy file ${file.filename}:`, err);
+          }
+        }
+
+        // Handle system-prompt integration
+        if (integrationMethod === 'system-prompt' || integrationMethod === 'both') {
+          const relativePath = `.rigger-uploads/${file.filename}`;
+          fileContext += `\n- **${file.originalFilename}** (${(file.fileSizeBytes / 1024).toFixed(1)} KB)`;
+          if (file.description) {
+            fileContext += `: ${file.description}`;
+          }
+          fileContext += `\n  Path: \`${relativePath}\``;
+
+          // Include content preview for small text files
+          if (file.contentPreview && integrationMethod === 'system-prompt') {
+            fileContext += `\n  Preview:\n  \`\`\`\n  ${file.contentPreview}\n  \`\`\``;
+          }
+        }
+      });
+
+      // Append file context to system prompt if any files use system-prompt integration
+      if (fileContext) {
+        options.systemPrompt = (options.systemPrompt || '') +
+          `\n\n## Available Files\n\nThe following files have been uploaded for this conversation:${fileContext}\n\nYou can access these files using the Read tool or directly from the \`.rigger-uploads/\` directory.`;
+      }
+
+      console.log(`[Files] Integrated ${enabledFiles.length} files`);
+    }
+  }
+
   return options;
 }
 
@@ -201,6 +257,42 @@ router.post('/stream', async (req: Request, res: Response) => {
     let cacheReadTokens = 0;
     let toolsUsed: string[] = [];
     let sdkSessionId: string | null = null;
+
+    // Query uploaded files if conversationId is provided
+    if (conversationId) {
+      try {
+        const filesResult = await pool.query(
+          `SELECT * FROM uploaded_files
+           WHERE enabled = TRUE
+           AND (is_global = TRUE OR conversation_id = $1)
+           ORDER BY uploaded_at DESC`,
+          [conversationId]
+        );
+
+        if (filesResult.rows.length > 0) {
+          config.uploadedFiles = filesResult.rows.map((row: any) => ({
+            id: row.id,
+            filename: row.filename,
+            originalFilename: row.original_filename,
+            filePath: row.file_path,
+            mimeType: row.mime_type,
+            fileSizeBytes: row.file_size_bytes,
+            isGlobal: row.is_global,
+            conversationId: row.conversation_id,
+            integrationMethod: row.integration_method,
+            enabled: row.enabled,
+            description: row.description,
+            contentPreview: row.content_preview,
+            uploadedAt: row.uploaded_at,
+            lastAccessedAt: row.last_accessed_at,
+            accessCount: row.access_count
+          }));
+          console.log(`[Files] Loaded ${filesResult.rows.length} files for conversation ${conversationId}`);
+        }
+      } catch (err) {
+        console.error('[Files] Failed to query uploaded files:', err);
+      }
+    }
 
     // Build SDK options from config
     const sdkOptions = buildSdkOptions(config);
@@ -571,6 +663,42 @@ router.post('/message', async (req: Request, res: Response) => {
     let assistantMessage: any = null;
     let toolsUsed: string[] = [];
     let sessionId: string | null = null;
+
+    // Query uploaded files if conversationId is provided
+    if (conversationId) {
+      try {
+        const filesResult = await pool.query(
+          `SELECT * FROM uploaded_files
+           WHERE enabled = TRUE
+           AND (is_global = TRUE OR conversation_id = $1)
+           ORDER BY uploaded_at DESC`,
+          [conversationId]
+        );
+
+        if (filesResult.rows.length > 0) {
+          config.uploadedFiles = filesResult.rows.map((row: any) => ({
+            id: row.id,
+            filename: row.filename,
+            originalFilename: row.original_filename,
+            filePath: row.file_path,
+            mimeType: row.mime_type,
+            fileSizeBytes: row.file_size_bytes,
+            isGlobal: row.is_global,
+            conversationId: row.conversation_id,
+            integrationMethod: row.integration_method,
+            enabled: row.enabled,
+            description: row.description,
+            contentPreview: row.content_preview,
+            uploadedAt: row.uploaded_at,
+            lastAccessedAt: row.last_accessed_at,
+            accessCount: row.access_count
+          }));
+          console.log(`[Files] Loaded ${filesResult.rows.length} files for conversation ${conversationId}`);
+        }
+      } catch (err) {
+        console.error('[Files] Failed to query uploaded files:', err);
+      }
+    }
 
     // Build SDK options from config
     const sdkOptions = buildSdkOptions(config);

@@ -88,6 +88,42 @@ export interface SkillMetadata {
   enabled?: boolean; // Whether this skill is enabled (default: true)
 }
 
+// Uploaded File (for agent context)
+export interface UploadedFile {
+  id: number;
+  filename: string;                    // Unique filename with hash
+  originalFilename: string;            // User-provided filename
+  filePath: string;                    // Path in sandbox container
+  mimeType?: string;
+  fileSizeBytes: number;
+
+  // Scoping
+  isGlobal: boolean;                   // Global vs conversation-specific
+  conversationId?: number;             // NULL for global files
+
+  // Integration
+  integrationMethod: 'system-prompt' | 'working-directory' | 'both';
+
+  // Metadata
+  enabled: boolean;                    // Whether to include in agent context
+  description?: string;                // User-provided description
+  contentPreview?: string;             // First 1000 chars for display
+
+  // Tracking
+  uploadedAt: string;
+  lastAccessedAt?: string;
+  accessCount: number;
+}
+
+// File Upload Request
+export interface FileUploadRequest {
+  file: File;
+  conversationId?: number;
+  isGlobal?: boolean;
+  integrationMethod?: 'system-prompt' | 'working-directory' | 'both';
+  description?: string;
+}
+
 // Agent SDK Configuration (30+ parameters)
 export interface AgentSDKConfig {
   // Core Settings
@@ -132,6 +168,9 @@ export interface AgentSDKConfig {
   hooks?: Record<string, any>;
   plugins?: any[];
   stop_sequences?: string[];
+
+  // Files for Agent Context
+  uploadedFiles?: UploadedFile[];  // Files to include in agent context
 
   // Skills Configuration
   settingSources?: string[]; // Directories to load Skills from (e.g., ['project', 'user'] or custom paths)

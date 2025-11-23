@@ -8,6 +8,7 @@ import {
   Bookmark,
   Activity,
   SlidersHorizontal,
+  FileText,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -69,6 +70,12 @@ export const navigationTabs: NavigationTab[] = [
     icon: Zap,
     description: 'Event-driven automation and webhooks',
     dividerAfter: true,
+  },
+  {
+    id: 'files',
+    label: 'Files',
+    icon: FileText,
+    description: 'Upload and manage files for agent context',
   },
   {
     id: 'advanced',

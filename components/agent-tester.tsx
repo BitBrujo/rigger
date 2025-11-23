@@ -12,6 +12,7 @@ import { AgentsTab } from './tabs/agents-tab';
 import { HooksTab } from './tabs/hooks-tab';
 import { ConfigurationTab } from './tabs/presets-tab';
 import { SessionsTab } from './tabs/sessions-tab';
+import { FilesTab } from './tabs/files-tab';
 import { AdvancedTab } from './tabs/advanced-tab';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { Button } from '@/components/ui/button';
@@ -67,6 +68,8 @@ export default function AgentTester() {
         return <ConfigurationTab />;
       case 'sessions':
         return <SessionsTab />;
+      case 'files':
+        return <FilesTab />;
       case 'advanced':
         return <AdvancedTab />;
       default:

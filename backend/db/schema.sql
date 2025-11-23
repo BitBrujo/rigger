@@ -202,6 +202,43 @@ CREATE TABLE IF NOT EXISTS custom_agents (
     definition JSONB NOT NULL
 );
 
+-- Uploaded files table for agent context
+CREATE TABLE IF NOT EXISTS uploaded_files (
+    id SERIAL PRIMARY KEY,
+    filename VARCHAR(255) NOT NULL,  -- Unique filename with hash
+    original_filename VARCHAR(255) NOT NULL,  -- User-provided filename
+    file_path VARCHAR(500) NOT NULL,  -- Path in sandbox container
+    mime_type VARCHAR(100),
+    file_size_bytes BIGINT NOT NULL,
+
+    -- Scoping
+    is_global BOOLEAN DEFAULT FALSE,  -- Global vs conversation-specific
+    conversation_id INTEGER REFERENCES conversations(id) ON DELETE CASCADE,  -- NULL for global files
+
+    -- Integration method
+    integration_method VARCHAR(50) DEFAULT 'working-directory',  -- 'system-prompt', 'working-directory', 'both'
+
+    -- Metadata
+    enabled BOOLEAN DEFAULT TRUE,  -- Whether to include in agent context
+    description TEXT,  -- User-provided description
+
+    -- Extracted content (for small text files)
+    content_preview TEXT,  -- First 1000 chars for display
+
+    -- Tracking
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_accessed_at TIMESTAMP,
+    access_count INTEGER DEFAULT 0,
+
+    -- Constraints
+    CONSTRAINT uploaded_files_size_check CHECK (file_size_bytes <= 10485760),  -- 10MB max
+    CONSTRAINT uploaded_files_integration_check CHECK (integration_method IN ('system-prompt', 'working-directory', 'both')),
+    CONSTRAINT uploaded_files_scope_check CHECK (
+        (is_global = TRUE AND conversation_id IS NULL) OR
+        (is_global = FALSE AND conversation_id IS NOT NULL)
+    )
+);
+
 -- Agent Sessions table for session-based UI
 CREATE TABLE IF NOT EXISTS agent_sessions (
     id VARCHAR(255) PRIMARY KEY,
@@ -279,6 +316,10 @@ CREATE INDEX IF NOT EXISTS idx_agent_sessions_created_at ON agent_sessions(creat
 CREATE INDEX IF NOT EXISTS idx_agent_sessions_sdk_session_id ON agent_sessions(sdk_session_id);
 CREATE INDEX IF NOT EXISTS idx_agent_sessions_abort_requested ON agent_sessions(abort_requested) WHERE abort_requested = TRUE;
 CREATE INDEX IF NOT EXISTS idx_agent_sessions_last_activity ON agent_sessions(last_activity_at DESC);
+CREATE INDEX IF NOT EXISTS idx_uploaded_files_enabled ON uploaded_files(enabled);
+CREATE INDEX IF NOT EXISTS idx_uploaded_files_conversation_id ON uploaded_files(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_uploaded_files_is_global ON uploaded_files(is_global);
+CREATE INDEX IF NOT EXISTS idx_uploaded_files_uploaded_at ON uploaded_files(uploaded_at DESC);
 
 -- Insert default Agent SDK presets
 INSERT INTO presets (name, description, model, system_prompt, max_turns, allowed_tools, permission_mode) VALUES

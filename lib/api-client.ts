@@ -500,6 +500,95 @@ export class ApiClient {
     return response.json();
   }
 
+  // Files API endpoints
+  static async uploadFile(data: {
+    file: File;
+    conversationId?: number;
+    isGlobal?: boolean;
+    integrationMethod?: 'system-prompt' | 'working-directory' | 'both';
+    description?: string;
+  }): Promise<import('./types').UploadedFile> {
+    const formData = new FormData();
+    formData.append('file', data.file);
+    if (data.conversationId) formData.append('conversationId', data.conversationId.toString());
+    if (data.isGlobal !== undefined) formData.append('isGlobal', data.isGlobal.toString());
+    if (data.integrationMethod) formData.append('integrationMethod', data.integrationMethod);
+    if (data.description) formData.append('description', data.description);
+
+    const response = await fetch(`${API_BASE_URL}/files/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to upload file');
+    }
+
+    return response.json();
+  }
+
+  static async getFiles(filters?: {
+    conversationId?: number;
+    globalOnly?: boolean;
+    enabledOnly?: boolean;
+  }): Promise<import('./types').UploadedFile[]> {
+    const params = new URLSearchParams();
+    if (filters?.conversationId) params.append('conversationId', filters.conversationId.toString());
+    if (filters?.globalOnly) params.append('globalOnly', 'true');
+    if (filters?.enabledOnly) params.append('enabledOnly', 'true');
+
+    const response = await fetch(`${API_BASE_URL}/files?${params}`);
+    if (!response.ok) throw new Error('Failed to fetch files');
+    return response.json();
+  }
+
+  static async getFile(id: number): Promise<import('./types').UploadedFile> {
+    const response = await fetch(`${API_BASE_URL}/files/${id}`);
+    if (!response.ok) throw new Error('Failed to fetch file');
+    return response.json();
+  }
+
+  static async updateFile(id: number, updates: {
+    enabled?: boolean;
+    integrationMethod?: 'system-prompt' | 'working-directory' | 'both';
+    description?: string;
+  }): Promise<import('./types').UploadedFile> {
+    const response = await fetch(`${API_BASE_URL}/files/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update file');
+    }
+
+    return response.json();
+  }
+
+  static async deleteFile(id: number): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/files/${id}`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete file');
+    }
+  }
+
+  static async downloadFile(id: number): Promise<Blob> {
+    const response = await fetch(`${API_BASE_URL}/files/${id}/download`);
+
+    if (!response.ok) {
+      throw new Error('Failed to download file');
+    }
+
+    return response.blob();
+  }
+
   // Sessions API endpoints
   static async getSessions(filters?: {
     status?: string;
