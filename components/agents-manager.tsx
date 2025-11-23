@@ -14,12 +14,15 @@ import { AgentDefinition } from '@/lib/types';
 import { AGENT_TEMPLATES, getTemplate } from '@/lib/agent-templates';
 import { useAgentStore } from '@/lib/store';
 
+// Type for agent with name included
+type AgentWithName = AgentDefinition & { name: string };
+
 export function AgentsManager() {
   const { toggleAgentEnabled } = useAgentStore();
-  const [agents, setAgents] = useState<AgentDefinition[]>([]);
+  const [agents, setAgents] = useState<AgentWithName[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editingAgent, setEditingAgent] = useState<AgentDefinition | null>(null);
+  const [editingAgent, setEditingAgent] = useState<AgentWithName | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
   // Load agents on mount
@@ -54,9 +57,10 @@ export function AgentsManager() {
       systemPrompt: template.systemPrompt,
       description: template.description,
       allowedTools: template.allowedTools || [],
-      model: template.model || 'claude-sonnet-4-20250514',
-      temperature: template.temperature || 1,
-      maxTokens: template.maxTokens || 8192,
+      disallowedTools: template.disallowedTools,
+      model: template.model,
+      maxTurns: template.maxTurns,
+      category: template.category,
     });
     setIsCreating(true);
   };
@@ -98,7 +102,7 @@ export function AgentsManager() {
     }
   };
 
-  const handleToggleEnabled = async (agent: AgentDefinition) => {
+  const handleToggleEnabled = async (agent: AgentWithName) => {
     try {
       // Toggle in local state immediately for responsive UI
       const updatedAgent = { ...agent, enabled: !(agent.enabled ?? true) };
@@ -231,8 +235,7 @@ export function AgentsManager() {
                   description: '',
                   allowedTools: [],
                   model: 'claude-sonnet-4-20250514',
-                  temperature: 1,
-                  maxTokens: 8192,
+                  maxTurns: 20,
                 });
                 setIsCreating(true);
               }}
@@ -249,7 +252,7 @@ export function AgentsManager() {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-rounded">
               {agents.map((agent) => (
                 <Card
                   key={agent.name}
