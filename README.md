@@ -1,44 +1,89 @@
 # Rigger
 
-**A visual playground for testing Claude's Agent SDK.** No code required—just configure, chat, and watch your AI agent work.
+**The visual dashboard for Claude's Agent SDK.** Test, debug, and manage your AI agents without writing code.
 
 <img width="4134" height="2672" alt="rigger1" src="https://github.com/user-attachments/assets/042bc530-6248-4514-ba2d-bb21161feee6" />
 
-## What's This For?
+## What Is This?
 
-Ever wondered what it's like to give an AI agent real tools and watch it work? Rigger lets you do exactly that.
+If you're working with the [Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk-ts), you know it's powerful—but running agents from the command line or writing test scripts gets old fast.
 
-You configure which tools Claude can use (file operations, bash commands, web search, etc.), send it a message, and watch in real-time as it decides what to do. See every token used, every tool called, and exactly how much it costs.
+**Rigger is mission control for the Agent SDK.** It gives you a visual interface to:
+- Configure all 30+ SDK parameters with forms instead of JSON
+- Test agents with real-time streaming and debug metrics
+- Monitor sessions with token usage, costs, and execution timelines
+- Manage tools, MCP servers, skills, and subagents visually
+- Save and share agent configurations as presets
 
-Think of it as **mission control for AI agents**—you see everything happening under the hood.
+Think of it as **the SDK's built-in developer tools**, but as a standalone web app.
 
-## What You Get
+## Why Use This?
 
-**Core Features:**
-- **19 built-in tools** the agent can use (files, bash, web, more)
-- **Session management** with two-tier emergency stop (graceful + force kill)
-- **Real-time debug view** showing tokens, costs, and API calls
-- **Live streaming** so you watch responses generate
-- **Full persistence** with PostgreSQL for conversations and sessions
+**Instead of this:**
+```typescript
+import { Agent } from '@anthropic-ai/claude-agent-sdk';
 
-**Advanced Stuff:**
-- **MCP servers** to connect external tools (GitHub, Notion, browsers, etc.)
-- **File uploads** to provide additional context (up to 10MB)
-- **Subagents** for specialized tasks
-- **Skills system** for reusable agent workflows
-- **Hooks** for event-driven automation
-- **Presets** to save and share configurations
+const agent = new Agent({
+  model: 'claude-3-5-sonnet-20241022',
+  maxTurns: 20,
+  allowedTools: ['Read', 'Write', 'Bash', 'WebSearch'],
+  systemPrompt: 'You are a helpful assistant...',
+  workingDirectory: '/path/to/project',
+  mcpServers: { /* ... complex config ... */ },
+  // ... 25+ more parameters
+});
+
+const result = await agent.query('Help me refactor this code');
+// Now parse the response, check tokens, calculate costs...
+```
+
+**You get this:**
+- Toggle checkboxes to enable tools
+- Type your system prompt in a textarea
+- See streaming responses in real-time
+- Get automatic token counts and cost breakdowns
+- View tool executions as they happen
+- Emergency stop controls (graceful + force kill)
+- Session history and conversation management
+
+## Core Features
+
+### SDK Configuration Dashboard
+- **All 30+ SDK parameters** exposed through a clean UI
+- **Tool selector** with 19 built-in tools (Read, Write, Bash, Grep, WebSearch, etc.)
+- **Model picker** (Sonnet, Opus, Haiku) with temperature controls
+- **MCP server manager** for connecting external tools (GitHub, Notion, Playwright)
+- **Advanced settings** (thinking budget, cache control, workspace paths)
+
+### Real-Time Monitoring
+- **Streaming responses** with Server-Sent Events
+- **Live debug metrics**: tokens (input/output/cached), costs, latency
+- **Tool execution timeline** showing every tool call and result
+- **Session tracking** with status, duration, and resource usage
+- **Emergency controls**: graceful stop or force kill runaway sessions
+
+### Agent SDK Features
+- **Skills system** → Load reusable workflows from `.claude/skills/`
+- **Subagents** → Configure specialized agents for delegation (Task tool)
+- **Hooks** → Event-driven automation (auto-commit, notifications, webhooks)
+- **File uploads** → Add context via system prompt or working directory
+- **Presets** → Save and share complete SDK configurations
+
+### Persistence & Analytics
+- **PostgreSQL database** for conversations and sessions
+- **Usage tracking** with cost analysis and performance metrics
+- **Configuration export** as JSON for sharing or version control
+- **Session history** with filtering and search
 
 ## Getting Started
 
 ### Prerequisites
 
-You'll need:
 - Node.js 20+
 - Docker & Docker Compose
-- An Anthropic API key ([grab one here](https://console.anthropic.com))
+- Anthropic API key ([get one here](https://console.anthropic.com))
 
-### 5-Minute Setup
+### Quick Setup
 
 **1. Clone and install:**
 ```bash
@@ -48,114 +93,220 @@ npm install
 cd backend && npm install && cd ..
 ```
 
-**2. Add your API key:**
+**2. Configure API key:**
 ```bash
-# Copy the environment templates
+# Copy environment templates
 cp .env.local.example .env.local
 cp backend/.env.example backend/.env
 
-# Edit backend/.env and add your key
-ANTHROPIC_API_KEY=sk-ant-your-actual-key-here
+# Edit backend/.env and add your Anthropic API key
+ANTHROPIC_API_KEY=sk-ant-your-key-here
 ```
 
-**3. Start everything:**
+**3. Start services:**
 ```bash
-# Terminal 1: Start database & backend (Docker)
+# Start backend + database
 docker-compose up -d
 
-# Terminal 2: Start frontend
+# Start frontend (in a new terminal)
 npm run dev
 ```
 
 **4. Open http://localhost:3334**
 
-You should see a split-panel interface. Configure on the left, chat on the right. You're ready!
+You'll see the SDK dashboard with sidebar navigation on the left and chat interface on the right.
 
 ## How It Works
 
-The interface has two main panels:
+### The Interface
 
-### Left Side: Configure Your Agent
-
-**Basic setup:**
-- Pick a Claude model (Sonnet for smart, Haiku for fast)
-- Adjust temperature (higher = more creative)
-- Write a system prompt to guide behavior
-
-**Choose tools:**
-- Select which tools the agent can access
-- Categories: File Ops, Bash, Web, Planning, etc.
-- The agent can only use what you enable here
-
-**Additional tabs:**
-- **MCP Servers** → Connect external services (GitHub, Notion, browsers)
-- **Subagents** → Define specialized subagents for specific tasks
-- **Skills** → Load reusable workflows from `.claude/skills/`
-- **Hooks** → Set up event triggers (auto-commit, notifications, etc.)
-- **Files** → Upload files for agent context (system prompt or working directory)
+**Left Panel: SDK Configuration**
+- **Sessions** → Monitor active sessions, view history, emergency stop controls
+- **Configuration** → Save/load/export agent configurations
+- **Basic Config** → Model, temperature, max turns, system prompt
+- **Tools** → Enable/disable SDK tools with checkboxes
+- **MCP Servers** → Connect external Model Context Protocol servers
+- **Skills** → Manage reusable agent workflows
+- **Subagents** → Define specialized agents for the Task tool
+- **Hooks** → Configure event-driven automation
+- **Files** → Upload context files (system prompt or working directory)
 - **Advanced** → Working directory, thinking budget, cache control, etc.
 
-**Save configurations:**
-- Hit "Save Preset" to store your setup
-- Load it later or share with teammates
+**Right Panel: Agent Interaction**
+- **Chat** → Send messages, see streaming responses
+- **Debug** → Token usage, costs, API latency, raw JSON
+- **Tools** → Timeline of tool executions with parameters and results
+- **Todo** → Task lists from the agent's TodoWrite tool
 
-### Right Side: Chat & Debug
+### The SDK Integration
 
-**Chat tab** → Your conversation with the agent:
-- Type messages and get streaming responses
-- See tool calls happen in real-time
-- Full conversation history
+Rigger is a **thin wrapper around the Claude Agent SDK**. Every configuration option maps directly to SDK parameters:
 
-**Debug tab** → See what's happening under the hood:
-- Tokens used (input, output, cached)
-- Cost per message
-- API latency
-- Raw JSON responses
-- Tool execution timeline
+```typescript
+// Your UI selections become SDK config
+const sdkConfig = {
+  model: uiState.selectedModel,           // From dropdown
+  temperature: uiState.temperature,       // From slider
+  allowedTools: uiState.enabledTools,     // From checkboxes
+  systemPrompt: uiState.systemPrompt,     // From textarea
+  mcpServers: uiState.mcpServers,         // From MCP manager
+  customAgents: uiState.subagents,        // From Subagents tab
+  // ... everything configured visually
+};
 
-## Try This First
-
-Here's a quick workflow to test everything:
-
-**1. Configure:**
-- Model: "Claude 3.5 Sonnet"
-- Enable tools: `Read`, `Write`, `Edit`, `Bash`
-- System prompt: "You are a helpful coding assistant"
-
-**2. Send a message:**
-```
-Create a simple Python script that prints 'Hello World'
+// Rigger calls the SDK for you
+const agent = new Agent(sdkConfig);
+const response = await agent.query(userMessage);
 ```
 
-**3. Watch what happens:**
-- Agent decides to use the `Write` tool
-- File gets created in real-time
-- Debug tab shows tokens and cost
+The backend handles streaming, session management, and persistence. The frontend gives you real-time visibility into what the SDK is doing.
 
-**4. Save it:**
-- Click "Save Preset"
-- Name: "Python Helper"
-- Now you can reload this setup anytime
+## Quick Start Guide
 
-## Common Issues
+**Try this workflow to test the SDK:**
+
+1. **Navigate to Tools tab**
+   - Enable: `Read`, `Write`, `Edit`, `Bash`
+   - This controls which SDK tools the agent can access
+
+2. **Go to Basic Config tab**
+   - Model: "Claude 3.5 Sonnet"
+   - System Prompt: "You are a helpful coding assistant"
+   - These map to SDK's `model` and `systemPrompt` parameters
+
+3. **Send a message in the Chat panel:**
+   ```
+   Create a Python script that prints "Hello from the Agent SDK"
+   ```
+
+4. **Watch the SDK in action:**
+   - Agent decides to use the `Write` tool
+   - File appears in your working directory
+   - Debug tab shows SDK metrics (tokens, cost, timing)
+   - Tools tab shows the complete tool execution
+
+5. **Save your configuration:**
+   - Go to Configuration tab
+   - Click "Save Preset" → Name: "Python Helper"
+   - Your SDK config is now reusable
+
+## SDK Features Explained
+
+### Sessions
+Sessions are persistent SDK execution contexts. Each session:
+- Tracks multi-turn conversations
+- Monitors resource usage (tokens, costs)
+- Maintains tool state
+- Supports emergency stop (graceful or force kill)
+
+See the **Sessions tab** to monitor active sessions and view history.
+
+### Tools
+The SDK comes with 19 built-in tools. Enable them in the **Tools tab**:
+
+**File Operations:** Read, Write, Edit, Glob, Grep
+**Execution:** Bash, BashOutput, KillShell
+**Web:** WebFetch, WebSearch
+**Planning:** TodoWrite, Task, AskUserQuestion, ExitPlanMode
+**Agent System:** Skill, SlashCommand
+
+### MCP Servers
+The SDK supports [Model Context Protocol](https://modelcontextprotocol.io/) servers. Connect external services:
+
+- **GitHub** → Create issues, PRs, commits
+- **Notion** → Query workspace, create pages
+- **Playwright** → Browser automation
+- **Filesystem** → Advanced file operations
+- **Git** → Version control
+
+Configure in **MCP Servers tab** with command, args, and environment variables.
+
+### Skills
+Skills are SDK workflows packaged as markdown files. The SDK's `Skill` tool loads them from `.claude/skills/`.
+
+**Example:** Create `example-code-review/SKILL.md`:
+```markdown
+---
+description: Perform comprehensive code reviews
+---
+# Code Review Skill
+
+## Workflow
+1. Analyze code for bugs and security issues
+2. Check performance and best practices
+3. Suggest improvements
+```
+
+The agent can now invoke this workflow when needed.
+
+### Subagents
+The SDK's `Task` tool delegates work to specialized agents. Define them in **Subagents tab**:
+
+**Example subagent:**
+- Name: "Bug Hunter"
+- Prompt: "Find bugs, trace errors, suggest fixes"
+- Tools: `Read`, `Grep`, `Bash`
+- Model: `haiku` (faster, cheaper)
+
+The main agent can delegate: "Use Bug Hunter to analyze authentication code"
+
+### Hooks
+Trigger actions based on SDK events:
+
+**Available triggers:**
+- `on-prompt-submit` → Before SDK query
+- `on-response-complete` → After SDK response
+- `on-tool-use` → When specific tools execute
+- `on-error` → On SDK errors
+
+**Example:** Auto-commit on file writes
+```typescript
+{
+  trigger: 'on-tool-use',
+  conditions: [{ tool: 'Write' }],
+  action: {
+    type: 'bash',
+    command: 'git add {{file}} && git commit -m "Auto-commit: {{description}}"'
+  }
+}
+```
+
+## Troubleshooting
 
 **Backend won't start?**
-- Check your API key: `cat backend/.env | grep ANTHROPIC_API_KEY`
-- View logs: `docker-compose logs -f backend`
-- Make sure Docker is running: `docker-compose ps`
+```bash
+# Check API key
+cat backend/.env | grep ANTHROPIC_API_KEY
 
-**Can't connect to backend?**
-- Test health: `curl http://localhost:3333/health`
-- Check `.env.local` has: `NEXT_PUBLIC_API_URL=http://localhost:3333/api`
+# View logs
+docker-compose logs -f backend
 
-**Database acting weird?**
-- Reset it: `docker-compose down -v && docker-compose up -d`
-- Wait ~10 seconds for PostgreSQL to start
-- Connect directly: `docker exec -it rigger-postgres-1 psql -U agent_user -d agent_db`
+# Verify Docker
+docker-compose ps
+```
 
-**Streaming not working?**
-- Some proxies block Server-Sent Events (SSE)
-- The app will auto-fallback to batch mode if streaming fails
+**Frontend can't connect?**
+```bash
+# Test backend health
+curl http://localhost:3333/health
+
+# Check frontend config
+cat .env.local | grep NEXT_PUBLIC_API_URL
+```
+
+**Database issues?**
+```bash
+# Reset database (WARNING: deletes all data)
+docker-compose down -v && docker-compose up -d
+
+# Connect directly
+docker exec -it rigger-postgres-1 psql -U agent_user -d agent_db
+```
+
+**SDK errors?**
+- Check the Debug tab for raw SDK responses
+- View backend logs: `docker-compose logs -f backend`
+- Verify your API key has sufficient credits
 
 ## Useful Commands
 
@@ -175,26 +326,53 @@ docker-compose up -d              # Start services
 docker-compose logs -f backend    # Watch backend logs
 docker-compose down               # Stop everything
 docker-compose down -v            # Stop + delete data
+
+# Database
+docker exec -it rigger-postgres-1 psql -U agent_user -d agent_db
 ```
 
-## What's Inside
+## Architecture
 
-**Tech stack:**
-- Frontend: Next.js 16 + React 19 + TypeScript + Tailwind 4
-- Backend: Express + Node.js + PostgreSQL
+**Tech Stack:**
+- Frontend: Next.js 16, React 19, TypeScript, Tailwind CSS 4
+- Backend: Express, Node.js, PostgreSQL
 - Agent SDK: `@anthropic-ai/claude-agent-sdk`
 - State: Zustand
-- Real-time: Server-Sent Events for streaming
+- Real-time: Server-Sent Events (SSE)
 
-**API:** See `CLAUDE.md` for complete API reference and architecture details.
+**How it works:**
+1. Frontend captures SDK configuration via UI
+2. Backend transforms config to SDK format
+3. SDK executes with streaming responses
+4. Backend wraps SDK events in SSE
+5. Frontend displays real-time updates
+6. PostgreSQL persists sessions and conversations
 
-## Want to Learn More?
+**Data Flow:**
+```
+UI Config → Zustand Store → API Request → buildSdkOptions()
+    → Agent SDK → Streaming Response → SSE → Frontend Update
+```
 
-- **`CLAUDE.md`** → Comprehensive developer guide (architecture, sessions, advanced features)
-- **`.claude/skills/README.md`** → Deep dive into the skills system
-- **`docs/API_SESSIONS.md`** → Session API reference and patterns
-- **`docs/HOSTING_PATTERNS.md`** → Session deployment patterns
+## Documentation
+
+- **`CLAUDE.md`** → Complete architecture and SDK integration details
+- **`docs/API_SESSIONS.md`** → Session API reference
+- **`.claude/skills/README.md`** → Skills system deep dive
+- **[Agent SDK Docs](https://github.com/anthropics/claude-agent-sdk-ts)** → Official SDK documentation
+
+## Contributing
+
+This is a tool for the Agent SDK community. Contributions welcome:
+
+- **Bug reports** → Open an issue
+- **Feature requests** → Describe your SDK use case
+- **Pull requests** → Add features that help SDK development
 
 ## License
 
-MIT — do whatever you want with it.
+MIT — use it however helps your SDK development.
+
+---
+
+Built for developers working with the Claude Agent SDK. Makes testing and debugging agents visual and fast.
