@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useAgentStore } from '@/lib/store';
 import { toast } from 'sonner';
-import { ApiClient } from '@/lib/api-client';
 import { HOOK_TEMPLATES, HOOK_CATEGORIES, HookTemplate } from '@/lib/hook-templates';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -13,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { JsonEditor } from '../ui/json-editor';
-import { Plus, Wand2 } from 'lucide-react';
+import { Plus, Minus, Wand2 } from 'lucide-react';
 
 export function HooksTab() {
   const { config, setConfig, toggleHookEnabled } = useAgentStore();
@@ -21,34 +20,50 @@ export function HooksTab() {
 
   const handleApplyHookTemplate = (template: HookTemplate) => {
     const currentHooks = config.hooks || {};
-    const mergedHooks = { ...currentHooks, ...template.hooks };
+    const mergedHooks = { ...currentHooks };
+
+    // Generate unique IDs for each hook in the template to prevent overwrites
+    Object.entries(template.hooks).forEach(([hookId, hook]) => {
+      const uniqueId = `${hookId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      mergedHooks[uniqueId] = hook;
+    });
+
     setConfig({ hooks: mergedHooks });
     toast.success('Hook template applied', {
       description: `Applied: ${template.name}`,
     });
   };
 
-  const handleReplaceWithHookTemplate = (template: HookTemplate) => {
-    setConfig({ hooks: template.hooks });
-    toast.success('Hooks replaced', {
-      description: `Replaced with: ${template.name}`,
+  const handleDeleteHookTemplate = (template: HookTemplate) => {
+    const currentHooks = config.hooks || {};
+    const updatedHooks = { ...currentHooks };
+
+    // Get template hook keys to match against
+    const templateHookKeys = Object.keys(template.hooks);
+    let deletedCount = 0;
+
+    // Remove all hooks whose IDs start with any template hook key
+    Object.keys(updatedHooks).forEach(hookId => {
+      templateHookKeys.forEach(templateKey => {
+        if (hookId.startsWith(`${templateKey}_`) || hookId === templateKey) {
+          delete updatedHooks[hookId];
+          deletedCount++;
+        }
+      });
+    });
+
+    setConfig({ hooks: updatedHooks });
+    toast.success('Hooks removed', {
+      description: `Removed ${deletedCount} hook(s) from: ${template.name}`,
     });
   };
 
-  const handleToggleHookEnabled = async (hookId: string, hook: any) => {
-    try {
-      toggleHookEnabled(hookId);
-      const updatedHook = { ...hook, enabled: !(hook.enabled ?? true) };
-      await ApiClient.updateHook(hookId, updatedHook);
-      toast.success('Hook updated', {
-        description: `${hook.name || hookId} ${updatedHook.enabled ? 'enabled' : 'disabled'}`,
-      });
-    } catch (err: any) {
-      toggleHookEnabled(hookId);
-      toast.error('Failed to update hook', {
-        description: err.message || 'An error occurred',
-      });
-    }
+  const handleToggleHookEnabled = (hookId: string, hook: any) => {
+    toggleHookEnabled(hookId);
+    const newEnabledState = !(hook.enabled ?? true);
+    toast.success('Hook updated', {
+      description: `${hook.name || hookId} ${newEnabledState ? 'enabled' : 'disabled'}`,
+    });
   };
 
   const filteredHookTemplates = hookCategory === 'all'
@@ -127,10 +142,10 @@ export function HooksTab() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleReplaceWithHookTemplate(template)}
-                        title="Replace all hooks"
+                        onClick={() => handleDeleteHookTemplate(template)}
+                        title="Remove all hooks from this template"
                       >
-                        Use
+                        <Minus className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
