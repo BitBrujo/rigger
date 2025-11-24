@@ -99,25 +99,14 @@ export default function ConfigPanel() {
     }
   };
 
-  const handleToggleHookEnabled = async (hookId: string, hook: any) => {
-    try {
-      // Optimistic update - toggle locally first
-      toggleHookEnabled(hookId);
+  const handleToggleHookEnabled = (hookId: string, hook: any) => {
+    // Update in Zustand store (hooks are part of config, not persisted separately)
+    toggleHookEnabled(hookId);
 
-      // Persist to backend
-      const updatedHook = { ...hook, enabled: !(hook.enabled ?? true) };
-      await ApiClient.updateHook(hookId, updatedHook);
-
-      toast.success('Hook updated', {
-        description: `${hook.name || hookId} ${updatedHook.enabled ? 'enabled' : 'disabled'}`,
-      });
-    } catch (err: any) {
-      // Revert on error
-      toggleHookEnabled(hookId);
-      toast.error('Failed to update hook', {
-        description: err.message || 'An error occurred',
-      });
-    }
+    const newEnabled = !(hook.enabled ?? true);
+    toast.success('Hook updated', {
+      description: `${hook.name || hookId} ${newEnabled ? 'enabled' : 'disabled'}`,
+    });
   };
 
   const filteredHookTemplates = hookCategory === 'all'

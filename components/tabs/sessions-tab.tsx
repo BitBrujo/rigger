@@ -83,7 +83,6 @@ export function SessionsTab() {
     addMessage({
       role: 'assistant',
       content: 'New session ready. Send a message to start.',
-      timestamp: new Date().toISOString(),
     });
 
     toast.success('New session activated', {

@@ -10,10 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAgentStore } from '@/lib/store';
 import { ApiClient } from '@/lib/api-client';
 import { UploadedFile } from '@/lib/types';
-import { Upload, FileText, File, Image, FileCode, X, Globe, User, AlertCircle } from 'lucide-react';
+import { Upload, FileText, File, Image, FileCode, X, Globe, User, AlertCircle, Info } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 export function FilesTab() {
@@ -21,7 +22,18 @@ export function FilesTab() {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'global' | 'conversation'>('all');
+  const [uploadScope, setUploadScope] = useState<'global' | 'conversation'>(
+    conversationId ? 'conversation' : 'global'
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Update upload scope when conversationId changes
+  useEffect(() => {
+    // If conversation just started, switch to conversation scope
+    if (conversationId && uploadScope === 'global') {
+      setUploadScope('conversation');
+    }
+  }, [conversationId]);
 
   // Load files on mount
   useEffect(() => {
@@ -44,6 +56,12 @@ export function FilesTab() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Validate conversation scope
+    if (uploadScope === 'conversation' && !conversationId) {
+      setError('Cannot upload conversation-scoped file without an active conversation');
+      return;
+    }
+
     setIsUploading(true);
     setError(null);
 
@@ -51,7 +69,7 @@ export function FilesTab() {
       const uploadedFile = await ApiClient.uploadFile({
         file,
         conversationId: conversationId ?? undefined,
-        isGlobal: false, // Default to conversation-specific
+        isGlobal: uploadScope === 'global',
         integrationMethod: 'working-directory', // Default integration method
       });
 
@@ -131,6 +149,20 @@ export function FilesTab() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  const formatUploadDate = (dateValue: string | Date | null | undefined) => {
+    if (!dateValue) return 'Unknown date';
+
+    try {
+      const date = new Date(dateValue);
+      if (isNaN(date.getTime())) {
+        return 'Invalid date';
+      }
+      return formatDistanceToNow(date, { addSuffix: true });
+    } catch (err) {
+      return 'Invalid date';
+    }
+  };
+
   const filteredFiles = uploadedFiles.filter((file) => {
     if (filter === 'global') return file.isGlobal;
     if (filter === 'conversation') return !file.isGlobal;
@@ -162,11 +194,64 @@ export function FilesTab() {
               Upload files for the agent to interact with (max 10MB, common file types only)
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            {/* Scope Selection */}
+            <div className="space-y-2">
+              <Label>File Scope</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={uploadScope === 'global' ? 'default' : 'outline'}
+                  onClick={() => setUploadScope('global')}
+                  className="flex-1 flex items-center justify-center gap-2"
+                >
+                  <Globe className="h-4 w-4" />
+                  Global
+                </Button>
+                <Button
+                  type="button"
+                  variant={uploadScope === 'conversation' ? 'default' : 'outline'}
+                  onClick={() => setUploadScope('conversation')}
+                  disabled={!conversationId}
+                  className="flex-1 flex items-center justify-center gap-2"
+                >
+                  <User className="h-4 w-4" />
+                  Current Conversation
+                </Button>
+              </div>
+            </div>
+
+            {/* Scope Info Alert */}
+            {uploadScope === 'global' && (
+              <Alert>
+                <Globe className="h-4 w-4" />
+                <AlertDescription>
+                  File will be available across all conversations
+                </AlertDescription>
+              </Alert>
+            )}
+            {uploadScope === 'conversation' && conversationId && (
+              <Alert>
+                <User className="h-4 w-4" />
+                <AlertDescription>
+                  File will be available only in this conversation
+                </AlertDescription>
+              </Alert>
+            )}
+            {uploadScope === 'conversation' && !conversationId && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  No active conversation. Start a conversation first or upload as global file.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* File Upload Button */}
             <div className="flex items-center gap-4">
               <Button
                 onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
+                disabled={isUploading || (uploadScope === 'conversation' && !conversationId)}
                 className="flex items-center gap-2"
               >
                 <Upload className="h-4 w-4" />
@@ -232,7 +317,7 @@ export function FilesTab() {
                           </CardTitle>
                           <CardDescription className="text-xs">
                             {formatFileSize(file.fileSizeBytes)} •{' '}
-                            {formatDistanceToNow(new Date(file.uploadedAt), { addSuffix: true })}
+                            {formatUploadDate(file.uploadedAt)}
                           </CardDescription>
                         </div>
                       </div>
@@ -276,7 +361,27 @@ export function FilesTab() {
 
                     {/* Integration Method */}
                     <div className="space-y-2">
-                      <Label className="text-sm">Integration Method</Label>
+                      <div className="flex items-center gap-2">
+                        <Label className="text-sm">Integration Method</Label>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p className="font-medium mb-1">How should the agent access this file?</p>
+                            <ul className="text-xs space-y-1">
+                              <li><strong>System Prompt:</strong> File content added to agent's instructions (read-only reference)</li>
+                              <li><strong>Working Directory:</strong> File copied to workspace (agent can edit with tools)</li>
+                              <li><strong>Both:</strong> Maximum availability (both system prompt and workspace)</li>
+                            </ul>
+                          </TooltipContent>
+                        </Tooltip>
+                        {file.integrationMethod === 'working-directory' && (
+                          <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-600 dark:text-amber-400">
+                            Default - Click to customize
+                          </Badge>
+                        )}
+                      </div>
                       <Select
                         value={file.integrationMethod}
                         onValueChange={(v: any) => handleUpdateIntegrationMethod(file.id, v)}
