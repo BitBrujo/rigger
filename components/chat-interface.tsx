@@ -55,14 +55,17 @@ export default function ChatInterface() {
   const [input, setInput] = useState('');
   const [streamingText, setStreamingText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when messages or streaming text changes
   useEffect(() => {
     // Use requestAnimationFrame to ensure DOM has updated
     requestAnimationFrame(() => {
-      if (bottomRef.current) {
-        bottomRef.current.scrollIntoView({ behavior: 'smooth' });
+      if (scrollRef.current) {
+        // Access the Radix UI ScrollArea viewport
+        const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+        if (viewport) {
+          viewport.scrollTop = viewport.scrollHeight;
+        }
       }
     });
   }, [messages, streamingText]);
@@ -396,7 +399,7 @@ export default function ChatInterface() {
       </div>
 
       {/* Messages Tab */}
-      <TabsContent value="messages" className="flex-1 flex flex-col m-0 data-[state=inactive]:hidden overflow-hidden">
+      <TabsContent value="messages" className="flex-1 flex flex-col m-0 data-[state=inactive]:hidden">
         <div className="border-b px-6 py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
@@ -482,9 +485,6 @@ export default function ChatInterface() {
               </Card>
             </div>
           )}
-
-          {/* Invisible anchor for auto-scroll */}
-          <div ref={bottomRef} className="h-0" />
         </div>
       </ScrollArea>
 
