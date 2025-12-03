@@ -127,7 +127,7 @@ export interface FileUploadRequest {
 // Agent SDK Configuration (30+ parameters)
 export interface AgentSDKConfig {
   // Core Settings
-  model: 'claude-sonnet-4-5-20250929' | 'claude-opus-4-1-20250805' | 'claude-haiku-4-5-20251001' | string;
+  model: 'claude-sonnet-4-5-20250929' | 'claude-opus-4-5-20251101' | 'claude-haiku-4-5-20251001' | string;
   systemPrompt?: string;
 
   // Agent Behavior
@@ -865,19 +865,19 @@ export const TOOL_DESCRIPTIONS: Record<string, string> = {
 
 export const MODEL_OPTIONS = [
   {
-    value: 'claude-sonnet-4-5-20250929',
-    label: 'Claude Sonnet 4.5',
-    description: 'Most capable model for complex reasoning and coding',
+    value: 'claude-opus-4-5-20251101',
+    label: 'Claude Opus 4.5',
+    description: 'Best model for coding, agents, and complex tasks (80.9% SWE-bench)',
   },
   {
-    value: 'claude-opus-4-1-20250805',
-    label: 'Claude Opus 4.1',
-    description: 'Highly capable model for advanced tasks',
+    value: 'claude-sonnet-4-5-20250929',
+    label: 'Claude Sonnet 4.5',
+    description: 'Balanced performance for most reasoning and coding tasks',
   },
   {
     value: 'claude-haiku-4-5-20251001',
     label: 'Claude Haiku 4.5',
-    description: 'Fast and efficient for most tasks',
+    description: 'Fast and efficient for simpler tasks',
   },
 ] as const;
 
