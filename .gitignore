@@ -48,3 +48,9 @@ backend/.env
 # docker
 docker-compose.override.yml
 docker-compose.yml
+
+
+DEPLOYMENT-NOTES.md
+
+# backlog
+/backlog/
