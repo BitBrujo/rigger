@@ -1,202 +1,65 @@
-# Changelog
+# Release Notes - v1.0.1
 
-All notable changes to this project will be documented in this file.
+**Release Date**: 2025-12-03
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+**Changes since**: v1.0.0
 
-## [1.0.0] - 2025-11-23
+## Summary
 
-### 🎉 Initial Release
+- 22 commits
+- 2 contributors
 
-**Rigger** - A comprehensive visual testing interface for the Claude Agent SDK.
+### ✨ Features
 
-### Core Features
+- add Claude Opus 4.5 model support ([017174b](../../commit/017174b21bccd72621c4ed08e30a9bf52559475d))
 
-#### Agent SDK Integration
-- **19 Built-in Tools**: Full support for Claude Agent SDK tools
-  - File Operations: Read, Write, Edit, Glob, Grep
-  - Execution: Bash, BashOutput, KillShell
-  - Web Access: WebFetch, WebSearch
-  - Planning & Interaction: TodoWrite, Task, AskUserQuestion, ExitPlanMode
-  - Agent System: Skill, SlashCommand
-- **Real-time Streaming**: Server-Sent Events (SSE) for streaming responses
-- **Debug Metrics**: Comprehensive tracking of tokens, costs, cache stats, and timing
-- **Tool Configuration**: Easy UI for selecting and configuring available tools
-- **Conversation Persistence**: Full conversation history with database storage
+### 🐛 Bug Fixes
 
-#### Session Management
-- **Persistent Execution Contexts**: Sessions track agent activity across multiple requests
-- **Two-Tier Emergency Stop**:
-  - Graceful Stop: Allow current operation to finish cleanly
-  - Force Kill: Immediate termination with resource cleanup
-- **Resource Monitoring**: Real-time tracking of tokens, costs, turns, and tool usage
-- **Auto-Cleanup**: Automatic termination of idle sessions (5-minute timeout)
-- **Session History**: View and manage all past sessions
+- improve chat scrolling with proper flexbox height constraints ([0a4b4ba](../../commit/0a4b4ba640deb4027f7f11bf1e107fdd8e06f3b4))
 
-#### Configuration Management
-- **Presets System**: Save and load complete agent configurations
-- **Import/Export**: JSON-based configuration portability
-- **Change Detection**: Visual indicators when active config differs from loaded preset
-- **30+ Configuration Parameters**: Full control over Agent SDK settings
-  - Model selection (Sonnet, Opus, Haiku)
-  - Temperature, max turns, token budgets
-  - Permission modes and sandbox controls
-  - Thinking budget and cache control
+### 🧹 Chores
 
-#### Advanced Capabilities
+- bump version to 1.0.1 ([0330a52](../../commit/0330a52177cfa60aa53f02746427ba6780b445de))
+-  ([- Add o](../../commit/- Add overflow-hidden to TabsContent to prevent parent overflow conflicts))
+-  ([- Wrap ](../../commit/- Wrap ScrollArea in flex container with min-h-0 for proper height constraint))
+-  ([- Chang](../../commit/- Change ScrollArea from flex-1 to h-full for correct sizing))
+-  ([- Add b](../../commit/- Add bg-background to input bar for visual separation))
+-  ([🤖 Gene](../../commit/🤖 Generated with [Claude Code](https://claude.com/claude-code)))
+-  ([Co-Auth](../../commit/Co-Authored-By: Claude <noreply@anthropic.com>))
+- gitignore ([6adb406](../../commit/6adb4062d3baf5b7ee9b52d231abb256652f1c05))
+- Fix chat window auto-scroll by removing CSS overflow conflict ([6e9a724](../../commit/6e9a7240264b09aed8b3cd846d3dcc4739d00caf))
+-  ([the Scr](../../commit/the ScrollArea from establishing proper scroll context. Improved scroll))
+-  ([impleme](../../commit/implementation to directly access Radix UI viewport for reliable scrolling.))
+-  ([🤖 Gene](../../commit/🤖 Generated with [Claude Code](https://claude.com/claude-code)))
+-  ([Co-Auth](../../commit/Co-Authored-By: Claude <noreply@anthropic.com>))
+-  ([- Updat](../../commit/- Update model descriptions with SWE-bench performance))
+-  ([- Upgra](../../commit/- Upgrade Agent SDK from v0.1.37 to v0.1.57))
+-  ([- Reord](../../commit/- Reorder models: Opus 4.5 > Sonnet 4.5 > Haiku 4.5))
+-  ([- Updat](../../commit/- Update CLAUDE.md documentation with Opus 4.5 guidance))
+-  ([🤖 Gene](../../commit/🤖 Generated with [Claude Code](https://claude.com/claude-code)))
+-  ([Co-Auth](../../commit/Co-Authored-By: Claude <noreply@anthropic.com>))
+- Create RELEASE_NOTES_v1.0.0.md ([cab28ac](../../commit/cab28ac0e55680ead8e6c8653b2467cd7516cd07))
 
-##### MCP (Model Context Protocol) Servers
-- External plugin support for extending Claude with additional tools
-- Pre-configured templates for popular servers:
-  - GitHub (repository management)
-  - Playwright (browser automation)
-  - Notion (workspace integration)
-  - Filesystem, Git, Memory, Time, and more
-- Environment variable configuration for API keys and secrets
+## Contributors
 
-##### Skills System
-- Packaged agent workflows loaded from `.claude/skills/`
-- Auto-discovery and management UI
-- Built-in examples:
-  - PDF Processing
-  - Data Transformation
-  - Code Review
-- Create, edit, and delete skills via UI
+- bitbrujo
+- 
 
-##### Subagents
-- Specialized AI agents with custom prompts and tools
-- Built-in templates:
-  - Code Reviewer (analyze code quality, security, performance)
-  - Bug Hunter (find bugs, trace errors)
-  - Doc Writer (technical documentation)
-  - Refactorer (improve code structure)
-  - Test Generator (unit/integration tests)
-- Model and temperature overrides per agent
-- Tool access restrictions for security
+## Installation
 
-##### Hooks System
-- Event-driven automation and workflows
-- Trigger types:
-  - on-prompt-submit (pre-processing, backups)
-  - on-response-complete (notifications, post-processing)
-  - on-tool-use (auto-commit, formatting)
-  - on-error (monitoring, alerting)
-- Pre-built templates:
-  - Git Auto-Commit
-  - Slack Notifications
-  - Error Logging
-  - Code Formatting
-  - Backup Creation
-  - API Webhooks
-- Variable interpolation for dynamic configurations
-
-##### File Upload System
-- Upload files up to 10MB for agent context
-- Supported formats: text, JSON, CSV, PDF, images, code files
-- Multiple integration methods:
-  - System Prompt: Inject content into system prompt
-  - Working Directory: Copy file to agent workspace
-  - Both: Combined approach
-- Global vs conversation-scoped files
-- Enable/disable individual files
-
-#### User Interface
-
-##### Three-Panel Layout
-- **Sidebar Navigation**: Collapsible navigation (10 tabs)
-  - Sessions, Configuration, Basic Config, Tools
-  - MCP Servers, Skills, Subagents, Hooks, Files, Advanced
-- **Center Content**: Tab-specific configuration and management UIs
-- **Chat Panel**: Multi-tabbed interface
-  - Chat: Message history with streaming
-  - Debug: Token usage, costs, API metrics
-  - Tools: Tool execution timeline
-  - Todo: Task list visualization
-
-##### State Management
-- Zustand store for efficient state management
-- No provider wrapping required
-- Reactive updates across all components
-- TypeScript-enforced type safety
-
-### Technical Stack
-
-#### Frontend
-- **Framework**: Next.js 16, React 19
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS 4
-- **Components**: shadcn/ui (Radix primitives)
-- **State**: Zustand
-- **Real-time**: Server-Sent Events (SSE)
-
-#### Backend
-- **Framework**: Express.js, Node.js
-- **Language**: TypeScript
-- **Database**: PostgreSQL with JSONB
-- **Agent SDK**: `@anthropic-ai/claude-agent-sdk`
-- **Containerization**: Docker Compose
-
-#### Database Schema
-- `conversations`: Chat history and messages
-- `agent_sessions`: Session lifecycle, metrics, emergency control
-- `presets`: Saved agent configurations
-- `usage_logs`: Per-request metrics and analytics
-- `tool_usage_logs`: Per-tool execution tracking
-- `todos` / `todo_items`: Task list management
-- `custom_agents`: User-defined subagent definitions
-- `uploaded_files`: File uploads for agent context
-
-### Architecture Highlights
-
-- **Session-based execution**: Persistent contexts with abort controls
-- **Event-driven hooks**: Automation triggers for common workflows
-- **Flexible configuration**: 30+ parameters for fine-tuned control
-- **Real-time streaming**: SSE for responsive UI updates
-- **Type-safe**: Full TypeScript coverage
-- **Docker-ready**: Complete containerization with docker-compose
-- **Analytics**: Usage tracking, cost analysis, performance metrics
-
-### Getting Started
-
-**Prerequisites:**
-- Node.js 18+
-- Docker and Docker Compose
-- Anthropic API key
-
-**Quick Start:**
 ```bash
-# Start backend and database
-docker-compose up -d
-
-# Install frontend dependencies
-npm install
-
-# Start frontend development server
-npm run dev
+git clone https://github.com/yourusername/rigger.git
+cd rigger
+git checkout v1.0.1
 ```
 
-Visit http://localhost:3334 to access the application.
+## Upgrading from v1.0.0
 
-### Documentation
-
-- **README.md**: Quick start guide and overview
-- **CLAUDE.md**: Comprehensive architecture and developer documentation
-- **Skills Documentation**: `.claude/skills/README.md`
-
-### License
-
-MIT License - See LICENSE file for details
+1. Backup your database
+2. Pull latest changes: `git pull && git checkout v1.0.1`
+3. Rebuild containers: `docker-compose down && docker-compose up -d --build`
+4. Update frontend: `npm install && npm run dev`
 
 ---
 
-## Future Plans
-
-- Enhanced analytics dashboard
-- Team collaboration features
-- Custom theme support
-- Plugin marketplace for MCP servers and skills
-- API documentation generator
-- Performance profiling tools
-
-[1.0.0]: https://github.com/yourusername/rigger/releases/tag/v1.0.0
+**Full Changelog**: [v1.0.0...v1.0.1](../../compare/v1.0.0...v1.0.1)
