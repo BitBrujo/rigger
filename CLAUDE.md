@@ -36,6 +36,10 @@ docker-compose down -v && docker-compose up -d  # Reset
 
 # Logs
 docker-compose logs -f backend
+
+# Releases
+node scripts/bump-version.js patch  # 1.0.0 → 1.0.1
+git push origin main && git push origin v<version>
 ```
 
 **Ports**: Frontend (3334), Backend (3333), Database (5335)
@@ -214,6 +218,48 @@ Context files up to 10MB:
 3. Add interface in `lib/types.ts`
 4. Create CRUD routes
 
+## Release Workflow
+
+### Automated GitHub Releases
+
+Rigger uses an automated release system with GitHub Actions:
+
+**Create Release**:
+```bash
+# Patch release (bug fixes): 1.0.0 → 1.0.1
+node scripts/bump-version.js patch
+
+# Minor release (new features): 1.0.0 → 1.1.0
+node scripts/bump-version.js minor
+
+# Major release (breaking changes): 1.0.0 → 2.0.0
+node scripts/bump-version.js major
+
+# Push to trigger automated workflow
+git push origin main
+git push origin v<version>
+```
+
+**Automation**: `.github/workflows/release.yml`
+- Triggers on version tags (`v*.*.*`)
+- Validates version consistency across monorepo
+- Runs linting and builds
+- Generates changelog from git history
+- Creates GitHub release with documentation assets
+
+**Scripts**:
+- `scripts/bump-version.js` - Updates both package.json files, creates commit and tag
+- `scripts/generate-changelog.js` - Generates release notes from git commits
+
+**Documentation**:
+- `RELEASE_PROCESS.md` - Complete release guide with rollback procedures
+- `VERSIONING.md` - Semantic versioning policy and commit conventions
+
+**Version Synchronization**:
+- Frontend and backend MUST maintain matching versions
+- Automated validation in CI/CD pipeline
+- Monorepo unified versioning strategy
+
 ## Important Files
 
 **Backend**:
@@ -231,6 +277,13 @@ Context files up to 10MB:
 **Configuration**:
 - `.claude/skills/*/SKILL.md` - Skill definitions
 - `.claude/agents/*.json` - Subagent definitions
+
+**Release & CI/CD**:
+- `.github/workflows/release.yml` - Automated release workflow
+- `scripts/bump-version.js` - Version management tool
+- `scripts/generate-changelog.js` - Changelog generator
+- `RELEASE_PROCESS.md` - Release documentation
+- `VERSIONING.md` - Versioning policy
 
 ## Troubleshooting
 
