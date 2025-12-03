@@ -1,0 +1,171 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  validate-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for changelog generation
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Verify version consistency
+        run: |
+          TAG_VERSION="${{ steps.version.outputs.version }}"
+          FRONTEND_VERSION=$(node -p "require('./package.json').version")
+          BACKEND_VERSION=$(node -p "require('./backend/package.json').version")
+
+          echo "Tag version: $TAG_VERSION"
+          echo "Frontend version: $FRONTEND_VERSION"
+          echo "Backend version: $BACKEND_VERSION"
+
+          if [ "$TAG_VERSION" != "$FRONTEND_VERSION" ]; then
+            echo "❌ Frontend version mismatch!"
+            exit 1
+          fi
+
+          if [ "$TAG_VERSION" != "$BACKEND_VERSION" ]; then
+            echo "❌ Backend version mismatch!"
+            exit 1
+          fi
+
+          echo "✅ All versions match: $TAG_VERSION"
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          npm ci
+
+      - name: Lint frontend
+        run: npm run lint
+        continue-on-error: false
+
+      - name: Build frontend
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3333/api
+
+      - name: Build backend
+        run: |
+          cd backend
+          npm run build
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          node scripts/generate-changelog.js "${{ steps.version.outputs.tag }}"
+
+      - name: Create release documentation package
+        run: |
+          mkdir -p release-assets
+          cp README.md release-assets/
+          cp CLAUDE.md release-assets/
+          cp RELEASE_NOTES.md release-assets/ 2>/dev/null || echo "No RELEASE_NOTES.md found"
+          cp CHANGELOG.md release-assets/
+
+          # Create installation guide
+          cat > release-assets/INSTALLATION.md << 'EOF'
+          # Rigger v${{ steps.version.outputs.version }} - Installation Guide
+
+          ## Quick Start
+
+          ### Prerequisites
+          - Node.js 20+
+          - Docker and Docker Compose
+          - Anthropic API key
+
+          ### Installation Steps
+
+          1. **Clone the repository**
+             ```bash
+             git clone https://github.com/yourusername/rigger.git
+             cd rigger
+             git checkout ${{ steps.version.outputs.tag }}
+             ```
+
+          2. **Setup environment**
+             ```bash
+             # Backend configuration
+             cp backend/.env.example backend/.env
+             # Add your ANTHROPIC_API_KEY to backend/.env
+
+             # Frontend configuration
+             cp .env.local.example .env.local
+             ```
+
+          3. **Start services**
+             ```bash
+             # Start database and backend
+             docker-compose up -d
+
+             # Install and run frontend
+             npm install
+             npm run dev
+             ```
+
+          4. **Access the application**
+             - Frontend: http://localhost:3334
+             - Backend API: http://localhost:3333
+             - Database: localhost:5335
+
+          ## Upgrading from Previous Version
+
+          1. Backup your database
+          2. Pull latest changes
+          3. Rebuild containers: `docker-compose down && docker-compose up -d --build`
+          4. Update frontend: `npm install && npm run dev`
+
+          ## Troubleshooting
+
+          See the main README.md for detailed troubleshooting steps.
+
+          ## Documentation
+
+          - Full documentation: https://github.com/yourusername/rigger
+          - CLAUDE.md for developer guidance
+          EOF
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Rigger ${{ steps.version.outputs.version }}
+          body_path: CHANGELOG.md
+          files: |
+            release-assets/*
+          draft: false
+          prerelease: false
+          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Release workflow failed for ${{ steps.version.outputs.tag }}"
+          echo "Please check the workflow logs and fix any issues before retrying."

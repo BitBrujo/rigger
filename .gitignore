@@ -51,13 +51,6 @@ docker-compose.yml
 
 
 DEPLOYMENT-NOTES.md
-RELEASE_PROCESS.md
 
 # backlog
 /backlog/
-
-# github
-/.github/
-
-/scripts/
-VERSIONING.md
