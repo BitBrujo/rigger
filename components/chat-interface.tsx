@@ -399,7 +399,7 @@ export default function ChatInterface() {
       </div>
 
       {/* Messages Tab */}
-      <TabsContent value="messages" className="flex-1 flex flex-col m-0 data-[state=inactive]:hidden">
+      <TabsContent value="messages" className="flex-1 flex flex-col m-0 data-[state=inactive]:hidden overflow-hidden">
         <div className="border-b px-6 py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
@@ -434,62 +434,64 @@ export default function ChatInterface() {
         </div>
       </div>
 
-      {/* Messages */}
-      <ScrollArea className="flex-1 p-6" ref={scrollRef}>
-        <div className="space-y-4 max-w-4xl mx-auto">
-          {messages.map((message: Message, i: number) => (
-            <div
-              key={i}
-              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <Card
-                className={`p-4 max-w-[80%] ${
-                  message.role === 'user'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted'
-                }`}
+      {/* Messages - flex-1 with min-h-0 forces proper height constraint */}
+      <div className="flex-1 min-h-0">
+        <ScrollArea className="h-full p-6" ref={scrollRef}>
+          <div className="space-y-4 max-w-4xl mx-auto pb-4">
+            {messages.map((message: Message, i: number) => (
+              <div
+                key={i}
+                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                <div className="flex items-start gap-2">
-                  <Badge variant="outline" className="mt-0.5">
-                    {message.role}
-                  </Badge>
-                  <div className="flex-1 whitespace-pre-wrap break-words">
-                    {typeof message.content === 'string' ? message.content : JSON.stringify(message.content)}
+                <Card
+                  className={`p-4 max-w-[80%] ${
+                    message.role === 'user'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted'
+                  }`}
+                >
+                  <div className="flex items-start gap-2">
+                    <Badge variant="outline" className="mt-0.5">
+                      {message.role}
+                    </Badge>
+                    <div className="flex-1 whitespace-pre-wrap break-words">
+                      {typeof message.content === 'string' ? message.content : JSON.stringify(message.content)}
+                    </div>
                   </div>
-                </div>
-              </Card>
-            </div>
-          ))}
+                </Card>
+              </div>
+            ))}
 
-          {/* Streaming message */}
-          {isStreaming && streamingText && (
-            <div className="flex justify-start">
-              <Card className="p-4 max-w-[80%] bg-muted">
-                <div className="flex items-start gap-2">
-                  <Badge variant="outline" className="mt-0.5">
-                    assistant
-                  </Badge>
-                  <div className="flex-1 whitespace-pre-wrap break-words">
-                    {streamingText}
-                    <span className="inline-block w-2 h-4 bg-foreground animate-pulse ml-1" />
+            {/* Streaming message */}
+            {isStreaming && streamingText && (
+              <div className="flex justify-start">
+                <Card className="p-4 max-w-[80%] bg-muted">
+                  <div className="flex items-start gap-2">
+                    <Badge variant="outline" className="mt-0.5">
+                      assistant
+                    </Badge>
+                    <div className="flex-1 whitespace-pre-wrap break-words">
+                      {streamingText}
+                      <span className="inline-block w-2 h-4 bg-foreground animate-pulse ml-1" />
+                    </div>
                   </div>
-                </div>
-              </Card>
-            </div>
-          )}
+                </Card>
+              </div>
+            )}
 
-          {isStreaming && !streamingText && (
-            <div className="flex justify-start">
-              <Card className="p-4 bg-muted">
-                <Loader2 className="w-5 h-5 animate-spin" />
-              </Card>
-            </div>
-          )}
-        </div>
-      </ScrollArea>
+            {isStreaming && !streamingText && (
+              <div className="flex justify-start">
+                <Card className="p-4 bg-muted">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                </Card>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+      </div>
 
-      {/* Input */}
-      <div className="border-t p-4 flex-shrink-0">
+      {/* Input - Always visible at bottom */}
+      <div className="border-t p-4 flex-shrink-0 bg-background">
         <div className="max-w-4xl mx-auto flex gap-2">
           <Textarea
             value={input}
