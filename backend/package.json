@@ -1,6 +1,6 @@
 {
   "name": "rigger-backend",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Backend API for Rigger - Claude Agent Testing",
   "main": "dist/server.js",
   "scripts": {
@@ -10,8 +10,8 @@
     "watch": "ts-node-dev --respawn src/server.ts"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.1.57",
-    "@anthropic-ai/sdk": "^0.68.0",
+    "@anthropic-ai/claude-agent-sdk": "^0.1.62",
+    "@anthropic-ai/sdk": "^0.71.2",
     "@types/multer": "^2.0.0",
     "@types/uuid": "^10.0.0",
     "cors": "^2.8.5",
