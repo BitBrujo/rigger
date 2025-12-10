@@ -20,8 +20,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { ApiClient } from '@/lib/api-client';
 import { toast } from 'sonner';
-import { Activity, StopCircle, XCircle, Trash2, Plus, Copy, Play, RotateCcw, GitBranch, ChevronDown } from 'lucide-react';
+import { Activity, StopCircle, XCircle, Trash2, Plus, Copy, Play, RotateCcw, GitBranch, ChevronDown, Eye } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { SessionViewerModal } from '@/components/session-viewer-modal';
 
 export function SessionsTab() {
   const {
@@ -53,6 +54,8 @@ export function SessionsTab() {
   const [showForceKillDialog, setShowForceKillDialog] = useState(false);
   const [stopCountdown, setStopCountdown] = useState<number | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [viewingSession, setViewingSession] = useState<any>(null);
+  const [isLoadingSession, setIsLoadingSession] = useState(false);
 
   const loadSessions = async () => {
     try {
@@ -141,6 +144,20 @@ export function SessionsTab() {
       toast.error('Failed to delete session', {
         description: error.message,
       });
+    }
+  };
+
+  const handleViewSession = async (sessionId: string) => {
+    try {
+      setIsLoadingSession(true);
+      const response = await ApiClient.getSession(sessionId);
+      setViewingSession(response.session);
+    } catch (error: any) {
+      toast.error('Failed to load session details', {
+        description: error.message,
+      });
+    } finally {
+      setIsLoadingSession(false);
     }
   };
 
@@ -477,7 +494,11 @@ export function SessionsTab() {
           ) : (
             <div className="space-y-2">
               {sessionHistory.map((session: any) => (
-                <Card key={session.id} className="p-4 hover:border-primary/50 transition-all">
+                <Card
+                  key={session.id}
+                  className="p-4 hover:border-primary/50 transition-all cursor-pointer"
+                  onClick={() => handleViewSession(session.id)}
+                >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-2">
@@ -508,13 +529,30 @@ export function SessionsTab() {
                         </p>
                       )}
                     </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleDeleteSession(session.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewSession(session.id);
+                        }}
+                        title="View session details"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteSession(session.id);
+                        }}
+                        title="Delete session"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               ))}
@@ -551,6 +589,13 @@ export function SessionsTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Session Viewer Modal */}
+      <SessionViewerModal
+        session={viewingSession}
+        open={!!viewingSession}
+        onOpenChange={(open) => !open && setViewingSession(null)}
+      />
     </ScrollArea>
   );
 }
