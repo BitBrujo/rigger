@@ -2,7 +2,9 @@
 
 **The visual dashboard for Claude's Agent SDK.** Test, debug, and manage your AI agents without writing code.
 
-<img width="3058" height="1772" alt="screencapture-100-87-169-2-3334-2025-11-23-17_43_27" src="https://github.com/user-attachments/assets/cd3d679c-01a5-4726-b6d4-c58e3add98b1" />
+<img width="3058" height="1772" alt="Rigger Dashboard - Session Management with emergency stop controls" src="https://github.com/user-attachments/assets/cd3d679c-01a5-4726-b6d4-c58e3add98b1" />
+
+*Mission control for the Claude Agent SDK*
 
 ## What Is This?
 
@@ -15,7 +17,25 @@ If you're working with the [Claude Agent SDK](https://github.com/anthropics/clau
 - Manage tools, MCP servers, skills, and subagents visually
 - Save and share agent configurations as presets
 
-<img width="3024" height="1646" alt="screencapture-100-87-169-2-3334-2025-11-23-17_41_41" src="https://github.com/user-attachments/assets/ca85f2fb-4fcd-47e2-bc00-da2721846f89" />
+## Features
+
+### Real-time Cost Tracking
+
+<img width="902" height="836" alt="Debug metrics panel showing token usage, costs, and performance" src="https://github.com/user-attachments/assets/de45e921-2b15-4bad-b69d-056db758ca6d" />
+
+*See tokens and costs accumulate in real-time - no more surprise API bills*
+
+### Live Tool Monitoring
+
+<img width="820" height="913" alt="Tool execution panel with running tools" src="https://github.com/user-attachments/assets/1ddfb1e6-3589-4567-9e33-5dcb2865c9e9" />
+
+*Watch every tool call as it happens - Grep, Glob, WebSearch, and more*
+
+---
+
+<img width="3024" height="1646" alt="Rigger configuration panel with visual SDK parameters" src="https://github.com/user-attachments/assets/ca85f2fb-4fcd-47e2-bc00-da2721846f89" />
+
+*Visual configuration for all 30+ SDK parameters*
 
 ## Getting Started
 
