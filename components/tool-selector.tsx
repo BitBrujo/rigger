@@ -5,7 +5,6 @@ import { TOOL_CATEGORIES, ALL_SDK_TOOLS, TOOL_DESCRIPTIONS } from '@/lib/types';
 import { Checkbox } from './ui/checkbox';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import {
   Accordion,
   AccordionContent,
@@ -139,28 +138,25 @@ export function ToolSelector({ selectedTools, onChange, disabled = false }: Tool
 
                   {/* Individual tools */}
                   {tools.map((tool) => (
-                    <div key={tool} className="flex items-center gap-2 pl-6">
+                    <div key={tool} className="flex items-start gap-2 pl-6">
                       <Checkbox
                         id={`tool-${tool}`}
                         checked={selectedTools.includes(tool)}
                         onCheckedChange={() => handleToggleTool(tool)}
                         disabled={disabled}
+                        className="mt-0.5"
                       />
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <label
-                              htmlFor={`tool-${tool}`}
-                              className="text-sm font-mono cursor-pointer flex-1"
-                            >
-                              {tool}
-                            </label>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{TOOL_DESCRIPTIONS[tool] || 'No description available'}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      <div className="flex-1">
+                        <label
+                          htmlFor={`tool-${tool}`}
+                          className="text-sm font-mono cursor-pointer"
+                        >
+                          {tool}
+                        </label>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {TOOL_DESCRIPTIONS[tool] || 'No description available'}
+                        </p>
+                      </div>
                     </div>
                   ))}
                 </div>
