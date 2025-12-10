@@ -27,7 +27,7 @@ If you're working with the [Claude Agent SDK](https://github.com/anthropics/clau
 
 ### Live Tool Monitoring
 
-<img width="760" height="251" alt="Image" src="https://github.com/user-attachments/assets/f99e0f71-e8a7-4aba-bbdc-c30c3d986cc3" />
+<img width="865" height="730" alt="Image" src="https://github.com/user-attachments/assets/9565e44f-305c-4e6f-97dc-9e59769e23c3" />
 
 *Watch every tool call as it happens - Grep, Glob, WebSearch, and more*
 
